@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Navigator - Find Your Dream Job</title>
+    <link rel="stylesheet" href="../Styles/styles.css">
+    <link rel="stylesheet" href="../Styles/home.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <img src="../images/logo.png" alt="Job Navigator">
+            <span>Job Navigator</span>
+        </div>
+        <div class="nav-links">
+            <a href="home.html" class="active"><i class="fas fa-home"></i> Home</a>
+            <a href="jobs.html"><i class="fas fa-briefcase"></i> Jobs</a>
+            <a href="courses.html"><i class="fas fa-graduation-cap"></i> Courses</a>
+            <a href="settings.html"><i class="fas fa-cog"></i> Settings</a>
+        </div>
+        <div class="nav-profile">
+            <img src="../images/default-avatar.png" alt="Profile" class="profile-pic">
+            <div class="dropdown">
+                <button class="dropbtn">My Account <i class="fas fa-chevron-down"></i></button>
+                <div class="dropdown-content">
+                    <a href="profile.html">View Profile</a>
+                    <a href="applications.html">My Applications</a>
+                    <a href="saved-jobs.html">Saved Jobs</a>
+                    <a href="#" id="logout-btn">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <section class="hero-section">
+            <h1>Find Your Dream Job in Morocco</h1>
+            <p>Connecting OFPPT Trainees with Top Employers</p>
+            <div class="search-container">
+                <div class="search-box">
+                    <input type="text" placeholder="Job title, keywords, or company">
+                    <input type="text" placeholder="City or region">
+                    <button class="search-btn"><i class="fas fa-search"></i> Search Jobs</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="featured-jobs">
+            <h2>Featured Jobs</h2>
+            <div class="job-cards">
+                <!-- Job cards will be dynamically populated -->
+            </div>
+        </section>
+
+        <section class="categories">
+            <h2>Popular Categories</h2>
+            <div class="category-grid">
+                <div class="category-card">
+                    <i class="fas fa-laptop-code"></i>
+                    <h3>IT & Software</h3>
+                    <p>450 jobs</p>
+                </div>
+                <div class="category-card">
+                    <i class="fas fa-industry"></i>
+                    <h3>Manufacturing</h3>
+                    <p>320 jobs</p>
+                </div>
+                <div class="category-card">
+                    <i class="fas fa-chart-line"></i>
+                    <h3>Business</h3>
+                    <p>280 jobs</p>
+                </div>
+                <div class="category-card">
+                    <i class="fas fa-tools"></i>
+                    <h3>Technical</h3>
+                    <p>195 jobs</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="how-it-works">
+            <h2>How Job Navigator Works</h2>
+            <div class="steps">
+                <div class="step">
+                    <i class="fas fa-user-plus"></i>
+                    <h3>Create Profile</h3>
+                    <p>Sign up and create your professional profile</p>
+                </div>
+                <div class="step">
+                    <i class="fas fa-search"></i>
+                    <h3>Search Jobs</h3>
+                    <p>Browse through thousands of job opportunities</p>
+                </div>
+                <div class="step">
+                    <i class="fas fa-paper-plane"></i>
+                    <h3>Apply</h3>
+                    <p>Apply with one click and track your applications</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>Job Navigator</h3>
+                <p>Connecting OFPPT trainees with their dream careers</p>
+            </div>
+            <div class="footer-section">
+                <h3>Quick Links</h3>
+                <ul>
+                    <li><a href="about.html">About Us</a></li>
+                    <li><a href="contact.html">Contact</a></li>
+                    <li><a href="privacy.html">Privacy Policy</a></li>
+                    <li><a href="terms.html">Terms of Service</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>Contact Us</h3>
+                <p>Email: support@jobnavigator.ma</p>
+                <p>Phone: +212 500-000000</p>
+            </div>
+            <div class="footer-section">
+                <h3>Follow Us</h3>
+                <div class="social-links">
+                    <a href="#"><i class="fab fa-facebook"></i></a>
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-linkedin"></i></a>
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 Job Navigator. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="../Scripts/home.js"></script>
+</body>
+</html>

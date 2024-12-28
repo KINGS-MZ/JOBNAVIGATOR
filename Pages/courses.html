@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Courses - Job Navigator</title>
+    <link rel="stylesheet" href="../Styles/styles.css">
+    <link rel="stylesheet" href="../Styles/courses.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <img src="../images/logo.png" alt="Job Navigator">
+            <span>Job Navigator</span>
+        </div>
+        <div class="nav-links">
+            <a href="home.html"><i class="fas fa-home"></i> Home</a>
+            <a href="jobs.html"><i class="fas fa-briefcase"></i> Jobs</a>
+            <a href="courses.html" class="active"><i class="fas fa-graduation-cap"></i> Courses</a>
+            <a href="settings.html"><i class="fas fa-cog"></i> Settings</a>
+        </div>
+        <div class="nav-profile">
+            <button id="theme-toggle" class="btn btn-secondary">
+                <i class="fas fa-moon"></i>
+            </button>
+            <img src="../images/default-avatar.png" alt="Profile" class="profile-pic">
+            <div class="dropdown">
+                <button class="dropbtn">My Account <i class="fas fa-chevron-down"></i></button>
+                <div class="dropdown-content">
+                    <a href="applications.html"><i class="fas fa-file-alt"></i> My Applications</a>
+                    <a href="saved-jobs.html"><i class="fas fa-bookmark"></i> Saved Jobs</a>
+                    <a href="#" id="logout-btn"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="courses-container">
+        <section class="courses-header">
+            <h1>Available Courses</h1>
+            <div class="search-container">
+                <input type="text" id="course-search" placeholder="Search courses...">
+                <button class="search-btn"><i class="fas fa-search"></i></button>
+            </div>
+        </section>
+
+        <section class="courses-grid" id="courses-grid">
+            <!-- Courses will be dynamically loaded here -->
+        </section>
+    </main>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.x.x/firebase-firestore-compat.js"></script>
+    
+    <!-- App Scripts -->
+    <script src="../Scripts/firebase-config.js"></script>
+    <script src="../Scripts/courses.js"></script>
+</body>
+</html>

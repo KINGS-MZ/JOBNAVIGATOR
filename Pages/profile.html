@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile - Job Navigator</title>
+    <link rel="stylesheet" href="../Styles/styles.css">
+    <link rel="stylesheet" href="../Styles/home.css">
+    <link rel="stylesheet" href="../Styles/profile.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <img src="../images/logo.png" alt="Job Navigator">
+            <span>Job Navigator</span>
+        </div>
+        <div class="nav-links">
+            <a href="home.html"><i class="fas fa-home"></i> Home</a>
+            <a href="jobs.html"><i class="fas fa-briefcase"></i> Jobs</a>
+            <a href="profile.html" class="active"><i class="fas fa-user"></i> Profile</a>
+            <a href="settings.html"><i class="fas fa-cog"></i> Settings</a>
+        </div>
+        <div class="nav-profile">
+            <img src="../images/default-avatar.png" alt="Profile" class="profile-pic">
+            <div class="dropdown">
+                <button class="dropbtn">My Account <i class="fas fa-chevron-down"></i></button>
+                <div class="dropdown-content">
+                    <a href="profile.html">View Profile</a>
+                    <a href="applications.html">My Applications</a>
+                    <a href="saved-jobs.html">Saved Jobs</a>
+                    <a href="#" id="logout-btn">Logout</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="profile-container">
+        <div class="profile-header">
+            <div class="profile-cover">
+                <button class="edit-cover"><i class="fas fa-camera"></i> Change Cover</button>
+            </div>
+            <div class="profile-info">
+                <div class="profile-picture">
+                    <img src="../images/default-avatar.png" alt="Profile Picture">
+                    <button class="edit-picture"><i class="fas fa-camera"></i></button>
+                </div>
+                <div class="profile-details">
+                    <h1>MEHDI EL-EMARTI</h1>
+                    <p class="title">Web Developer | OFPPT Graduate</p>
+                    <p class="location"><i class="fas fa-map-marker-alt"></i> Casablanca, Morocco</p>
+                </div>
+                <button class="edit-profile-btn"><i class="fas fa-edit"></i> Edit Profile</button>
+            </div>
+        </div>
+
+        <div class="profile-content">
+            <aside class="profile-sidebar">
+                <div class="profile-completion">
+                    <h3>Profile Completion</h3>
+                    <div class="progress-bar">
+                        <div class="progress" style="width: 85%"></div>
+                    </div>
+                    <p>85% Complete</p>
+                    <ul class="completion-tasks">
+                        <li class="completed"><i class="fas fa-check"></i> Basic Information</li>
+                        <li class="completed"><i class="fas fa-check"></i> Education</li>
+                        <li class="completed"><i class="fas fa-check"></i> Skills</li>
+                        <li><i class="fas fa-times"></i> Work Experience</li>
+                    </ul>
+                </div>
+
+                <div class="profile-stats">
+                    <div class="stat-item">
+                        <i class="fas fa-eye"></i>
+                        <div>
+                            <h4>Profile Views</h4>
+                            <p>152 this week</p>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-file-alt"></i>
+                        <div>
+                            <h4>Applications</h4>
+                            <p>12 active</p>
+                        </div>
+                    </div>
+                    <div class="stat-item">
+                        <i class="fas fa-bookmark"></i>
+                        <div>
+                            <h4>Saved Jobs</h4>
+                            <p>8 jobs</p>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <section class="profile-main">
+                <div class="profile-section">
+                    <h2>About Me</h2>
+                    <p>Recent OFPPT graduate with a strong foundation in web development and a passion for creating user-friendly applications. Seeking opportunities to apply my skills and contribute to innovative projects.</p>
+                </div>
+
+                <div class="profile-section">
+                    <h2>Education</h2>
+                    <div class="education-item">
+                        <div class="education-logo">
+                            <img src="../images/ofppt-logo.png" alt="OFPPT">
+                        </div>
+                        <div class="education-details">
+                            <h3>Diploma in Web Development</h3>
+                            <p class="institution">OFPPT - Institut Spécialisé de Technologie Appliquée</p>
+                            <p class="duration">2021 - 2023</p>
+                            <p class="description">Specialized in full-stack web development, including HTML, CSS, JavaScript, PHP, and MySQL.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-section">
+                    <h2>Skills</h2>
+                    <div class="skills-container">
+                        <div class="skill-tag">HTML5</div>
+                        <div class="skill-tag">CSS3</div>
+                        <div class="skill-tag">JavaScript</div>
+                        <div class="skill-tag">PHP</div>
+                        <div class="skill-tag">MySQL</div>
+                        <div class="skill-tag">React</div>
+                        <div class="skill-tag">Bootstrap</div>
+                        <div class="skill-tag">Git</div>
+                    </div>
+                </div>
+
+                <div class="profile-section">
+                    <h2>Languages</h2>
+                    <div class="languages-container">
+                        <div class="language-item">
+                            <span class="language">Arabic</span>
+                            <div class="language-level">Native</div>
+                        </div>
+                        <div class="language-item">
+                            <span class="language">French</span>
+                            <div class="language-level">Professional</div>
+                        </div>
+                        <div class="language-item">
+                            <span class="language">English</span>
+                            <div class="language-level">Intermediate</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-section">
+                    <h2>Certifications</h2>
+                    <div class="certifications-container">
+                        <div class="certification-item">
+                            <div class="certification-icon">
+                                <i class="fas fa-certificate"></i>
+                            </div>
+                            <div class="certification-details">
+                                <h3>Web Development Fundamentals</h3>
+                                <p>OFPPT Certification</p>
+                                <p class="certification-date">Issued: June 2023</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-section">
+                <h3>Job Navigator</h3>
+                <p>Connecting OFPPT trainees with their dream careers</p>
+            </div>
+            <div class="footer-section">
+                <h3>Quick Links</h3>
+                <ul>
+                    <li><a href="about.html">About Us</a></li>
+                    <li><a href="contact.html">Contact</a></li>
+                    <li><a href="privacy.html">Privacy Policy</a></li>
+                    <li><a href="terms.html">Terms of Service</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>Contact Us</h3>
+                <p>Email: support@jobnavigator.ma</p>
+                <p>Phone: +212 500-000000</p>
+            </div>
+            <div class="footer-section">
+                <h3>Follow Us</h3>
+                <div class="social-links">
+                    <a href="#"><i class="fab fa-facebook"></i></a>
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-linkedin"></i></a>
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 Job Navigator. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="../Scripts/profile.js"></script>
+</body>
+</html>
