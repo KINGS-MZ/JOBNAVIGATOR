@@ -25,40 +25,58 @@ function showToastAndRedirect(user) {
 }
 
 // Check if user is already signed in
+let isHandlingAuthChange = false;
+
 auth.onAuthStateChanged((user) => {
-    if (user) {
-        // User is signed in
-        console.log('User is signed in:', user.email);
-        // Save user data to localStorage
-        localStorage.setItem('user', JSON.stringify({
-            email: user.email,
-            displayName: user.displayName,
-            uid: user.uid
-        }));
-        
-        // Check if we're on the auth page using the current URL
-        const currentPath = window.location.pathname;
-        const isAuthPage = currentPath.endsWith('auth.html') || currentPath.endsWith('auth') || currentPath.includes('/auth/');
-        
-        // If we're on the auth page, show toast and redirect
-        if (isAuthPage) {
-            showToastAndRedirect(user);
+    // Prevent recursive auth state handling
+    if (isHandlingAuthChange) return;
+    isHandlingAuthChange = true;
+
+    try {
+        if (user) {
+            // User is signed in
+            console.log('User is signed in:', user.email);
+            // Save user data to localStorage
+            localStorage.setItem('user', JSON.stringify({
+                email: user.email,
+                displayName: user.displayName,
+                uid: user.uid
+            }));
+            
+            // Check if we're on the auth page using the current URL
+            const currentPath = window.location.pathname;
+            const isAuthPage = currentPath.endsWith('auth.html') || 
+                             currentPath.endsWith('auth') || 
+                             currentPath.includes('/auth/');
+            
+            // If we're on the auth page, show toast and redirect
+            if (isAuthPage && !sessionStorage.getItem('redirecting')) {
+                sessionStorage.setItem('redirecting', 'true');
+                showToastAndRedirect(user);
+            }
+        } else {
+            // User is signed out
+            console.log('User is signed out');
+            localStorage.removeItem('user');
+            sessionStorage.removeItem('redirecting');
+            
+            // Check current path
+            const currentPath = window.location.pathname;
+            const isAuthPage = currentPath.endsWith('auth.html') || 
+                             currentPath.endsWith('auth') || 
+                             currentPath.includes('/auth/');
+            const isIndexPage = currentPath.endsWith('index.html') || 
+                              currentPath === '/' || 
+                              currentPath.endsWith('index');
+            
+            // Only redirect if not on auth or index page
+            if (!isAuthPage && !isIndexPage && !sessionStorage.getItem('redirecting')) {
+                sessionStorage.setItem('redirecting', 'true');
+                window.location.href = '../Auth/auth.html';
+            }
         }
-    } else {
-        // User is signed out
-        console.log('User is signed out');
-        localStorage.removeItem('user');
-        
-        // Check current path
-        const currentPath = window.location.pathname;
-        const isAuthPage = currentPath.endsWith('auth.html') || currentPath.endsWith('auth') || currentPath.includes('/auth/');
-        const isIndexPage = currentPath.endsWith('index.html') || currentPath === '/' || currentPath.endsWith('index');
-        
-        // Only redirect if not on auth or index page
-        if (!isAuthPage && !isIndexPage) {
-            // Use relative path that works in both environments
-            window.location.href = '../Auth/auth.html';
-        }
+    } finally {
+        isHandlingAuthChange = false;
     }
 });
 

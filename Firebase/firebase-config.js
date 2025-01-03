@@ -16,12 +16,3 @@ firebase.initializeApp(firebaseConfig);
 
 // Set persistence to LOCAL
 firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-
-// Add auth state listener
-firebase.auth().onAuthStateChanged((user) => {
-    console.log('Auth state changed:', user ? 'User is signed in' : 'User is signed out');
-    if (user) {
-        console.log('User ID:', user.uid);
-        console.log('User email:', user.email);
-    }
-});
