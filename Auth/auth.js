@@ -36,16 +36,27 @@ auth.onAuthStateChanged((user) => {
             uid: user.uid
         }));
         
+        // Check if we're on the auth page using the current URL
+        const currentPath = window.location.pathname;
+        const isAuthPage = currentPath.endsWith('auth.html') || currentPath.endsWith('auth') || currentPath.includes('/auth/');
+        
         // If we're on the auth page, show toast and redirect
-        if (window.location.pathname.includes('auth.html')) {
+        if (isAuthPage) {
             showToastAndRedirect(user);
         }
     } else {
         // User is signed out
         console.log('User is signed out');
         localStorage.removeItem('user');
-        // If we're not on the auth page and user is not signed in, redirect to auth
-        if (!window.location.pathname.includes('auth.html') && !window.location.pathname.includes('index.html')) {
+        
+        // Check current path
+        const currentPath = window.location.pathname;
+        const isAuthPage = currentPath.endsWith('auth.html') || currentPath.endsWith('auth') || currentPath.includes('/auth/');
+        const isIndexPage = currentPath.endsWith('index.html') || currentPath === '/' || currentPath.endsWith('index');
+        
+        // Only redirect if not on auth or index page
+        if (!isAuthPage && !isIndexPage) {
+            // Use relative path that works in both environments
             window.location.href = '../Auth/auth.html';
         }
     }
