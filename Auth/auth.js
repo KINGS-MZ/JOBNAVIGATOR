@@ -11,6 +11,8 @@ function showToastAndRedirect(user) {
     const toast = document.querySelector('.toast-notification');
     const userInfo = document.querySelector('.toast-user');
     
+    if (!overlay || !toast || !userInfo) return; // Exit if elements don't exist
+    
     // Update user info in toast
     userInfo.textContent = `Signed in as ${user.email}`;
     
@@ -20,22 +22,25 @@ function showToastAndRedirect(user) {
     
     // Redirect after 2 seconds
     setTimeout(() => {
-        window.location.href = '../Pages/Home.html';
+        const basePath = window.location.origin;
+        window.location.href = `${basePath}/Pages/Home.html`;
     }, 2000);
 }
 
 // Check if user is already signed in
 let isHandlingAuthChange = false;
+let redirectInProgress = false;
 
 auth.onAuthStateChanged((user) => {
     // Prevent recursive auth state handling
-    if (isHandlingAuthChange) return;
+    if (isHandlingAuthChange || redirectInProgress) return;
     isHandlingAuthChange = true;
 
     try {
         if (user) {
             // User is signed in
             console.log('User is signed in:', user.email);
+            
             // Save user data to localStorage
             localStorage.setItem('user', JSON.stringify({
                 email: user.email,
@@ -49,16 +54,20 @@ auth.onAuthStateChanged((user) => {
                              currentPath.endsWith('auth') || 
                              currentPath.includes('/auth/');
             
-            // If we're on the auth page, show toast and redirect
-            if (isAuthPage && !sessionStorage.getItem('redirecting')) {
-                sessionStorage.setItem('redirecting', 'true');
+            // Only redirect if we're on the auth page and not already redirecting
+            if (isAuthPage && !redirectInProgress) {
+                redirectInProgress = true;
+                // Use absolute path for Cloudflare Pages
+                const basePath = window.location.origin;
                 showToastAndRedirect(user);
+                setTimeout(() => {
+                    redirectInProgress = false;
+                }, 3000); // Reset after redirect completes
             }
         } else {
             // User is signed out
             console.log('User is signed out');
             localStorage.removeItem('user');
-            sessionStorage.removeItem('redirecting');
             
             // Check current path
             const currentPath = window.location.pathname;
@@ -69,10 +78,15 @@ auth.onAuthStateChanged((user) => {
                               currentPath === '/' || 
                               currentPath.endsWith('index');
             
-            // Only redirect if not on auth or index page
-            if (!isAuthPage && !isIndexPage && !sessionStorage.getItem('redirecting')) {
-                sessionStorage.setItem('redirecting', 'true');
-                window.location.href = '../Auth/auth.html';
+            // Only redirect if not on auth/index page and not already redirecting
+            if (!isAuthPage && !isIndexPage && !redirectInProgress) {
+                redirectInProgress = true;
+                // Use absolute path for Cloudflare Pages
+                const basePath = window.location.origin;
+                window.location.href = `${basePath}/Auth/auth.html`;
+                setTimeout(() => {
+                    redirectInProgress = false;
+                }, 3000); // Reset after redirect completes
             }
         }
     } finally {
@@ -202,6 +216,41 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Initialize floating menu if it exists
+    const floatingMenu = document.querySelector('.floating-menu');
+    if (floatingMenu) {
+        const mainBtn = floatingMenu.querySelector('.main-btn');
+        const menuItems = floatingMenu.querySelector('.menu-items');
+        const floatingThemeToggle = document.getElementById('floating-theme-toggle');
+
+        mainBtn.addEventListener('click', () => {
+            menuItems.classList.toggle('active');
+            mainBtn.classList.toggle('active');
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!floatingMenu.contains(e.target)) {
+                menuItems.classList.remove('active');
+                mainBtn.classList.remove('active');
+            }
+        });
+
+        // Theme toggle functionality for floating menu
+        floatingThemeToggle.addEventListener('click', () => {
+            document.body.classList.toggle('dark-mode');
+            const icon = floatingThemeToggle.querySelector('i');
+            if (document.body.classList.contains('dark-mode')) {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            } else {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            }
+            menuItems.classList.remove('active');
+        });
+    }
+
     // Error handling
     function showError(message) {
         // Create error element if it doesn't exist
@@ -220,35 +269,4 @@ document.addEventListener('DOMContentLoaded', function() {
             errorDiv.style.display = 'none';
         }, 5000);
     }
-
-    // Floating Menu
-    const floatingMenu = document.querySelector('.floating-menu');
-    const mainBtn = floatingMenu.querySelector('.main-btn');
-    const menuItems = floatingMenu.querySelector('.menu-items');
-    const floatingThemeToggle = document.getElementById('floating-theme-toggle');
-
-    mainBtn.addEventListener('click', () => {
-        menuItems.classList.toggle('active');
-    });
-
-    // Close menu when clicking outside
-    document.addEventListener('click', (e) => {
-        if (!floatingMenu.contains(e.target)) {
-            menuItems.classList.remove('active');
-        }
-    });
-
-    // Theme toggle functionality for floating menu
-    floatingThemeToggle.addEventListener('click', () => {
-        document.body.classList.toggle('dark-mode');
-        const icon = floatingThemeToggle.querySelector('i');
-        if (document.body.classList.contains('dark-mode')) {
-            icon.classList.remove('fa-moon');
-            icon.classList.add('fa-sun');
-        } else {
-            icon.classList.remove('fa-sun');
-            icon.classList.add('fa-moon');
-        }
-        menuItems.classList.remove('active');
-    });
 });
