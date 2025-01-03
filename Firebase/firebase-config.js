@@ -1,5 +1,4 @@
 // Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyCb-WQn8hxetYE2wWMQ37y7vRAKl0hFbkI",
   authDomain: "jobnav-799f0.firebaseapp.com",
@@ -12,7 +11,14 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-firebase.initializeApp(firebaseConfig);
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
 
-// Set persistence to LOCAL
-firebase.auth().setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+const auth = firebase.auth();
+
+// Set default persistence to LOCAL
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
+// Export auth instance
+window.auth = auth;
