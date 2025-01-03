@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saved Jobs - Job Navigator</title>
+    <link rel="stylesheet" href="../Styles/SavedJobs.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <!-- Lottie Player -->
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <!-- Firebase Config -->
+    <script src="../Firebase/firebase-config.js"></script>
+    <script>
+        // Initialize theme before page load to prevent flash
+        const isDark = localStorage.getItem('darkMode') === 'true';
+        document.documentElement.classList.add(isDark ? 'dark-mode' : 'light-mode');
+    </script>
+</head>
+<body class="light-mode">
+    <nav>
+        <div class="nav-container">
+            <div class="logo">
+                <span class="logo-icon">JN</span>
+                <span class="logo-text">Job Navigator</span>
+            </div>
+            
+            <div class="nav-right">
+                <button id="theme-toggle" aria-label="Toggle dark mode">
+                    <i class="fas fa-moon"></i>
+                </button>
+                
+                <div class="user-menu">
+                    <button id="user-menu-btn" class="user-btn" aria-label="User menu" type="button">
+                        <div class="user-avatar">
+                            <div class="avatar-initials" id="avatar-initials">JN</div>
+                            <img src="../Assets/default-avatar.png" alt="User avatar" id="user-avatar" style="display: none;">
+                        </div>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="dropdown-menu" id="user-dropdown">
+                        <div class="dropdown-header">
+                            <div class="user-info">
+                                <div class="dropdown-avatar">
+                                    <div class="avatar-initials" id="dropdown-initials">JN</div>
+                                    <img src="../Assets/default-avatar.png" alt="User avatar" id="dropdown-avatar-img" style="display: none;">
+                                </div>
+                                <div class="user-details">
+                                    <span id="user-name">Guest User</span>
+                                    <span id="user-email">guest@example.com</span>
+                                </div>
+                            </div>
+                        </div>
+                        <a href="Profile.html">
+                            <i class="fas fa-user-circle"></i>
+                            Profile
+                        </a>
+                        <a href="Applications.html">
+                            <i class="fas fa-briefcase"></i>
+                            My Applications
+                        </a>
+                        <a href="SavedJobs.html" class="active">
+                            <i class="fas fa-heart"></i>
+                            Saved Jobs
+                        </a>
+                        <a href="Settings.html">
+                            <i class="fas fa-cog"></i>
+                            Settings
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" id="logout-link" class="logout-link">
+                            <i class="fas fa-sign-out-alt"></i>
+                            Sign Out
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="saved-jobs-container">
+        <div class="saved-jobs-header">
+            <h1>Saved Jobs</h1>
+            <div class="view-toggle">
+                <button class="view-btn active" data-view="grid">
+                    <i class="fas fa-th-large"></i>
+                </button>
+                <button class="view-btn" data-view="list">
+                    <i class="fas fa-list"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="saved-jobs-grid" id="saved-jobs-list">
+            <!-- Jobs will be dynamically inserted here -->
+        </div>
+        <div class="no-saved-jobs" id="no-saved-jobs" style="display: none;">
+            <lottie-player src="https://assets2.lottiefiles.com/packages/lf20_ydo1amjm.json"
+                background="transparent" speed="1" style="width: 300px; height: 300px;" loop autoplay>
+            </lottie-player>
+            <h2>No Saved Jobs Yet</h2>
+            <p>Jobs you save will appear here</p>
+            <a href="Jobs.html" class="browse-jobs-btn">
+                <i class="fas fa-search"></i>
+                Browse Jobs
+            </a>
+        </div>
+    </main>
+
+    <!-- Sign Out Confirmation Modal -->
+    <div class="modal-overlay" id="signOutModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <i class="fas fa-sign-out-alt warning-icon"></i>
+                <h3>Sign Out</h3>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to sign out?</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary cancel-btn" id="cancelSignOut">Cancel</button>
+                <button class="btn btn-danger confirm-btn" id="confirmSignOut">Sign Out</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="floating-menu">
+        <button class="menu-btn main-btn">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div class="menu-items">
+            <a href="Home.html" class="menu-item home-btn">
+                <i class="fas fa-home"></i>
+            </a>
+            <a href="Jobs.html" class="menu-item jobs-btn">
+                <i class="fas fa-briefcase"></i>
+            </a>
+            <a href="Courses.html" class="menu-item courses-btn">
+                <i class="fas fa-graduation-cap"></i>
+            </a>
+            <a href="Settings.html" class="menu-item settings-btn">
+                <i class="fas fa-cog"></i>
+            </a>
+        </div>
+    </div>
+
+    <script src="../Scripts/SavedJobs.js"></script>
+</body>
+</html>

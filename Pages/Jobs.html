@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jobs - Job Navigator</title>
+    <link rel="stylesheet" href="../Styles/Jobs.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
+    <!-- Lottie Player -->
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <!-- Firebase Config -->
+    <script src="../Firebase/firebase-config.js"></script>
+    <script>
+        // Initialize theme before page load to prevent flash
+        const isDark = localStorage.getItem('darkMode') === 'true';
+        document.documentElement.classList.add(isDark ? 'dark-mode' : 'light-mode');
+
+       
+    </script>
+</head>
+<body class="light-mode">
+    <nav>
+        <div class="nav-container">
+            <div class="logo">
+                <span class="logo-icon">JN</span>
+                <span class="logo-text">Job Navigator</span>
+            </div>
+            
+            <div class="nav-right">
+                <button id="theme-toggle" aria-label="Toggle dark mode">
+                    <i class="fas fa-moon"></i>
+                </button>
+                
+                <div class="user-menu">
+                    <button id="user-menu-btn" class="user-btn" aria-label="User menu" type="button">
+                        <div class="user-avatar">
+                            <div class="avatar-initials" id="avatar-initials">JN</div>
+                            <img src="../Assets/default-avatar.png" alt="User avatar" id="user-avatar" style="display: none;">
+                        </div>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="dropdown-menu" id="user-dropdown">
+                        <div class="dropdown-header">
+                            <div class="user-info">
+                                <div class="dropdown-avatar">
+                                    <div class="avatar-initials" id="dropdown-initials">JN</div>
+                                    <img src="../Assets/default-avatar.png" alt="User avatar" id="dropdown-avatar-img" style="display: none;">
+                                </div>
+                                <div class="user-details">
+                                    <span id="user-name">Guest User</span>
+                                    <span id="user-email">guest@example.com</span>
+                                </div>
+                            </div>
+                        </div>
+                        <a href="Profile.html">
+                            <i class="fas fa-user-circle"></i>
+                            Profile
+                        </a>
+                        <a href="Applications.html">
+                            <i class="fas fa-briefcase"></i>
+                            My Applications
+                        </a>
+                        <a href="SavedJobs.html">
+                            <i class="fas fa-heart"></i>
+                            Saved Jobs
+                        </a>
+                        <a href="Settings.html">
+                            <i class="fas fa-cog"></i>
+                            Settings
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="#" id="logout-link" class="logout-link">
+                            <i class="fas fa-sign-out-alt"></i>
+                            Sign Out
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="jobs-container">
+        <aside class="filters-sidebar">
+            <button class="filters-close-btn" aria-label="Close filters">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="filters-section">
+                <h3>Filters</h3>
+                <div class="filter-group">
+                    <label>Location</label>
+                    <input type="text" placeholder="City, state, or zip code">
+                </div>
+                <div class="filter-group">
+                    <label>Job Type</label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox"> Full-time</label>
+                        <label><input type="checkbox"> Part-time</label>
+                        <label><input type="checkbox"> Contract</label>
+                        <label><input type="checkbox"> Remote</label>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label>Experience Level</label>
+                    <div class="checkbox-group">
+                        <label><input type="checkbox"> Entry Level</label>
+                        <label><input type="checkbox"> Mid Level</label>
+                        <label><input type="checkbox"> Senior Level</label>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label>Salary Range</label>
+                    <select>
+                        <option>Any</option>
+                        <option>$0 - $50,000</option>
+                        <option>$50,000 - $100,000</option>
+                        <option>$100,000+</option>
+                    </select>
+                </div>
+                <div class="filter-actions">
+                    <button class="btn btn-primary filter-button apply">Apply Filters</button>
+                    <button class="btn btn-secondary filter-button reset">Reset</button>
+                </div>
+            </div>
+        </aside>
+
+        <section class="jobs-content">
+            <div class="search-bar">
+                <div class="search-input-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="search-input" placeholder="Search jobs, keywords, companies">
+                </div>
+                <div class="search-actions">
+                    <button class="filter-toggle-btn">
+                        <i class="fas fa-filter"></i>
+                        <span>Filters</span>
+                    </button>
+                    <button class="search-button" id="search-button">
+                        <i class="fas fa-search"></i>
+                        <span>Search Jobs</span>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="add-job-container">
+                <button class="add-job-btn" onclick="window.location.href='posts.html'">
+                    <i class="fas fa-plus-circle"></i>
+                    Post a New Job
+                </button>
+            </div>
+            
+            <div class="jobs-list">
+                <!-- Job cards will be dynamically populated -->
+            </div>
+        </section>
+    </main>
+
+<!-- Sign Out Confirmation Modal -->
+<div class="modal-overlay" id="signOutModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <i class="fas fa-sign-out-alt warning-icon"></i>
+            <h3>Sign Out</h3>
+        </div>
+        <div class="modal-body">
+            <p>Are you sure you want to sign out?</p>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary cancel-btn" id="cancelSignOut">Cancel</button>
+            <button class="btn btn-danger confirm-btn" id="confirmSignOut">Sign Out</button>
+        </div>
+    </div>
+</div>
+
+    <div class="floating-menu">
+        <button class="menu-btn main-btn">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div class="menu-items">
+            <a href="Home.html" class="menu-item home-btn">
+                <i class="fas fa-home"></i>
+            </a>
+            <a href="Jobs.html" class="menu-item jobs-btn active">
+                <i class="fas fa-briefcase"></i>
+            </a>
+            <a href="Courses.html" class="menu-item courses-btn">
+                <i class="fas fa-graduation-cap"></i>
+            </a>
+            <a href="Settings.html" class="menu-item settings-btn">
+                <i class="fas fa-cog"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal-overlay" id="confirmationModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <i class="fas fa-exclamation-triangle warning-icon"></i>
+                <h3>Delete Job Post</h3>
+                <button class="modal-close" id="modalClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete this job post?</p>
+                <p class="modal-subtitle">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn cancel-btn" id="cancelDelete">
+                    <i class="fas fa-times"></i>
+                    Cancel
+                </button>
+                <button class="modal-btn confirm-btn" id="confirmDelete">
+                    <i class="fas fa-trash-alt"></i>
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+    <script src="../Scripts/Jobs.js"></script>
+</body>
+</html>

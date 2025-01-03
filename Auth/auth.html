@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jobs - Job Navigator</title>
+    <link rel="stylesheet" href="auth.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Firebase Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="../Firebase/firebase-config.js"></script>
+</head>
+
+<body class="login-page">
+    <div class="auth-container">
+        <div class="welcome-section">
+            <div class="welcome-content">
+                <div class="logo large-logo">
+                    <img src="../Images/logo.png" alt="Job Navigator Logo" class="logo-image">
+                </div>
+                <h1>Welcome Back!</h1>
+                <p>Your journey to the perfect job starts here. Sign in to access personalized job recommendations and track your applications.</p>
+            </div>
+        </div>
+
+        <div class="form-container">
+            <form class="sign-in-form active-form" id="signInForm">
+                <h2 class="title">Sign In</h2>
+                <p class="subtitle">Welcome back! Please login to your account</p>
+
+                <div class="input-group">
+                    <div class="input-field">
+                        <input type="email" id="signInEmail" placeholder="Email" required>
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <div class="input-field">
+                        <input type="password" id="signInPassword" placeholder="Password" required>
+                        <i class="fas fa-lock"></i>
+                    </div>
+                </div>
+
+                <div class="remember-forgot">
+                    <label class="remember-me">
+                        <input type="checkbox">
+                        Remember me
+                    </label>
+                    <a href="#" class="forgot-link">Forgot Password?</a>
+                </div>
+
+                <button type="submit" class="auth-button">Sign In</button>
+
+                <div class="social-divider">
+                    <span>Or continue with</span>
+                </div>
+
+                <div class="social-buttons">
+                    <button type="button" class="social-btn google-btn">
+                        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PHBhdGggZmlsbD0iI0VBNDMzNSIgZD0iTTI0IDkuNWMzLjU0IDAgNi43MSAxLjIyIDkuMjEgMy42bDYuODUtNi44NUMzNS45IDIuMzggMzAuNDcgMCAyNCAwIDEyLjY2IDAgMy4yMyA1LjExLjk2IDE5LjQxTDkuNSAxNy40MmMyLjAyLTUuNzkgNy40OS0xMCA4LjQtNy45MnoiLz48cGF0aCBmaWxsPSIjNDI4NUY0IiBkPSJNNDYuOTggMjQuNTVjMC0xLjU3LS4xNS0zLjA5LS4zOC00LjU1SDI0djkuMDJoMTIuOTRjLS41OCAyLjk2LTIuMjYgNS40OC00Ljc4IDcuMThsNy43MyA2YzQuNTEtNC4xOCA3LjA5LTEwLjM2IDcuMDktMTcuNjV6Ii8+PHBhdGggZmlsbD0iI0ZCQkMwNSIgZD0iTTEwLjUzIDI4LjU5Yy0uNDgtMS40NS0uNzYtMi45OS0uNzYtNC41OXMuMjctMy4xNC43Ni00LjU5bC03Ljk4LTYuMTlDLjkyIDE2LjQ2IDAgMjAuMTIgMCAyNGMwIDMuODguOTIgNy41NCAyLjU2IDEwLjc4bDcuOTctNi4xOXoiLz48cGF0aCBmaWxsPSIjMzRBODUzIiBkPSJNMjQgNDhjNi40OCAwIDExLjkzLTIuMTMgMTUuODktNS44MWwtNy43My02Yy0yLjE1IDEuNDUtNC45MiAyLjMtOC4xNiAyLjMtNi43MiAwLTEyLjQxLTQuNTQtMTQuNDQtMTAuNjFsLTcuOTQgNi4xOEM1LjM3IDQyLjg5IDEzLjk0IDQ4IDI0IDQ4eiIvPjwvc3ZnPg==" alt="Google" class="google-icon">
+                        <span>Continue with Google</span>
+                    </button>
+                    <button type="button" class="social-btn microsoft-btn">
+                        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMy4xMSAyMy4xMSI+PHBhdGggZmlsbD0iI2YzNTMyNSIgZD0iTTEgMWgxMC4wMnYxMC4wMkgxeiIvPjxwYXRoIGZpbGw9IiM4MWJjMDYiIGQ9Ik0xMi4wOSAxaDEwLjAydjEwLjAySDEyLjA5eiIvPjxwYXRoIGZpbGw9IiMwNWE2ZjAiIGQ9Ik0xIDEyLjA5aDEwLjAydjEwLjAySDEiLz48cGF0aCBmaWxsPSIjZmZiYTA4IiBkPSJNMTIuMDkgMTIuMDloMTAuMDJ2MTAuMDJIMTIuMDl6Ii8+PC9zdmc+" alt="Microsoft" class="microsoft-icon">
+                        <span>Continue with Microsoft</span>
+                    </button>
+                </div>
+
+                <p class="switch-form-text">
+                    Don't have an account? <a href="#" class="switch-form-link">Sign Up</a>
+                </p>
+            </form>
+
+            <form class="sign-up-form" id="signUpForm">
+                <h2 class="title">Create Account</h2>
+                <p class="subtitle">Get started with your free account</p>
+
+                <div class="input-group">
+                    <div class="input-field">
+                        <input type="text" id="signUpName" placeholder="Full Name" required>
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="input-field">
+                        <input type="email" id="signUpEmail" placeholder="Email" required>
+                        <i class="fas fa-envelope"></i>
+                    </div>
+                    <div class="input-field">
+                        <input type="password" id="signUpPassword" placeholder="Password" required>
+                        <i class="fas fa-lock"></i>
+                    </div>
+                    <div class="input-field">
+                        <input type="password" id="signUpConfirmPassword" placeholder="Confirm Password" required>
+                        <i class="fas fa-lock"></i>
+                    </div>
+                </div>
+
+                <div class="terms-checkbox">
+                    <label class="terms-label">
+                        <input type="checkbox" required>
+                        I agree to the <a href="#" class="terms-link">Terms of Service</a> and <a href="#" class="terms-link">Privacy Policy</a>
+                    </label>
+                </div>
+
+                <button type="submit" class="auth-button">Sign Up</button>
+
+                <div class="social-divider">
+                    <span>Or continue with</span>
+                </div>
+
+                <div class="social-buttons">
+                    <button type="button" class="social-btn google-btn">
+                        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA0OCA0OCI+PHBhdGggZmlsbD0iI0VBNDMzNSIgZD0iTTI0IDkuNWMzLjU0IDAgNi43MSAxLjIyIDkuMjEgMy42bDYuODUtNi44NUMzNS45IDIuMzggMzAuNDcgMCAyNCAwIDEyLjY2IDAgMy4yMyA1LjExLjk2IDE5LjQxTDkuNSAxNy40MmMyLjAyLTUuNzkgNy40OS0xMCA4LjQtNy45MnoiLz48cGF0aCBmaWxsPSIjNDI4NUY0IiBkPSJNNDYuOTggMjQuNTVjMC0xLjU3LS4xNS0zLjA5LS4zOC00LjU1SDI0djkuMDJoMTIuOTRjLS41OCAyLjk2LTIuMjYgNS40OC00Ljc4IDcuMThsNy43MyA2YzQuNTEtNC4xOCA3LjA5LTEwLjM2IDcuMDktMTcuNjV6Ii8+PHBhdGggZmlsbD0iI0ZCQkMwNSIgZD0iTTEwLjUzIDI4LjU5Yy0uNDgtMS40NS0uNzYtMi45OS0uNzYtNC41OXMuMjctMy4xNC43Ni00LjU5bC03Ljk4LTYuMTlDLjkyIDE2LjQ2IDAgMjAuMTIgMCAyNGMwIDMuODguOTIgNy41NCAyLjU2IDEwLjc4bDcuOTctNi4xOXoiLz48cGF0aCBmaWxsPSIjMzRBODUzIiBkPSJNMjQgNDhjNi40OCAwIDExLjkzLTIuMTMgMTUuODktNS44MWwtNy43My02Yy0yLjE1IDEuNDUtNC45MiAyLjMtOC4xNiAyLjMtNi43MiAwLTEyLjQxLTQuNTQtMTQuNDQtMTAuNjFsLTcuOTQgNi4xOEM1LjM3IDQyLjg5IDEzLjk0IDQ4IDI0IDQ4eiIvPjwvc3ZnPg==" alt="Google" class="google-icon">
+                        <span>Continue with Google</span>
+                    </button>
+                    <button type="button" class="social-btn microsoft-btn">
+                        <img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyMy4xMSAyMy4xMSI+PHBhdGggZmlsbD0iI2YzNTMyNSIgZD0iTTEgMWgxMC4wMnYxMC4wMkgxeiIvPjxwYXRoIGZpbGw9IiM4MWJjMDYiIGQ9Ik0xMi4wOSAxaDEwLjAydjEwLjAySDEyLjA5eiIvPjxwYXRoIGZpbGw9IiMwNWE2ZjAiIGQ9Ik0xIDEyLjA5aDEwLjAydjEwLjAySDEiLz48cGF0aCBmaWxsPSIjZmZiYTA4IiBkPSJNMTIuMDkgMTIuMDloMTAuMDJ2MTAuMDJIMTIuMDl6Ii8+PC9zdmc+" alt="Microsoft" class="microsoft-icon">
+                        <span>Continue with Microsoft</span>
+                    </button>
+                </div>
+
+                <p class="switch-form-text">
+                    Already have an account? <a href="#" class="switch-form-link">Sign In</a>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <div class="toast-overlay"></div>
+    <div class="toast-notification">
+        <img src="../Images/logo.png" alt="Job Navigator Logo" class="toast-logo">
+        <div class="toast-message">Welcome Back!</div>
+        <div class="toast-user"></div>
+        <div class="redirect-message">
+            Redirecting to Home Page
+            <div class="dots">
+                <div class="dot"></div>
+                <div class="dot"></div>
+                <div class="dot"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="auth.js"></script>
+</body>
+</html>

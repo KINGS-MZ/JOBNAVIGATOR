@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Navigator</title>
+    <link rel="stylesheet" href="../Styles/Home.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+</head>
+<body class="light-mode">
+    
+    <nav>
+        <div class="nav-container">
+            <div class="logo">
+                <span class="logo-icon">JN</span>
+                <span class="logo-text">Job Navigator</span>
+            </div>
+            
+            <div class="nav-right">
+                <button id="theme-toggle" aria-label="Toggle dark mode">
+                    <i class="fas fa-moon"></i>
+                </button>
+                
+                <div class="user-menu">
+                    <button id="user-menu-btn" class="user-btn" aria-label="User menu">
+                        <i class="fas fa-user"></i>
+                        <i class="fas fa-chevron-down"></i>
+                    </button>
+                    <div class="dropdown-menu" id="user-dropdown">
+                        <a href="#profile">
+                            <i class="fas fa-user-circle"></i>
+                            Profile
+                        </a>
+                        <a href="#applications">
+                            <i class="fas fa-briefcase"></i>
+                            My Applications
+                        </a>
+                        <a href="#saved">
+                            <i class="fas fa-heart"></i>
+                            Saved Jobs
+                        </a>
+                        <a href="#settings">
+                            <i class="fas fa-cog"></i>
+                            Settings
+                        </a>
+                        <div class="dropdown-divider"></div>
+                        <a href="#logout" class="logout-link">
+                            <i class="fas fa-sign-out-alt"></i>
+                            Sign Out
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <section class="search-section">
+            <h1>Find Your Next Career Opportunity</h1>
+            
+            <div class="search-container">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="job-search" placeholder="Job title, keywords, or company">
+                </div>
+                
+                <div class="search-box">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <input type="text" id="location-search" placeholder="City, state, or remote">
+                </div>
+                
+                <button id="search-btn">Search Jobs</button>
+            </div>
+
+            <div class="filters">
+                <select id="experience-level">
+                    <option value="">Experience Level</option>
+                    <option value="entry">Entry Level</option>
+                    <option value="mid">Mid Level</option>
+                    <option value="senior">Senior Level</option>
+                </select>
+
+                <select id="job-type">
+                    <option value="">Job Type</option>
+                    <option value="full-time">Full Time</option>
+                    <option value="part-time">Part Time</option>
+                    <option value="contract">Contract</option>
+                    <option value="remote">Remote</option>
+                </select>
+
+                <select id="salary-range">
+                    <option value="">Salary Range</option>
+                    <option value="0-30">$0-30k</option>
+                    <option value="30-60">$30-60k</option>
+                    <option value="60-90">$60-90k</option>
+                    <option value="90+">$90k+</option>
+                </select>
+            </div>
+        </section>
+
+        <section class="quick-links">
+            <h2>Popular Searches</h2>
+            <div class="tags">
+                <button class="tag">Remote Jobs</button>
+                <button class="tag">Tech</button>
+                <button class="tag">Healthcare</button>
+                <button class="tag">Marketing</button>
+                <button class="tag">Sales</button>
+                <button class="tag">Engineering</button>
+                <button class="tag">Design</button>
+                <button class="tag">Education</button>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>Made with <i class="fas fa-heart"></i> by OFPPT Trainees</p>
+    </footer>
+
+    <div class="floating-menu">
+        <button class="menu-btn main-btn">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div class="menu-items">
+            <a href="Home.html" class="menu-item home-btn active">
+                <i class="fas fa-home"></i>
+            </a>
+            <a href="Jobs.html" class="menu-item jobs-btn">
+                <i class="fas fa-briefcase"></i>
+            </a>
+            <a href="Courses.html" class="menu-item courses-btn">
+                <i class="fas fa-graduation-cap"></i>
+            </a>
+            <a href="Settings.html" class="menu-item settings-btn">
+                <i class="fas fa-cog"></i>
+            </a>
+        </div>
+    </div>
+
+    <script src="../Scripts/Home.js"></script>
+    
+</body>
+</html>

@@ -1,0 +1,1066 @@
+/* Import base styles */
+@import url('Home.css');
+
+/* Navigation Styles */
+nav {
+    background-color: var(--light-bg);
+    border-bottom: 1px solid var(--light-border);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    padding: 0.75rem 0;
+}
+
+.nav-container {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Logo Styles */
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+    color: var(--light-text);
+}
+
+.logo-icon {
+    background-color: var(--primary-blue);
+    color: white;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 1.1rem;
+}
+
+.logo-text {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--light-text);
+}
+
+/* Navigation Right Section */
+.nav-right {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* Theme Toggle */
+#theme-toggle {
+    background: none;
+    border: none;
+    padding: 0.5rem;
+    cursor: pointer;
+    color: var(--light-secondary);
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+#theme-toggle:hover {
+    background-color: var(--light-hover);
+    color: var(--primary-blue);
+}
+
+body.dark-mode #theme-toggle {
+    color: var(--dark-secondary);
+}
+
+body.dark-mode #theme-toggle:hover {
+    background-color: var(--dark-hover);
+    color: var(--primary-blue);
+}
+
+/* User Menu Styles */
+.user-menu {
+    position: relative;
+}
+
+.user-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.user-btn:hover {
+    background-color: var(--tag-bg);
+}
+
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    overflow: hidden;
+    background-color: var(--tag-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.avatar-initials {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--primary-blue);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.user-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+/* Dropdown Menu */
+.dropdown-menu {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    background-color: var(--light-bg);
+    border: 1px solid var(--light-border);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px var(--shadow-light);
+    min-width: 240px;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.dropdown-menu.show {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+    display: block;
+}
+
+.dropdown-header {
+    padding: 1rem;
+    border-bottom: 1px solid var(--light-border);
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.dropdown-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    overflow: hidden;
+    background-color: var(--tag-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.dropdown-avatar .avatar-initials {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--primary-blue);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.dropdown-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.user-details {
+    display: flex;
+    flex-direction: column;
+}
+
+#user-name {
+    color: var(--light-text);
+    font-weight: 500;
+}
+
+#user-email {
+    color: var(--light-secondary);
+    font-size: 0.875rem;
+}
+
+.dropdown-menu a {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    color: var(--light-text);
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.dropdown-menu a:hover {
+    background-color: var(--tag-bg);
+}
+
+.dropdown-menu a.active {
+    background-color: var(--tag-bg);
+}
+
+.dropdown-menu i {
+    color: var(--light-secondary);
+    font-size: 1.1rem;
+    width: 20px;
+}
+
+.dropdown-menu a.active i {
+    color: var(--primary-blue);
+}
+
+.dropdown-divider {
+    height: 1px;
+    background-color: var(--light-border);
+    margin: 0.5rem 0;
+}
+
+.logout-link {
+    color: #ef4444 !important;
+}
+
+/* Mobile Styles */
+@media screen and (max-width: 768px) {
+    .nav-container {
+        padding: 0 1rem;
+    }
+
+    .logo-text {
+        display: none;
+    }
+
+    .dropdown-menu {
+        position: fixed;
+        top: auto;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        border-radius: 12px 12px 0 0;
+        max-height: 80vh;
+        overflow-y: auto;
+        transform: translateY(100%);
+        transition: transform 0.3s ease;
+        margin: 0;
+        padding-bottom: env(safe-area-inset-bottom);
+        background-color: var(--light-bg);
+        border: none;
+        border-top: 1px solid var(--light-border);
+        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.1);
+        opacity: 1;
+        visibility: visible;
+        display: none;
+    }
+
+    .dropdown-menu.show {
+        transform: translateY(0);
+        display: block;
+    }
+
+    .dropdown-header {
+        padding: 1rem;
+    }
+
+    .dropdown-menu a {
+        padding: 1rem;
+    }
+
+    .user-info {
+        padding: 0.5rem 0;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .nav-right {
+        gap: 0.5rem;
+    }
+
+    .user-btn {
+        padding: 0.25rem;
+    }
+
+    .dropdown-menu {
+        padding-bottom: calc(env(safe-area-inset-bottom) + 1rem);
+    }
+}
+
+/* Dark Mode Styles */
+body.dark-mode .user-btn:hover {
+    background-color: var(--dark-hover);
+}
+
+body.dark-mode .dropdown-menu {
+    background-color: var(--dark-secondary-bg);
+    border-color: var(--dark-border);
+}
+
+body.dark-mode .dropdown-header {
+    border-color: var(--dark-border);
+}
+
+body.dark-mode #user-name {
+    color: var(--dark-text);
+}
+
+body.dark-mode #user-email {
+    color: var(--dark-secondary);
+}
+
+body.dark-mode .dropdown-menu a {
+    color: var(--dark-text);
+}
+
+body.dark-mode .dropdown-menu a:hover {
+    background-color: var(--dark-hover);
+}
+
+body.dark-mode .dropdown-menu a.active {
+    background-color: var(--dark-hover);
+}
+
+body.dark-mode .dropdown-menu i {
+    color: var(--dark-secondary);
+}
+
+body.dark-mode .dropdown-divider {
+    background-color: var(--dark-border);
+}
+
+/* Sign Out Modal */
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1100;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: var(--light-bg);
+    border-radius: 12px;
+    width: 400px;
+    max-width: 90%;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+}
+
+.modal-header {
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid var(--light-border);
+}
+
+.modal-header .warning-icon {
+    color: #ef4444;
+    font-size: 24px;
+}
+
+.modal-header h3 {
+    color: var(--light-text);
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.modal-body {
+    padding: 20px 24px;
+}
+
+.modal-body p {
+    color: var(--light-secondary);
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+.modal-footer {
+    padding: 20px 24px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    border-top: 1px solid var(--light-border);
+}
+
+.btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+}
+
+.btn-secondary {
+    background-color: var(--tag-bg);
+    color: var(--light-text);
+}
+
+.btn-danger {
+    background-color: #ef4444;
+    color: white;
+}
+
+.btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+/* Floating Menu */
+.floating-menu {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    z-index: 1000;
+}
+
+.menu-btn {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: var(--primary-blue);
+    color: white;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+}
+
+.menu-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+.menu-items {
+    position: absolute;
+    bottom: calc(100% + 1rem);
+    right: 0;
+    background-color: var(--light-bg);
+    border-radius: 12px;
+    padding: 0.5rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    display: none;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.menu-items.show {
+    display: flex;
+}
+
+.menu-item {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--light-secondary);
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.menu-item:hover {
+    background-color: var(--light-hover);
+    color: var(--primary-blue);
+}
+
+.menu-item.active {
+    color: var(--primary-blue);
+    background-color: var(--tag-bg);
+}
+
+/* Dark Mode Styles */
+body.dark-mode .modal-content {
+    background-color: var(--dark-secondary-bg);
+    border-color: var(--dark-border);
+}
+
+body.dark-mode .modal-header {
+    border-color: var(--dark-border);
+}
+
+body.dark-mode .modal-header h3 {
+    color: var(--dark-text);
+}
+
+body.dark-mode .modal-body p {
+    color: var(--dark-secondary);
+}
+
+body.dark-mode .modal-footer {
+    border-color: var(--dark-border);
+}
+
+body.dark-mode .btn-secondary {
+    background-color: var(--dark-hover);
+    color: var(--dark-text);
+}
+
+body.dark-mode .menu-items {
+    background-color: var(--dark-secondary-bg);
+}
+
+body.dark-mode .menu-item {
+    color: var(--dark-secondary);
+}
+
+body.dark-mode .menu-item:hover {
+    background-color: var(--dark-hover);
+    color: var(--primary-blue);
+}
+
+/* Responsive Styles */
+@media screen and (max-width: 768px) {
+    .floating-menu {
+        bottom: 1rem;
+        right: 1rem;
+    }
+
+    .modal-content {
+        margin: 1rem;
+    }
+}
+
+/* Dark Mode Styles */
+body.dark-mode nav {
+    background-color: var(--dark-secondary-bg);
+    border-color: var(--dark-border);
+}
+
+body.dark-mode .logo-text {
+    color: var(--dark-text);
+}
+
+body.dark-mode .user-btn:hover {
+    background-color: var(--dark-hover);
+}
+
+body.dark-mode .dropdown-menu {
+    background-color: var(--dark-secondary-bg);
+    border-color: var(--dark-border);
+}
+
+body.dark-mode .dropdown-header {
+    border-color: var(--dark-border);
+}
+
+body.dark-mode #user-name {
+    color: var(--dark-text);
+}
+
+body.dark-mode #user-email {
+    color: var(--dark-secondary);
+}
+
+body.dark-mode .dropdown-menu a {
+    color: var(--dark-text);
+}
+
+body.dark-mode .dropdown-menu i {
+    color: var(--dark-secondary);
+}
+
+body.dark-mode .dropdown-menu a:hover {
+    background-color: var(--dark-hover);
+}
+
+body.dark-mode .dropdown-divider {
+    background-color: var(--dark-border);
+}
+
+/* Saved Jobs Styles */
+.saved-jobs-container {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.saved-jobs-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    background-color: var(--light-bg);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid var(--light-border);
+    box-shadow: 0 2px 4px var(--shadow-light);
+}
+
+.saved-jobs-header h1 {
+    color: var(--light-text);
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.view-toggle {
+    display: flex;
+    gap: 0.5rem;
+    background-color: var(--light-bg);
+    padding: 0.5rem;
+    border-radius: 8px;
+    border: 1px solid var(--light-border);
+}
+
+.view-btn {
+    background: none;
+    border: none;
+    padding: 0.75rem;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--light-secondary);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 40px;
+}
+
+.view-btn:hover {
+    background-color: var(--tag-bg);
+}
+
+.view-btn.active {
+    background-color: var(--primary-blue);
+    color: white;
+}
+
+.saved-jobs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+    padding: 1rem 0;
+}
+
+.saved-jobs-grid.list-view {
+    grid-template-columns: 1fr;
+}
+
+/* Job card styles from Jobs.css */
+.job-card {
+    background-color: var(--light-bg);
+    border: 1px solid var(--light-border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px var(--shadow-light);
+    position: relative;
+}
+
+.job-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px var(--shadow-light);
+}
+
+body.dark-mode .job-card:hover {
+    background-color: rgba(59, 130, 246, 0.1);
+    border-color: #3b82f6;
+    box-shadow: 0 4px 20px rgba(59, 130, 246, 0.2);
+}
+
+.job-card-content {
+    position: relative;
+}
+
+/* Action button */
+.action-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    background: transparent;
+    border: none;
+    padding: 0.5rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    z-index: 1;
+}
+
+.action-btn.save-job-btn {
+    color: var(--primary-gray);
+}
+
+.action-btn.save-job-btn:hover {
+    background-color: var(--light-hover);
+    color: var(--primary-blue);
+}
+
+body.dark-mode .action-btn.save-job-btn:hover {
+    background-color: var(--dark-hover);
+}
+
+.action-btn.save-job-btn i.fas {
+    color: var(--primary-blue);
+}
+
+.action-btn i {
+    font-size: 1.2rem;
+}
+
+/* Job header */
+.job-header {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-right: 3rem;
+}
+
+.job-logo-container {
+    width: 60px;
+    height: 60px;
+    flex-shrink: 0;
+}
+
+.company-logo {
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    background-color: var(--tag-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--primary-blue);
+}
+
+.company-logo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 12px;
+}
+
+.job-title-container {
+    flex: 1;
+    min-width: 0;
+}
+
+.job-title {
+    color: var(--light-text);
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+    line-height: 1.4;
+}
+
+.company-name {
+    color: var(--primary-gray);
+    font-size: 1rem;
+    margin: 0;
+}
+
+/* Job details */
+.job-details {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.company-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    color: var(--primary-gray);
+    font-size: 0.875rem;
+}
+
+.job-location,
+.job-type {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.job-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.tag {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background-color: var(--tag-bg);
+    border-radius: 6px;
+    color: var(--primary-blue);
+    font-size: 0.875rem;
+}
+
+.tag i {
+    font-size: 0.875rem;
+}
+
+/* Job footer */
+.job-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.posted-date {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--primary-gray);
+    font-size: 0.875rem;
+}
+
+.job-footer-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.apply-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    background-color: var(--primary-blue);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.apply-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.apply-btn i {
+    font-size: 1rem;
+}
+
+/* No saved jobs */
+.no-saved-jobs {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 3rem;
+    background-color: var(--light-bg);
+    border-radius: 12px;
+    border: 1px solid var(--light-border);
+}
+
+.no-saved-jobs h2 {
+    color: var(--light-text);
+    font-size: 1.5rem;
+    margin: 1rem 0;
+}
+
+.no-saved-jobs p {
+    color: var(--light-secondary);
+    margin-bottom: 1.5rem;
+}
+
+.browse-jobs-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: var(--primary-blue);
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: transform 0.2s ease;
+}
+
+.browse-jobs-btn:hover {
+    transform: translateY(-2px);
+}
+
+/* Dark mode styles */
+body.dark-mode .saved-jobs-header {
+    background-color: var(--dark-secondary-bg);
+    border-color: var(--dark-border);
+}
+
+body.dark-mode .saved-jobs-header h1 {
+    color: var(--dark-text);
+}
+
+body.dark-mode .view-toggle {
+    background-color: var(--dark-secondary-bg);
+    border-color: var(--dark-border);
+}
+
+body.dark-mode .view-btn {
+    color: var(--dark-secondary);
+}
+
+body.dark-mode .job-card {
+    background-color: var(--dark-secondary-bg);
+    border-color: var(--dark-border);
+}
+
+body.dark-mode .job-title {
+    color: var(--dark-text);
+}
+
+body.dark-mode .company-name,
+body.dark-mode .company-info,
+body.dark-mode .posted-date {
+    color: var(--dark-secondary);
+}
+
+body.dark-mode .no-saved-jobs {
+    background-color: var(--dark-secondary-bg);
+    border-color: var(--dark-border);
+}
+
+body.dark-mode .no-saved-jobs h2 {
+    color: var(--dark-text);
+}
+
+body.dark-mode .no-saved-jobs p {
+    color: var(--dark-secondary);
+}
+
+/* Responsive styles */
+@media screen and (max-width: 1200px) {
+    .saved-jobs-grid {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+}
+
+@media screen and (max-width: 768px) {
+    .saved-jobs-container {
+        padding: 1rem;
+    }
+
+    .saved-jobs-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+        padding: 1rem;
+    }
+
+    .saved-jobs-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+
+    .job-card {
+        padding: 1rem;
+    }
+
+    .job-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+        padding-right: 0;
+    }
+
+    .job-logo-container {
+        margin-bottom: 1rem;
+    }
+
+    .job-title-container {
+        text-align: center;
+    }
+
+    .company-info,
+    .job-tags {
+        justify-content: center;
+    }
+
+    .job-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .posted-date {
+        justify-content: center;
+    }
+
+    .job-footer-actions {
+        flex-direction: column;
+    }
+
+    .apply-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .action-btn {
+        top: 0.5rem;
+        right: 0.5rem;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .job-logo-container {
+        width: 80px;
+        height: 80px;
+    }
+
+    .job-title {
+        font-size: 1.1rem;
+    }
+
+    .company-name,
+    .company-info,
+    .tag {
+        font-size: 0.8rem;
+    }
+}

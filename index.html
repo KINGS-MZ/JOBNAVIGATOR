@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>About - Job Navigator</title>
+    <link rel="stylesheet" href="./Styles/Home.css">
+    <link rel="stylesheet" href="./Styles/About.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <script>
+        // Initialize theme before page load to prevent flash
+        const isDark = localStorage.getItem('darkMode') === 'true';
+        document.documentElement.classList.add(isDark ? 'dark-mode' : 'light-mode');
+    </script>
+</head>
+<body class="light-mode">
+    <nav>
+        <div class="nav-container">
+            <div class="logo">
+                <span class="logo-icon">JN</span>
+                <span class="logo-text">Job Navigator</span>
+            </div>
+            
+            <div class="nav-right">
+                <div class="auth-buttons">
+                    <a href="Auth/auth.html" class="btn btn-outline">Sign In</a>
+                    <a href="Auth/auth.html?action=signup" class="btn btn-primary">Sign Up</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="about-container">
+        <section class="hero-section">
+            <div class="hero-content">
+                <h1>Welcome to Job Navigator</h1>
+                <p class="hero-subtitle">Your Gateway to Professional Success at OFPPT</p>
+                <div class="hero-animation">
+                    <lottie-player 
+                        src="https://assets2.lottiefiles.com/packages/lf20_qwl4gi2d.json"
+                        background="transparent"
+                        speed="1"
+                        loop
+                        autoplay>
+                    </lottie-player>
+                </div>
+            </div>
+        </section>
+
+        <section class="features-section">
+            <h2>Why Choose Job Navigator?</h2>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <lottie-player 
+                            src="https://assets9.lottiefiles.com/packages/lf20_w51pcehl.json"
+                            background="transparent"
+                            speed="1"
+                            loop
+                            autoplay>
+                        </lottie-player>
+                    </div>
+                    <h3>Tailored for OFPPT Students</h3>
+                    <p>Specially designed platform for OFPPT trainees to connect with relevant job opportunities and career paths.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <lottie-player 
+                            src="https://assets3.lottiefiles.com/packages/lf20_5tl1xxnz.json"
+                            background="transparent"
+                            speed="1"
+                            loop
+                            autoplay>
+                        </lottie-player>
+                    </div>
+                    <h3>Career Guidance</h3>
+                    <p>Get expert advice and resources to plan your future career path effectively.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <lottie-player 
+                            src="https://assets10.lottiefiles.com/packages/lf20_ydo1amjm.json"
+                            background="transparent"
+                            speed="1"
+                            loop
+                            autoplay>
+                        </lottie-player>
+                    </div>
+                    <h3>Job Matching</h3>
+                    <p>Smart algorithms to match your skills with the perfect job opportunities.</p>
+                </div>
+            </div>
+        </section>
+
+        <section class="mission-section">
+            <div class="mission-content">
+                <div class="mission-text">
+                    <h2>Our Mission</h2>
+                    <p>Connecting OFPPT talent with career opportunities through innovative job matching.</p>
+                    
+                    <div class="mission-details">
+                        <div class="mission-point">
+                            <i class="fas fa-graduation-cap"></i>
+                            <div class="mission-point-content">
+                                <h3>Student Success</h3>
+                                <p>Tailored for OFPPT graduates</p>
+                            </div>
+                        </div>
+                        <div class="mission-point">
+                            <i class="fas fa-handshake"></i>
+                            <div class="mission-point-content">
+                                <h3>Industry Connect</h3>
+                                <p>Direct employer connections</p>
+                            </div>
+                        </div>
+                        <div class="mission-point">
+                            <i class="fas fa-chart-line"></i>
+                            <div class="mission-point-content">
+                                <h3>Career Growth</h3>
+                                <p>Personalized guidance path</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mission-animation">
+                    <lottie-player 
+                        src="https://lottie.host/0ff012fc-c701-433f-b564-e7fcf8791071/AETbzARMcU.json"
+                        background="transparent"
+                        speed="1"
+                        loop
+                        autoplay>
+                    </lottie-player>
+                </div>
+            </div>
+        </section>
+
+        <section class="cta-section">
+            <h2>Ready to Start Your Journey?</h2>
+            <p>Join thousands of OFPPT trainees who have found their dream careers through Job Navigator.</p>
+            <div class="cta-buttons">
+                <a href="Auth/auth.html?action=signup" class="btn btn-primary">Get Started</a>
+                <a href="#learn-more" class="btn btn-outline">Learn More</a>
+            </div>
+        </section>
+    </main>
+
+    <button id="theme-toggle" aria-label="Toggle dark mode">
+        <i class="fas fa-moon"></i>
+    </button>
+
+    <script src="Scripts/About.js"></script>
+</body>
+</html>

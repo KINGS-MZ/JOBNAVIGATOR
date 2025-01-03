@@ -1,0 +1,736 @@
+/* Preview Page Styles */
+:root {
+    --primary-blue: #2563eb;
+    --primary-green: #10b981;
+    --primary-gray: #6b7280;
+    --border-light: rgba(229, 231, 235, 0.2);
+    --light-bg: #f9fafb;
+    --dark-bg: #111827;
+    --light-text: #111827;
+    --dark-text: #f9fafb;
+    --hover-light: #f3f4f6;
+    --hover-dark: #1f2937;
+    --shadow-light: rgba(0, 0, 0, 0.1);
+}
+
+/* Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    min-height: 100vh;
+    background-color: var(--light-bg);
+    color: var(--light-text);
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+/* Theme Modes */
+body.light-mode {
+    background-color: var(--light-bg);
+    color: var(--light-text);
+}
+
+body.dark-mode {
+    background-color: var(--dark-bg);
+    color: var(--dark-text);
+}
+
+/* Navigation Styles */
+nav {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-light);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(8px);
+}
+
+.light-mode nav {
+    background-color: rgba(255, 255, 255, 0.8);
+    box-shadow: 0 1px 3px var(--shadow-light);
+}
+
+.dark-mode nav {
+    background-color: rgba(17, 24, 39, 0.8);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Preview Page Container */
+.preview-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.preview-container {
+    background-color: var(--light-bg);
+    border-radius: 12px;
+    box-shadow: 0 4px 6px var(--shadow-light);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.dark-mode .preview-container {
+    background-color: var(--dark-bg);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Back Section Styles */
+.back-section {
+    margin-bottom: 2rem;
+}
+
+.back-buttons {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.back-button,
+.cancel-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.back-button {
+    background-color: var(--light-bg);
+    border: 1px solid var(--border-light);
+    color: var(--primary-text);
+}
+
+.cancel-button {
+    background-color: #fee2e2;
+    border: 1px solid #fecaca;
+    color: #dc2626;
+}
+
+.dark-mode .back-button {
+    background-color: var(--dark-bg);
+    border-color: var(--dark-border);
+}
+
+.dark-mode .cancel-button {
+    background-color: #7f1d1d;
+    border-color: #991b1b;
+    color: #fecaca;
+}
+
+.back-button:hover {
+    background-color: var(--light-hover);
+}
+
+.cancel-button:hover {
+    background-color: #fecaca;
+}
+
+.dark-mode .back-button:hover {
+    background-color: var(--dark-hover);
+}
+
+.dark-mode .cancel-button:hover {
+    background-color: #991b1b;
+}
+
+.back-button i,
+.cancel-button i {
+    font-size: 1rem;
+}
+
+@media screen and (max-width: 480px) {
+    .back-buttons {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .back-button,
+    .cancel-button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Back Button */
+.back-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: none;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: all 0.3s ease;
+}
+
+.back-button:hover {
+    background-color: var(--hover-light);
+}
+
+.dark-mode .back-button:hover {
+    background-color: var(--hover-dark);
+}
+
+/* Job Header */
+.job-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 2rem;
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.company-info {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+}
+
+#company-logo {
+    width: 80px;
+    height: 80px;
+    border-radius: 12px;
+    object-fit: cover;
+}
+
+.company-details h1 {
+    font-size: 1.8rem;
+    margin-bottom: 0.5rem;
+}
+
+.company-details h2 {
+    font-size: 1.2rem;
+    color: var(--primary-gray);
+    font-weight: normal;
+}
+
+/* Job Actions */
+.job-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.save-job-btn {
+    background: transparent;
+    border: none;
+    padding: 0.5rem;
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: inherit;
+    transition: transform 0.3s ease;
+}
+
+.save-job-btn:hover {
+    transform: scale(1.1);
+}
+
+.save-job-btn i.fas {
+    color: #ef4444;
+}
+
+.delete-job-btn {
+    background: transparent;
+    border: none;
+    padding: 0.5rem;
+    cursor: pointer;
+    font-size: 1.2rem;
+    color: #ef4444;
+    transition: transform 0.3s ease;
+}
+
+.delete-job-btn:hover {
+    transform: scale(1.1);
+}
+
+.delete-job-btn i {
+    color: inherit;
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.action-btn.primary {
+    background-color: var(--primary-blue);
+    color: white;
+    border: none;
+}
+
+.action-btn.primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.share-btn {
+    background: transparent;
+    border: 1px solid var(--primary-gray);
+    color: inherit;
+}
+
+.share-btn:hover {
+    background-color: var(--hover-light);
+}
+
+.dark-mode .share-btn:hover {
+    background-color: var(--hover-dark);
+}
+
+/* Job Details Grid */
+.details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background-color: var(--hover-light);
+    border-radius: 12px;
+}
+
+.dark-mode .details-grid {
+    background-color: var(--hover-dark);
+}
+
+.detail-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.detail-item i {
+    color: var(--primary-blue);
+    font-size: 1.2rem;
+    margin-top: 0.2rem;
+}
+
+.detail-content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.detail-label {
+    color: var(--primary-gray);
+    font-size: 0.9rem;
+}
+
+/* Content Sections */
+.content-section {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background-color: var(--hover-light);
+    border-radius: 12px;
+}
+
+.dark-mode .content-section {
+    background-color: var(--hover-dark);
+}
+
+.content-section h3 {
+    margin-bottom: 1rem;
+    font-size: 1.2rem;
+}
+
+.description-content,
+.requirements-list,
+.benefits-list {
+    line-height: 1.6;
+}
+
+.requirements-list,
+.benefits-list {
+    padding-left: 1.5rem;
+}
+
+.requirements-list li,
+.benefits-list li {
+    margin-bottom: 0.5rem;
+}
+
+/* Application Details */
+.application-details {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.detail-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.application-methods {
+    display: flex;
+    gap: 1rem;
+}
+
+.application-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    text-decoration: none;
+    color: var(--primary-blue);
+    background-color: rgba(37, 99, 235, 0.1);
+    transition: all 0.3s ease;
+}
+
+.application-link:hover {
+    background-color: rgba(37, 99, 235, 0.2);
+}
+
+/* Share Modal */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+}
+
+.modal.active {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background-color: var(--light-bg);
+    border-radius: 12px;
+    padding: 2rem;
+    width: 90%;
+    max-width: 500px;
+    position: relative;
+}
+
+.dark-mode .modal-content {
+    background-color: var(--dark-bg);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.close-modal {
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: inherit;
+}
+
+.share-url-container {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+}
+
+#share-url {
+    flex: 1;
+    padding: 0.75rem;
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    background-color: var(--hover-light);
+    color: inherit;
+}
+
+.dark-mode #share-url {
+    background-color: var(--hover-dark);
+}
+
+#copy-link-btn {
+    padding: 0.75rem 1rem;
+    background-color: var(--primary-blue);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+#copy-link-btn:hover {
+    background-color: var(--primary-blue-hover);
+}
+
+.share-options {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+}
+
+.share-option {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    border: 1px solid var(--border-light);
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.share-option:hover {
+    background-color: var(--hover-light);
+    transform: translateY(-2px);
+}
+
+.dark-mode .share-option:hover {
+    background-color: var(--hover-dark);
+}
+
+/* Confirmation Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+}
+
+.modal.active {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 1;
+}
+
+.modal[data-animation='in'] {
+    animation: fadeIn 0.3s ease-in-out forwards;
+}
+
+.modal[data-animation='out'] {
+    animation: fadeOut 0.3s ease-in-out forwards;
+}
+
+.modal-content {
+    background-color: var(--bg-color);
+    border-radius: 8px;
+    padding: 0;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transform: scale(0.7);
+    opacity: 0;
+    animation: modalIn 0.3s ease-out forwards;
+}
+
+.modal-header {
+    padding: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: var(--text-color);
+    font-size: 1.25rem;
+}
+
+.close-button {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-color);
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.close-button:hover {
+    background-color: var(--hover-color);
+}
+
+.modal-body {
+    padding: 1.5rem;
+    color: var(--text-color);
+}
+
+.modal-footer {
+    padding: 1rem;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+}
+
+.cancel-btn,
+.delete-btn {
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.cancel-btn {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
+.delete-btn {
+    background-color: #dc3545;
+    color: white;
+}
+
+.cancel-btn:hover {
+    background-color: var(--hover-color);
+}
+
+.delete-btn:hover {
+    background-color: #c82333;
+}
+
+/* Toast Notifications */
+.toast {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    padding: 1rem;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: white;
+    animation: slideIn 0.3s ease-out forwards;
+    z-index: 1000;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+.toast.success {
+    background-color: #28a745;
+}
+
+.toast.error {
+    background-color: #dc3545;
+}
+
+.toast i {
+    font-size: 1.25rem;
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes fadeOut {
+    from {
+        opacity: 1;
+    }
+    to {
+        opacity: 0;
+    }
+}
+
+@keyframes modalIn {
+    from {
+        transform: scale(0.7);
+        opacity: 0;
+    }
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .preview-page {
+        padding: 1rem;
+    }
+
+    .preview-container {
+        padding: 1rem;
+    }
+
+    .job-header {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .job-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .details-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .share-options {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Footer */
+footer {
+    text-align: center;
+    padding: 2rem;
+    color: var(--primary-gray);
+}
+
+footer i {
+    color: #ef4444;
+}
