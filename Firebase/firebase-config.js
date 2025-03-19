@@ -1,4 +1,8 @@
-// Your web app's Firebase configuration
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js';
+import { getAuth } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
+import { getFirestore, collection, addDoc, query, where, getDocs, doc, getDoc } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js';
+
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyCb-WQn8hxetYE2wWMQ37y7vRAKl0hFbkI",
   authDomain: "jobnav-799f0.firebaseapp.com",
@@ -11,14 +15,8 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-}
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-const auth = firebase.auth();
-
-// Set default persistence to LOCAL
-auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
-
-// Export auth instance
-window.auth = auth;
+export { auth, app, db, collection, addDoc, query, where, getDocs, doc, getDoc };

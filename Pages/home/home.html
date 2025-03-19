@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Navigator</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="../../Assets/navbar/nav.css">
+    <link rel="stylesheet" href="home.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav>
+        <div class="nav-container">
+            <div class="logo">
+                <span class="logo-icon">JN</span>
+                <span class="logo-text">Job Navigator</span>
+            </div>
+            
+            <div class="nav-right">
+                <button id="theme-toggle" aria-label="Toggle dark mode">
+                    <i class="fas fa-moon"></i>
+                </button>
+                
+                <div class="user-menu">
+                    <button id="user-menu-btn" class="user-btn" aria-label="User menu" type="button">
+                        <div class="user-avatar">
+                            <img id="avatar-image" alt="Profile picture" style="display: none;">
+                            <div class="avatar-initials" id="avatar-initials">JN</div>
+                        </div>
+                    </button>
+                    <div class="dropdown-menu" id="user-dropdown">
+                        <div class="dropdown-header">
+                            <div class="user-avatar">
+                                <img id="avatar-image-dropdown" alt="Profile picture" style="display: none;">
+                                <div class="avatar-initials" id="avatar-initials-dropdown">JN</div>
+                            </div>
+                            <div class="user-info">
+                                <span id="user-name">Guest User</span>
+                                <span id="user-email">guest@example.com</span>
+                            </div>
+                        </div>
+                        
+                        <div class="menu-sections">
+                            <a href="../jobs/Applications.html">
+                                <i class="fas fa-briefcase"></i>
+                                Applications
+                                <span class="badge">0</span>
+                            </a>
+                            <div class="menu-divider"></div>
+                            <a href="../auth/login.html" class="sign-in-link">
+                                <i class="fas fa-sign-in-alt"></i>
+                                Sign In
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <section class="search-section">
+            <h1>Find Your Next Career Opportunity</h1>
+            
+            <div class="search-container">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="job-search" placeholder="Job title, keywords, or company">
+                </div>
+                
+                <div class="search-box">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <input type="text" id="location-search" placeholder="City, state, or remote">
+                </div>
+                
+                <button onclick="window.location.href = '../jobs/jobs.html'" id="search-btn">Search Jobs</button>
+            </div>
+ 
+            <div class="filters">
+                <select id="job-type" class="filter-select">
+                    <option value="">Job Type</option>
+                    <option value="full-time">Full Time</option>
+                    <option value="part-time">Part Time</option>
+                    <option value="contract">Contract</option>
+                    <option value="remote">Remote</option>
+                </select>
+
+                <select id="salary-range" class="filter-select">
+                    <option value="">Salary Range</option>
+                    <option value="0-30">$0-30k</option>
+                    <option value="30-60">$30-60k</option>
+                    <option value="60-90">$60-90k</option>
+                    <option value="90+">$90k+</option>
+                </select>
+            </div>
+        </section>
+
+        <section class="quick-links">
+            <h2>Popular Searches</h2>
+            <div class="tags">
+                <button class="tag">Remote Jobs</button>
+                <button class="tag">Tech</button>
+                <button class="tag">Healthcare</button>
+                <button class="tag">Marketing</button>
+                <button class="tag">Sales</button>
+                <button class="tag">Engineering</button>
+                <button class="tag">Design</button>
+                <button class="tag">Education</button>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p> 2024 All Rights Reserved to IMAD EL KHAIDER</p>
+    </footer>
+
+    <div class="floating-menu">
+        <button class="menu-btn">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div class="menu-items">
+            <a href="home.html" class="menu-item home-btn active">
+                <i class="fas fa-home"></i>
+            </a>
+            <a href="../jobs/jobs.html" class="menu-item jobs-btn">
+                <i class="fas fa-briefcase"></i>
+            </a>
+            <a href="../posts/posts.html" class="menu-item posts-btn">
+                <i class="fas fa-plus-circle"></i>
+            </a>
+            <a href="../settings/settings.html" class="menu-item settings-btn">
+                <i class="fas fa-cog"></i>
+            </a>
+        </div>
+    </div>
+
+    <!-- Firebase SDK -->
+    <!-- <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script> -->
+    <!-- Use a specific version of Lottie player instead of latest -->
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@1.7.1/dist/lottie-player.js"></script>
+    <!-- Firebase Config -->
+    <!-- <script src="../Firebase/firebase-config.js"></script> -->
+    <!-- Main JavaScript -->
+    <script type="module" src="home.js"></script>
+</body>
+</html>

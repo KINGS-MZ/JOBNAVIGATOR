@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Post - Job Navigator</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="posts.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <div class="logo">
+                <span class="logo-icon">JN</span>
+                <span class="logo-text">Job Navigator</span>
+            </div>
+            
+            <div class="nav-right">
+                <button id="theme-toggle" aria-label="Toggle dark mode">
+                    <i class="fas fa-moon"></i>
+                </button>
+                
+                <div class="user-menu">
+                    <button id="user-menu-btn" class="user-btn" aria-label="User menu" type="button">
+                        <div class="user-avatar">
+                            <img id="avatar-image" alt="Profile picture" style="display: none;">
+                            <div class="avatar-initials" id="avatar-initials">JN</div>
+                        </div>
+                    </button>
+                    <div class="dropdown-menu" id="user-dropdown">
+                        <div class="dropdown-header">
+                            <div class="user-avatar">
+                                <img id="avatar-image-dropdown" alt="Profile picture" style="display: none;">
+                                <div class="avatar-initials" id="avatar-initials-dropdown">JN</div>
+                            </div>
+                            <div class="user-info">
+                                <span id="user-name">Guest User</span>
+                                <span id="user-email">guest@example.com</span>
+                            </div>
+                        </div>
+                        
+                        <div class="menu-sections">
+                            <a href="SavedJobs.html">
+                                <i class="fas fa-heart"></i>
+                                Saved Jobs
+                                <span class="badge">4</span>
+                            </a>
+                            <a href="Applications.html">
+                                <i class="fas fa-briefcase"></i>
+                                Applications
+                                <span class="badge">2</span>
+                            </a>
+                            <a href="JobAlerts.html">
+                                <i class="fas fa-bell"></i>
+                                Job Alerts
+                                <span class="badge active">3</span>
+                            </a>
+                            <div class="menu-divider"></div>
+                            <a href="Profile.html">
+                                <i class="fas fa-user"></i>
+                                My Profile
+                            </a>
+                            <a href="Resume.html">
+                                <i class="fas fa-file-alt"></i>
+                                My Resume
+                            </a>
+                            <a href="Settings.html">
+                                <i class="fas fa-cog"></i>
+                                Settings
+                            </a>
+                            <div class="menu-divider"></div>
+                            <a href="#" id="logout-link" class="logout-link">
+                                <i class="fas fa-sign-out-alt"></i>
+                                Sign Out
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <main class="main-content">
+        <div class="posts-container">
+                <div class="section-header">
+                <h2>Create a New Post</h2>
+                <p>Share opportunities with the community</p>
+                </div>
+
+            <form class="post-form" id="postForm">
+                <!-- Main Form Content -->
+                <div class="form-main">
+                    <div class="form-group">
+                        <label for="jobTitle">Job Title</label>
+                        <div class="title-with-icon">
+                            <div class="icon-selector">
+                                <button type="button" class="selected-icon" id="iconSelector">
+                                    <i class="fas fa-briefcase"></i>
+                                </button>
+                                <div class="icon-dropdown" id="iconDropdown">
+                                    <div class="icon-grid">
+                                        <button type="button" data-icon="fa-briefcase"><i class="fas fa-briefcase"></i></button>
+                                        <button type="button" data-icon="fa-code"><i class="fas fa-code"></i></button>
+                                        <button type="button" data-icon="fa-paint-brush"><i class="fas fa-paint-brush"></i></button>
+                                        <button type="button" data-icon="fa-chart-line"><i class="fas fa-chart-line"></i></button>
+                                        <button type="button" data-icon="fa-bullhorn"><i class="fas fa-bullhorn"></i></button>
+                                        <button type="button" data-icon="fa-camera"><i class="fas fa-camera"></i></button>
+                                        <button type="button" data-icon="fa-pencil-alt"><i class="fas fa-pencil-alt"></i></button>
+                                        <button type="button" data-icon="fa-cog"><i class="fas fa-cog"></i></button>
+                                        <button type="button" data-icon="fa-users"><i class="fas fa-users"></i></button>
+                                        <button type="button" data-icon="fa-desktop"><i class="fas fa-desktop"></i></button>
+                                        <button type="button" data-icon="fa-mobile-alt"><i class="fas fa-mobile-alt"></i></button>
+                                        <button type="button" data-icon="fa-database"><i class="fas fa-database"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <input type="text" id="jobTitle" placeholder="e.g. Senior Software Engineer" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group half-width">
+                            <label for="companyName">Company Name</label>
+                            <input type="text" id="companyName" placeholder="e.g. Tech Solutions Inc." required>
+                        </div>
+                        <div class="form-group half-width">
+                            <label for="location">Location</label>
+                            <input type="text" id="location" placeholder="e.g. New York, NY or Remote" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group half-width">
+                            <label for="employmentType">Employment Type</label>
+                            <select id="employmentType" required>
+                                <option value="">Select job type</option>
+                                <option value="Full-time">Full-time</option>
+                                <option value="Part-time">Part-time</option>
+                                <option value="Contract">Contract</option>
+                                <option value="Internship">Internship</option>
+                                <option value="Freelance">Freelance</option>
+                            </select>
+                        </div>
+                        <div class="form-group half-width">
+                            <label for="companyEmail">Company Email</label>
+                            <input type="email" id="companyEmail" placeholder="e.g. careers@company.com" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group half-width">
+                            <label for="salaryMin">Minimum Salary</label>
+                            <input type="number" id="salaryMin" placeholder="e.g. 50000">
+                        </div>
+                        <div class="form-group half-width">
+                            <label for="salaryMax">Maximum Salary</label>
+                            <input type="number" id="salaryMax" placeholder="e.g. 80000">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="jobDescription">Job Description</label>
+                        <div class="job-description">
+                            <div class="description-editor">
+                                <div class="editor-toolbar">
+                                    <div class="editor-toolbar-group">
+                                        <button type="button" data-command="bold" title="Bold"><i class="fas fa-bold"></i></button>
+                                        <button type="button" data-command="italic" title="Italic"><i class="fas fa-italic"></i></button>
+                                        <button type="button" data-command="underline" title="Underline"><i class="fas fa-underline"></i></button>
+                                    </div>
+                                    <div class="editor-toolbar-group">
+                                        <button type="button" data-command="h2" title="Heading"><i class="fas fa-heading"></i></button>
+                                        <button type="button" data-command="p" title="Paragraph"><i class="fas fa-paragraph"></i></button>
+                                    </div>
+                                    <div class="editor-toolbar-group">
+                                        <button type="button" data-command="ul" title="Bullet List"><i class="fas fa-list-ul"></i></button>
+                                        <button type="button" data-command="ol" title="Numbered List"><i class="fas fa-list-ol"></i></button>
+                                    </div>
+                                    <div class="editor-toolbar-group">
+                                        <button type="button" data-command="link" title="Insert Link"><i class="fas fa-link"></i></button>
+                                        <button type="button" data-command="code" title="Code Block"><i class="fas fa-code"></i></button>
+                                        <button type="button" data-command="quote" title="Quote"><i class="fas fa-quote-right"></i></button>
+                                    </div>
+                                </div>
+                                <div class="editor-content" id="jobDescription" contenteditable="true" placeholder="Enter the job description, requirements, and any additional information..." required></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar Content -->
+                <div class="form-sidebar">
+                    <div class="form-group">
+                        <label>Media Attachments</label>
+                        <div class="media-upload-section">
+                            <div class="upload-container">
+                                <div class="image-upload-area" id="imageUpload">
+                                    <div class="upload-content">
+                                        <i class="fas fa-images"></i>
+                                        <h3>Upload Images</h3>
+                                        <p>Drag and drop images here or click to browse</p>
+                                        <span class="file-info">Supported formats: JPG, PNG, GIF (Max: 5MB)</span>
+                                    </div>
+                                    <input type="file" id="imageInput" accept="image/*" multiple hidden>
+                                </div>
+                                <div class="uploaded-images" id="uploadedImages"></div>
+                            </div>
+
+                            <div class="upload-container">
+                                <div class="pdf-upload-area" id="pdfUpload">
+                                    <div class="upload-content">
+                                        <i class="fas fa-file-pdf"></i>
+                                        <h3>Upload PDF Documents</h3>
+                                        <p>Drag and drop PDF files here or click to browse</p>
+                                        <span class="file-info">PDF files only (Max: 10MB)</span>
+                                    </div>
+                                    <input type="file" id="pdfInput" accept=".pdf" multiple hidden>
+                                </div>
+                                <div class="uploaded-pdfs" id="uploadedPdfs"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="skillInput">Skills & Requirements</label>
+                        <div class="tags-input-container">
+                            <div class="tags-input">
+                                <input type="text" id="skillInput" placeholder="Type and press Enter to add skills">
+                            </div>
+                            <div id="skillsContainer" class="tags-container"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="benefitInput">Benefits</label>
+                        <div class="tags-input-container">
+                            <div class="tags-input">
+                                <input type="text" id="benefitInput" placeholder="Type and press Enter to add benefits">
+                            </div>
+                            <div id="benefitsContainer" class="tags-container"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary">
+                        <i class="fas fa-save"></i>
+                        Save Draft
+                    </button>
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-paper-plane"></i>
+                        Publish
+                    </button>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p> 2024 All Rights Reserved to IMAD EL KHAIDER</p>
+    </footer>
+
+    <script type="module" src="posts.js"></script>
+</body>
+</html>
