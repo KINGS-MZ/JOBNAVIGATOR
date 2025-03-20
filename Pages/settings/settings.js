@@ -322,7 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
         logoutLink.addEventListener('click', (event) => {
             event.preventDefault();
             firebase.auth().signOut().then(() => {
-                window.location.href = '../../index.html';
+                window.location.href = '../login/login.html';
             }).catch((error) => {
                 console.error('Error signing out:', error);
             });

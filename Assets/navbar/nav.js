@@ -107,9 +107,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     Applications
                     <span class="badge">0</span>
                 </a>
-                <a href="../jobs/JobAlerts.html">
+                <a href="../notifications/notifications.html">
                     <i class="fas fa-bell"></i>
-                    Job Alerts
+                    Notifications
                     <span class="badge active">0</span>
                 </a>
                 <div class="menu-divider"></div>
@@ -138,7 +138,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 logoutLink.addEventListener('click', (e) => {
                     e.preventDefault();
                     auth.signOut().then(() => {
-                        window.location.href = '../home/home.html';
+                        window.location.href = '../login/login.html';
                     }).catch((error) => {
                         console.error('Error signing out:', error);
                     });

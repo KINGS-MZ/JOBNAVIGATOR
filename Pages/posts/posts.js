@@ -427,7 +427,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 await signOut(auth);
                 // Redirect to login page after successful sign out
-                window.location.href = '/Pages/login/login.html';
+                window.location.href = '../login/login.html';
             } catch (error) {
                 console.error('Error signing out:', error);
             }

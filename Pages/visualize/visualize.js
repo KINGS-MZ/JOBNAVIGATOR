@@ -26,15 +26,149 @@ document.addEventListener('click', (e) => {
     }
 });
 
+// Force the user icon to show instead of initials
+function forceUserIcon() {
+    const avatarInitials = document.getElementById('avatar-initials');
+    const avatarInitialsDropdown = document.getElementById('avatar-initials-dropdown');
+    
+    // For main avatar
+    if (avatarInitials) {
+        // Completely replace with icon
+        avatarInitials.innerHTML = '<i class="fa-solid fa-circle-user"></i>';
+        avatarInitials.style.display = 'flex';
+        
+        // Add a class to identify this as using an icon
+        avatarInitials.classList.add('using-icon');
+    }
+    
+    // For dropdown avatar
+    if (avatarInitialsDropdown) {
+        // Completely replace with icon
+        avatarInitialsDropdown.innerHTML = '<i class="fa-solid fa-circle-user"></i>';
+        avatarInitialsDropdown.style.display = 'flex';
+        
+        // Add a class to identify this as using an icon
+        avatarInitialsDropdown.classList.add('using-icon');
+    }
+}
+
+// Set up a MutationObserver to ensure the user icon is always displayed
+function setupMutationObserver() {
+    const avatarInitials = document.getElementById('avatar-initials');
+    const avatarInitialsDropdown = document.getElementById('avatar-initials-dropdown');
+    
+    // Options for the observer (which mutations to observe)
+    const config = { childList: true, subtree: true, characterData: true };
+    
+    // Callback function to execute when mutations are observed
+    const callback = function(mutationsList) {
+        for(const mutation of mutationsList) {
+            if (mutation.type === 'childList' || mutation.type === 'characterData') {
+                // Check if our icon is still present
+                const hasIcon = mutation.target.querySelector('.fa-circle-user');
+                if (!hasIcon) {
+                    console.log('Avatar was changed, forcing user icon again');
+                    forceUserIcon();
+                }
+            }
+        }
+    };
+    
+    // Create observers for both avatar elements
+    if (avatarInitials) {
+        const observer = new MutationObserver(callback);
+        observer.observe(avatarInitials, config);
+    }
+    
+    if (avatarInitialsDropdown) {
+        const observer = new MutationObserver(callback);
+        observer.observe(avatarInitialsDropdown, config);
+    }
+}
+
+// Call it once immediately
+forceUserIcon();
+
+// Set up the observer to keep monitoring for changes
+setupMutationObserver();
+
+// Call it again after a short delay to ensure it's not overridden
+setTimeout(forceUserIcon, 100);
+
+// Also set an interval to periodically check and force the icon if needed
+// This is a fallback in case the mutation observer doesn't catch everything
+const intervalId = setInterval(() => {
+    const avatarInitials = document.getElementById('avatar-initials');
+    const avatarInitialsDropdown = document.getElementById('avatar-initials-dropdown');
+    
+    if (avatarInitials && !avatarInitials.querySelector('.fa-circle-user')) {
+        console.log('Periodic check: Avatar icon missing, restoring');
+        forceUserIcon();
+    }
+    
+    if (avatarInitialsDropdown && !avatarInitialsDropdown.querySelector('.fa-circle-user')) {
+        console.log('Periodic check: Dropdown avatar icon missing, restoring');
+        forceUserIcon();
+    }
+}, 500);
+
 // Handle authentication state
 onAuthStateChanged(auth, (user) => {
     console.log('Auth state changed:', user);
+    const menuSections = document.querySelector('.menu-sections');
+    
+    // Get avatar elements
+    const avatarInitials = document.getElementById('avatar-initials');
+    const avatarInitialsDropdown = document.getElementById('avatar-initials-dropdown');
+    const avatarImage = document.getElementById('avatar-image');
+    const avatarImageDropdown = document.getElementById('avatar-image-dropdown');
     
     if (user) {
         // User is signed in
         const displayName = user.displayName || 'User';
         const email = user.email;
         
+        // Update user info in the dropdown
+        const userNameElement = document.getElementById('user-name');
+        const userEmailElement = document.getElementById('user-email');
+        
+        if (userNameElement && user.displayName) {
+            userNameElement.textContent = user.displayName;
+        }
+        
+        if (userEmailElement && user.email) {
+            userEmailElement.textContent = user.email;
+        }
+
+        // Handle profile picture
+        if (user.photoURL) {
+            // User has a profile picture
+            if (avatarImage) {
+                avatarImage.src = user.photoURL;
+                avatarImage.style.display = 'block';
+            }
+            if (avatarImageDropdown) {
+                avatarImageDropdown.src = user.photoURL;
+                avatarImageDropdown.style.display = 'block';
+            }
+            if (avatarInitials) {
+                avatarInitials.style.display = 'none';
+            }
+            if (avatarInitialsDropdown) {
+                avatarInitialsDropdown.style.display = 'none';
+            }
+        } else {
+            // Force user icon for signed-in users without profile pictures
+            if (avatarImage) avatarImage.style.display = 'none';
+            if (avatarImageDropdown) avatarImageDropdown.style.display = 'none';
+            
+            // Force user icon
+            forceUserIcon();
+            
+            // Call it again after a short delay to ensure it's not overridden
+            setTimeout(forceUserIcon, 100);
+        }
+
         // Update menu sections for signed-in user
         menuSections.innerHTML = `
             <a href="../jobs/SavedJobs.html">
@@ -47,9 +181,9 @@ onAuthStateChanged(auth, (user) => {
                 Applications
                 <span class="badge">0</span>
             </a>
-            <a href="../jobs/JobAlerts.html">
+            <a href="../notifications/notifications.html">
                 <i class="fas fa-bell"></i>
-                Job Alerts
+                Notifications
                 <span class="badge active">0</span>
             </a>
             <div class="menu-divider"></div>
@@ -84,15 +218,15 @@ onAuthStateChanged(auth, (user) => {
         });
     } else {
         // Guest user - update avatar and menu
-        const avatarInitials = document.getElementById('avatar-initials');
-        const avatarInitialsDropdown = document.getElementById('avatar-initials-dropdown');
+        // Force default user icon for guest users
+        if (avatarImage) avatarImage.style.display = 'none';
+        if (avatarImageDropdown) avatarImageDropdown.style.display = 'none';
         
-        if (avatarInitials) {
-            avatarInitials.innerHTML = '<i class="fa-solid fa-circle-user"></i>';
-        }
-        if (avatarInitialsDropdown) {
-            avatarInitialsDropdown.innerHTML = '<i class="fa-solid fa-circle-user"></i>';
-        }
+        // Force user icon
+        forceUserIcon();
+        
+        // Call it again after a short delay to ensure it's not overridden
+        setTimeout(forceUserIcon, 100);
 
         // Update user info for guest
         const userName = document.getElementById('user-name');
@@ -106,14 +240,12 @@ onAuthStateChanged(auth, (user) => {
         }
 
         // Update menu sections for guest user
-        if (menuSections) {
-            menuSections.innerHTML = `
-                <a href="../login/login.html" class="sign-in-link">
-                    <i class="fas fa-sign-in-alt"></i>
-                    Sign In
-                </a>
-            `;
-        }
+        menuSections.innerHTML = `
+            <a href="../login/login.html" class="sign-in-link">
+                <i class="fas fa-sign-in-alt"></i>
+                Sign In
+            </a>
+        `;
     }
     
     // Load job details regardless of auth state
@@ -441,4 +573,4 @@ toastSignIn.addEventListener('click', () => {
 toastSignUp.addEventListener('click', () => {
     const currentPage = encodeURIComponent(window.location.href);
     window.location.href = `../login/login.html?redirect=${currentPage}&section=signup`;
-});
+});// Force refresh trigger

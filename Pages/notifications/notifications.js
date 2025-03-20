@@ -150,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
         logoutLink.addEventListener('click', (event) => {
             event.preventDefault();
             auth.signOut().then(() => {
-                window.location.href = '/Pages/login/login.html';
+                window.location.href = '../login/login.html';
             }).catch((error) => {
                 console.error('Error signing out:', error);
             });

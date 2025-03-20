@@ -88,13 +88,13 @@ onAuthStateChanged(auth, (user) => {
                     Applications
                     <span class="badge">2</span>
                 </a>
-                <a href="JobAlerts.html">
+                <a href="../notifications/notifications.html">
                     <i class="fas fa-bell"></i>
-                    Job Alerts
+                    Notifications
                     <span class="badge active">3</span>
                 </a>
                 <div class="menu-divider"></div>
-                <a href="Profile.html">
+                <a href="../profile/Profile.html">
                     <i class="fas fa-user"></i>
                     My Profile
                 </a>
@@ -102,7 +102,7 @@ onAuthStateChanged(auth, (user) => {
                     <i class="fas fa-file-alt"></i>
                     My Resume
                 </a>
-                <a href="Settings.html">
+                <a href="../settings/settings.html">
                     <i class="fas fa-cog"></i>
                     Settings
                 </a>
@@ -119,7 +119,7 @@ onAuthStateChanged(auth, (user) => {
                 logoutLink.addEventListener('click', (event) => {
                     event.preventDefault();
                     auth.signOut().then(() => {
-                        window.location.href = '/Pages/login/login.html';
+                        window.location.href = '../login/login.html';
                     }).catch((error) => {
                         console.error('Error signing out:', error);
                     });
@@ -568,7 +568,7 @@ document.addEventListener('DOMContentLoaded', () => {
         logoutLink.addEventListener('click', (event) => {
             event.preventDefault();
             auth.signOut().then(() => {
-                window.location.href = '/Pages/login/login.html';
+                window.location.href = '../login/login.html';
             }).catch((error) => {
                 console.error('Error signing out:', error);
             });
