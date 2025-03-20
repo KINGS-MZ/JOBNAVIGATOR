@@ -14,16 +14,40 @@ document.addEventListener('DOMContentLoaded', () => {
     const menuSections = document.querySelector('.menu-sections');
     const signInLink = document.querySelector('.sign-in-link');
 
+    // Initialize guest state
+    avatarImage.style.display = 'none';
+    avatarImageDropdown.style.display = 'none';
+    avatarInitials.style.display = 'flex';
+    avatarInitialsDropdown.style.display = 'flex';
+    avatarInitials.textContent = '';  // Clear any existing content
+    avatarInitialsDropdown.textContent = '';  // Clear any existing content
+    const guestIcon = document.createElement('i');
+    guestIcon.className = 'fa-solid fa-circle-user';
+    const guestIconDropdown = document.createElement('i');
+    guestIconDropdown.className = 'fa-solid fa-circle-user';
+    avatarInitials.appendChild(guestIcon);
+    avatarInitialsDropdown.appendChild(guestIconDropdown);
+    userName.textContent = 'Welcome';
+    userEmail.textContent = 'Sign in to access your account';
+
     // Theme toggle functionality
     themeToggle.addEventListener('click', () => {
-        document.body.classList.toggle('dark-mode');
-        localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+        const isDarkMode = document.body.classList.contains('dark-mode');
+        if (isDarkMode) {
+            document.body.classList.remove('dark-mode');
+            localStorage.setItem('theme', 'light');
+        } else {
+            document.body.classList.add('dark-mode');
+            localStorage.setItem('theme', 'dark');
+        }
     });
 
-    // Check for saved theme preference
-    const savedTheme = localStorage.getItem('theme');
+    // Check for saved theme preference and set initial state
+    const savedTheme = localStorage.getItem('theme') || 'light';
     if (savedTheme === 'dark') {
         document.body.classList.add('dark-mode');
+    } else {
+        document.body.classList.remove('dark-mode');
     }
 
     // User menu dropdown toggle
@@ -122,24 +146,28 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else {
             // User is signed out
-            userName.textContent = 'Guest User';
-            userEmail.textContent = 'guest@example.com';
+            userName.textContent = 'Welcome';
+            userEmail.textContent = 'Sign in to access your account';
+            
+            // Reset avatar images
             avatarImage.style.display = 'none';
             avatarImageDropdown.style.display = 'none';
+            
+            // Show avatar initials containers with user icon
             avatarInitials.style.display = 'flex';
             avatarInitialsDropdown.style.display = 'flex';
-            avatarInitials.textContent = 'JN';
-            avatarInitialsDropdown.textContent = 'JN';
+            avatarInitials.textContent = '';  // Clear any existing content
+            avatarInitialsDropdown.textContent = '';  // Clear any existing content
+            const guestIcon = document.createElement('i');
+            guestIcon.className = 'fa-solid fa-circle-user';
+            const guestIconDropdown = document.createElement('i');
+            guestIconDropdown.className = 'fa-solid fa-circle-user';
+            avatarInitials.appendChild(guestIcon);
+            avatarInitialsDropdown.appendChild(guestIconDropdown);
 
             // Update menu sections for guest user
             menuSections.innerHTML = `
-                <a href="../jobs/Applications.html">
-                    <i class="fas fa-briefcase"></i>
-                    Applications
-                    <span class="badge">0</span>
-                </a>
-                <div class="menu-divider"></div>
-                <a href="../auth/login.html" class="sign-in-link">
+                <a href="../login/login.html" class="sign-in-link">
                     <i class="fas fa-sign-in-alt"></i>
                     Sign In
                 </a>

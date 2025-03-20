@@ -1,4 +1,28 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Theme functionality
+    const html = document.documentElement;
+    const body = document.body;
+    const themeToggle = document.getElementById('theme-toggle');
+    const sunIcon = themeToggle.querySelector('.fa-sun');
+    const moonIcon = themeToggle.querySelector('.fa-moon');
+
+    // Check for saved theme preference
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        html.classList.add('dark-mode');
+        body.classList.add('dark-mode');
+    }
+
+    // Theme toggle functionality
+    themeToggle.addEventListener('click', () => {
+        html.classList.toggle('dark-mode');
+        body.classList.toggle('dark-mode');
+        
+        // Save theme preference
+        const isDarkMode = html.classList.contains('dark-mode');
+        localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+    });
+
     // Animate statistics numbers
     const stats = document.querySelectorAll('.stat-number');
     

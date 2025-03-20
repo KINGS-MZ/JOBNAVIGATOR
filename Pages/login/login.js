@@ -329,5 +329,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // Handle form section switching based on URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const section = urlParams.get('section');
+    
+    if (section === 'signup') {
+        document.getElementById('loginSection').classList.remove('active');
+        document.getElementById('signupSection').classList.add('active');
+    }
 });
 

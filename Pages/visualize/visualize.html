@@ -22,46 +22,42 @@
             
             <div class="nav-right">
                 <button id="theme-toggle" aria-label="Toggle dark mode">
-                    <i class="fas fa-sun"></i>
                     <i class="fas fa-moon"></i>
+                    <i class="fas fa-sun"></i>
                 </button>
                 
                 <div class="user-menu">
                     <button id="user-menu-btn" class="user-btn" aria-label="User menu" type="button">
                         <div class="user-avatar">
                             <img id="avatar-image" alt="Profile picture" style="display: none;">
-                            <div class="avatar-initials" id="avatar-initials">JN</div>
+                            <div class="avatar-initials" id="avatar-initials"></div>
                         </div>
                     </button>
                     <div class="dropdown-menu" id="user-dropdown">
                         <div class="dropdown-header">
                             <div class="user-avatar">
                                 <img id="avatar-image-dropdown" alt="Profile picture" style="display: none;">
-                                <div class="avatar-initials" id="avatar-initials-dropdown">JN</div>
+                                <div class="avatar-initials" id="avatar-initials-dropdown"></div>
                             </div>
                             <div class="user-info">
                                 <span id="user-name">Guest User</span>
                                 <span id="user-email">guest@example.com</span>
                             </div>
                         </div>
-                        
                         <div class="menu-sections">
-                            <a href="../jobs/Applications.html">
-                                <i class="fas fa-briefcase"></i>
-                                Applications
-                                <span class="badge">0</span>
-                            </a>
-                            <div class="menu-divider"></div>
-                            <a href="../auth/login.html" class="sign-in-link">
-                                <i class="fas fa-sign-in-alt"></i>
-                                Sign In
-                            </a>
+                            <!-- Menu items will be populated by JavaScript -->
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </nav>
+
+    <!-- Back Button -->
+    <button onclick="window.location.href='../jobs/jobs.html'" class="back-button">
+        <i class="fas fa-arrow-left"></i>
+        Back
+    </button>
 
     <!-- Main Content -->
     <main class="job-details-container">
@@ -175,6 +171,29 @@
             <p>Error loading job details. Please try again later.</p>
         </div>
     </main>
+
+    <!-- Toast Dialog -->
+    <div class="toast-overlay" id="toastOverlay"></div>
+    <div class="toast-container" id="toastDialog">
+        <button class="toast-close" id="toastClose" aria-label="Close dialog">
+            <i class="fas fa-times"></i>
+        </button>
+        <div class="toast-header">
+            <div class="toast-logo">JN</div>
+            <h3 class="toast-title">Sign in Required</h3>
+        </div>
+        <p class="toast-message">You need to be signed in to perform this action. Please sign in or create an account to continue.</p>
+        <div class="toast-actions">
+            <button class="toast-btn toast-btn-primary" id="toastSignIn">
+                <i class="fas fa-right-to-bracket"></i>
+                Sign In
+            </button>
+            <button class="toast-btn toast-btn-secondary" id="toastSignUp">
+                <i class="fas fa-user-plus"></i>
+                Sign Up
+            </button>
+        </div>
+    </div>
 
     <!-- Footer -->
     <footer class="footer">

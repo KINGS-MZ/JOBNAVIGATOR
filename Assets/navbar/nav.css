@@ -41,59 +41,56 @@ body.dark-mode {
 }
 
 .nav-container {
-    max-width: 1280px;
+    width: 100%;
     margin: 0 auto;
-    padding: 0 1.5rem;
+    padding: 0 2rem;
     height: 100%;
     display: flex;
     justify-content: space-between;
     align-items: center;
 }
 
-.nav-left {
+.logo {
     display: flex;
     align-items: center;
+    gap: 0.75rem;
+    margin-right: auto;
 }
 
 .nav-right {
     display: flex;
     align-items: center;
-    gap: 1.25rem;
-}
-
-.logo {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
+    margin-left: auto;
+    gap: 1.5rem;
 }
 
 .logo-icon {
-    background: var(--primary-blue);
-    color: var(--text-light);
     width: 2.5rem;
     height: 2.5rem;
+    background: var(--primary-blue);
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 8px;
-    font-weight: 600;
+    color: var(--text-light);
+    font-weight: 700;
     font-size: 1.1rem;
-    transition: all 0.3s ease;
+    font-family: 'Space Grotesk', sans-serif;
+}
+
+.logo-text {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--primary-blue);
 }
 
 .dark-mode .logo-icon {
     background: var(--primary-green);
 }
 
-.logo-text {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--text-dark);
-    font-family: 'Space Grotesk', sans-serif;
-}
-
 .dark-mode .logo-text {
-    color: var(--text-light);
+    color: var(--primary-green);
 }
 
 .nav-logo {
@@ -145,48 +142,87 @@ body.dark-mode {
 
 #theme-toggle i {
     font-size: 1.25rem;
-    color: var(--primary-blue);
     position: absolute;
     transition: all 0.3s ease;
+    color: var(--primary-blue);
 }
 
 .dark-mode #theme-toggle i {
     color: var(--primary-green);
 }
 
-.fa-sun {
+/* Light mode states */
+#theme-toggle .fa-sun {
     opacity: 0;
     transform: rotate(-180deg) scale(0);
-    position: absolute;
 }
 
-.fa-moon {
+#theme-toggle .fa-moon {
     opacity: 1;
     transform: rotate(0) scale(1);
-    position: absolute;
 }
 
-.dark-mode .fa-moon {
+/* Dark mode states */
+.dark-mode #theme-toggle .fa-sun {
+    opacity: 1;
+    transform: rotate(0) scale(1);
+}
+
+.dark-mode #theme-toggle .fa-moon {
     opacity: 0;
     transform: rotate(180deg) scale(0);
 }
 
-.dark-mode .fa-sun {
-    opacity: 1;
-    transform: rotate(0) scale(1);
+.fa-sun {
+    position: absolute;
 }
 
+.fa-moon {
+    position: absolute;
+}
+
+/* Media queries for responsive design */
 @media (max-width: 768px) {
-    .navbar {
-        padding: 0.5rem 1rem;
+    .logo {
+        gap: 0.5rem;
     }
-    
-    .nav-logo {
-        height: 2.4rem;
+
+    .logo-icon {
+        width: 2.2rem;
+        height: 2.2rem;
+        font-size: 1rem;
     }
-    
-    .nav-title {
-        font-size: 1.1rem;
+
+    .logo-text {
+        font-size: 1rem;
+    }
+
+    .nav-container {
+        padding: 0 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .logo {
+        gap: 0.3rem;
+    }
+
+    .logo-icon {
+        width: 1.8rem;
+        height: 1.8rem;
+        font-size: 0.8rem;
+    }
+
+    .logo-text {
+        display: none; /* Hide the text on mobile */
+    }
+
+    .nav-container {
+        padding: 0 1rem;
+    }
+
+    .nav-right {
+        gap: 1.75rem; /* Increased from 1.25rem for even more spacing */
     }
 }
 
@@ -268,7 +304,7 @@ body.dark-mode {
     width: 2.5rem;
     height: 2.5rem;
     border-radius: 50%;
-    background-color: var(--primary-blue);
+    background-color: transparent;
     color: var(--text-light);
     display: flex;
     align-items: center;
@@ -276,10 +312,11 @@ body.dark-mode {
     font-weight: 600;
     position: relative;
     overflow: hidden;
+    transition: all 0.3s ease;
 }
 
 .dark-mode .user-avatar {
-    background-color: var(--primary-green);
+    background-color: transparent;
 }
 
 .user-avatar img {
@@ -298,6 +335,17 @@ body.dark-mode {
     width: 100%;
     height: 100%;
     z-index: 1;
+}
+
+.avatar-initials i {
+    font-size: 1.8rem;
+    color: var(--primary-green);
+    opacity: 0.95;
+}
+
+.dark-mode .avatar-initials i {
+    color: var(--primary-green);
+    opacity: 0.95;
 }
 
 .dropdown-menu {

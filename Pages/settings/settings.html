@@ -53,13 +53,13 @@
                                 Applications
                                 <span class="badge">2</span>
                             </a>
-                            <a href="../../home/JobAlerts.html">
+                            <a href="../notifications/notifications.html">
                                 <i class="fas fa-bell"></i>
-                                Job Alerts
+                                Notifications
                                 <span class="badge active">3</span>
                             </a>
                             <div class="menu-divider"></div>
-                            <a href="../../profile/profile.html">
+                            <a href="../profile/profile.html">
                                 <i class="fas fa-user"></i>
                                 My Profile
                             </a>
@@ -113,6 +113,7 @@
                             <label for="location">Location</label>
                             <input type="text" id="location" placeholder="Your city, country">
                         </div>
+                        <button class="save-changes-btn">Save Changes</button>
                     </div>
                 </div>
 
@@ -137,6 +138,11 @@
                         <div class="forgot-password">
                             <a href="#" id="forgotPasswordLink">Forgot your password?</a>
                         </div>
+                        <button class="save-changes-btn" id="changePasswordBtn">
+                            <i class="fas fa-key"></i>
+                            Change Password
+                        </button>
+                        <div id="passwordMessage" class="message-container"></div>
                     </div>
                 </div>
             </div>
@@ -294,12 +300,6 @@
                 <button class="btn btn-danger" id="deleteAccount">Delete Account</button>
             </div>
         </section>
-
-        <!-- Save Changes -->
-        <div class="settings-actions">
-            <button class="btn btn-secondary">Cancel</button>
-            <button class="btn btn-primary">Save Changes</button>
-        </div>
     </main>
 
     <!-- Footer -->
@@ -315,14 +315,27 @@
     </footer>
 
     <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-    <!-- Use a specific version of Lottie player instead of latest -->
-    <script src="https://unpkg.com/@lottiefiles/lottie-player@1.7.1/dist/lottie-player.js"></script>
-    <!-- Firebase Config -->
-    <script src="../../Firebase/firebase-config.js" type="module"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyCb-WQn8hxetYE2wWMQ37y7vRAKl0hFbkI",
+            authDomain: "jobnav-799f0.firebaseapp.com",
+            databaseURL: "https://jobnav-799f0-default-rtdb.firebaseio.com",
+            projectId: "jobnav-799f0",
+            storageBucket: "jobnav-799f0.firebasestorage.app",
+            messagingSenderId: "908819629942",
+            appId: "1:908819629942:web:e569e324a0959efaef1c57",
+            measurementId: "G-58CZK5KRN4"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        window.auth = firebase.auth();
+        window.db = firebase.firestore();
+    </script>
     <!-- Main JavaScript -->
-    <script type="module" src="settings.js"></script>
+    <script src="settings.js"></script>
 </body>
 </html>

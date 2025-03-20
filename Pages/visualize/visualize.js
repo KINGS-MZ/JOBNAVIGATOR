@@ -9,21 +9,115 @@ import {
     onAuthStateChanged
 } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
 
-// Theme toggle functionality
-document.addEventListener('DOMContentLoaded', () => {
-    const themeToggle = document.getElementById('theme-toggle');
-    
-    // Theme toggle functionality
-    themeToggle.addEventListener('click', () => {
-        document.body.classList.toggle('dark-mode');
-        localStorage.setItem('theme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
-    });
+// User menu functionality
+const userMenuBtn = document.getElementById('user-menu-btn');
+const userDropdown = document.getElementById('user-dropdown');
+const menuSections = document.querySelector('.menu-sections');
 
-    // Check for saved theme preference
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-        document.body.classList.add('dark-mode');
+userMenuBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    userDropdown.classList.toggle('active');
+});
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+    if (!userMenuBtn.contains(e.target) && !userDropdown.contains(e.target)) {
+        userDropdown.classList.remove('active');
     }
+});
+
+// Handle authentication state
+onAuthStateChanged(auth, (user) => {
+    console.log('Auth state changed:', user);
+    
+    if (user) {
+        // User is signed in
+        const displayName = user.displayName || 'User';
+        const email = user.email;
+        
+        // Update menu sections for signed-in user
+        menuSections.innerHTML = `
+            <a href="../jobs/SavedJobs.html">
+                <i class="fas fa-heart"></i>
+                Saved Jobs
+                <span class="badge">0</span>
+            </a>
+            <a href="../jobs/Applications.html">
+                <i class="fas fa-briefcase"></i>
+                Applications
+                <span class="badge">0</span>
+            </a>
+            <a href="../jobs/JobAlerts.html">
+                <i class="fas fa-bell"></i>
+                Job Alerts
+                <span class="badge active">0</span>
+            </a>
+            <div class="menu-divider"></div>
+            <a href="../profile/Profile.html">
+                <i class="fas fa-user"></i>
+                My Profile
+            </a>
+            <a href="../profile/Resume.html">
+                <i class="fas fa-file-alt"></i>
+                My Resume
+            </a>
+            <a href="../settings/settings.html">
+                <i class="fas fa-cog"></i>
+                Settings
+            </a>
+            <div class="menu-divider"></div>
+            <a href="#" id="logout-link" class="logout-link">
+                <i class="fas fa-sign-out-alt"></i>
+                Sign Out
+            </a>
+        `;
+
+        // Add logout functionality
+        document.getElementById('logout-link')?.addEventListener('click', async (e) => {
+            e.preventDefault();
+            try {
+                await auth.signOut();
+                window.location.href = '../login/login.html';
+            } catch (error) {
+                console.error('Error signing out:', error);
+            }
+        });
+    } else {
+        // Guest user - update avatar and menu
+        const avatarInitials = document.getElementById('avatar-initials');
+        const avatarInitialsDropdown = document.getElementById('avatar-initials-dropdown');
+        
+        if (avatarInitials) {
+            avatarInitials.innerHTML = '<i class="fa-solid fa-circle-user"></i>';
+        }
+        if (avatarInitialsDropdown) {
+            avatarInitialsDropdown.innerHTML = '<i class="fa-solid fa-circle-user"></i>';
+        }
+
+        // Update user info for guest
+        const userName = document.getElementById('user-name');
+        const userEmail = document.getElementById('user-email');
+        
+        if (userName) {
+            userName.textContent = 'Welcome';
+        }
+        if (userEmail) {
+            userEmail.textContent = 'Sign in to access your account';
+        }
+
+        // Update menu sections for guest user
+        if (menuSections) {
+            menuSections.innerHTML = `
+                <a href="../login/login.html" class="sign-in-link">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Sign In
+                </a>
+            `;
+        }
+    }
+    
+    // Load job details regardless of auth state
+    loadJobDetails();
 });
 
 // Function to get URL parameters
@@ -214,11 +308,25 @@ function displayJobDetails(job) {
             mainContent.appendChild(postedBy);
         }
 
-        // Setup apply button
+        // Setup action buttons with authentication check
         const applyBtn = document.querySelector('.apply-btn');
-        applyBtn.addEventListener('click', () => {
-            if (job.companyEmail) {
-                window.location.href = `mailto:${job.companyEmail}?subject=Application for ${job.title} position`;
+        const saveBtn = document.querySelector('.save-btn');
+
+        applyBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (handleProtectedAction('apply')) {
+                // Only proceed with email if user is signed in
+                if (job.companyEmail) {
+                    window.location.href = `mailto:${job.companyEmail}?subject=Application for ${job.title} position`;
+                }
+            }
+        });
+
+        saveBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (handleProtectedAction('save')) {
+                // Handle save job functionality
+                console.log('Saving job...');
             }
         });
 
@@ -272,75 +380,65 @@ function showError(message) {
     }
 }
 
-// Initialize
-document.addEventListener('DOMContentLoaded', () => {
-    // User menu functionality
-    const userMenuBtn = document.getElementById('user-menu-btn');
-    const userDropdown = document.getElementById('user-dropdown');
+// Toast Dialog Functionality
+const toastDialog = document.getElementById('toastDialog');
+const toastOverlay = document.getElementById('toastOverlay');
+const toastClose = document.getElementById('toastClose');
+const toastSignIn = document.getElementById('toastSignIn');
+const toastSignUp = document.getElementById('toastSignUp');
 
-    userMenuBtn?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        userDropdown.classList.toggle('active');
+// Function to show toast
+function showToast() {
+    toastDialog.style.display = 'block';
+    toastOverlay.style.display = 'block';
+    document.body.style.overflow = 'hidden';
+    
+    // Trigger animations
+    requestAnimationFrame(() => {
+        toastOverlay.classList.add('active');
+        toastDialog.classList.add('active');
     });
+}
 
-    // Close dropdown when clicking outside
-    document.addEventListener('click', (e) => {
-        if (!userMenuBtn.contains(e.target) && !userDropdown.contains(e.target)) {
-            userDropdown.classList.remove('active');
-        }
-    });
+// Function to hide toast
+function hideToast() {
+    toastOverlay.classList.remove('active');
+    toastDialog.classList.remove('active');
+    document.body.style.overflow = '';
+    
+    // Wait for animations to finish before hiding
+    setTimeout(() => {
+        toastOverlay.style.display = 'none';
+        toastDialog.style.display = 'none';
+    }, 300); // Match the transition duration in CSS
+}
 
-    // Check authentication first
-    onAuthStateChanged(auth, (user) => {
-        console.log('Auth state changed:', user);
-        if (!user) {
-            // User is not signed in, redirect to login page
-            window.location.href = '../login/login.html';
-            return;
-        }
-        
-        // Update user info in dropdown
-        if (user.displayName) {
-            document.getElementById('user-name').textContent = user.displayName;
-        }
-        if (user.email) {
-            document.getElementById('user-email').textContent = user.email;
-        }
-        if (user.photoURL) {
-            const avatarImages = document.querySelectorAll('#avatar-image, #avatar-image-dropdown');
-            const avatarInitials = document.querySelectorAll('#avatar-initials, #avatar-initials-dropdown');
-            
-            avatarImages.forEach(img => {
-                img.src = user.photoURL;
-                img.style.display = 'block';
-            });
-            avatarInitials.forEach(div => {
-                div.style.display = 'none';
-            });
-        } else if (user.displayName) {
-            const initials = user.displayName
-                .split(' ')
-                .map(name => name[0])
-                .join('')
-                .toUpperCase()
-                .slice(0, 2);
-            
-            document.querySelectorAll('#avatar-initials, #avatar-initials-dropdown')
-                .forEach(div => div.textContent = initials);
-        }
-        
-        // User is authenticated, load job details
-        loadJobDetails();
-    });
+// Function to check if user is signed in
+function isUserSignedIn() {
+    return auth.currentUser !== null;
+}
 
-    // Logout functionality
-    document.getElementById('logout-link')?.addEventListener('click', async (e) => {
-        e.preventDefault();
-        try {
-            await auth.signOut();
-            window.location.href = '../login/login.html';
-        } catch (error) {
-            console.error('Error signing out:', error);
-        }
-    });
+// Function to handle protected actions
+function handleProtectedAction(action) {
+    if (!isUserSignedIn()) {
+        showToast();
+        return false;
+    }
+    return true;
+}
+
+// Event listeners for toast actions
+toastClose.addEventListener('click', hideToast);
+toastOverlay.addEventListener('click', hideToast);
+
+// Redirect to login page with sign in section
+toastSignIn.addEventListener('click', () => {
+    const currentPage = encodeURIComponent(window.location.href);
+    window.location.href = `../login/login.html?redirect=${currentPage}`;
+});
+
+// Redirect to login page with sign up section
+toastSignUp.addEventListener('click', () => {
+    const currentPage = encodeURIComponent(window.location.href);
+    window.location.href = `../login/login.html?redirect=${currentPage}&section=signup`;
 });
