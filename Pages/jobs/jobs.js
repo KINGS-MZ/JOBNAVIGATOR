@@ -98,7 +98,7 @@ onAuthStateChanged(auth, (user) => {
                     <i class="fas fa-user"></i>
                     My Profile
                 </a>
-                <a href="Resume.html">
+                <a href="../profile/Resume.html">
                     <i class="fas fa-file-alt"></i>
                     My Resume
                 </a>
