@@ -85,20 +85,15 @@ nav {
     top: 0;
     left: 0;
     right: 0;
-    z-index: 9999;
+    z-index: 1000;
     background-color: var(--bg-light);
     box-shadow: 0 2px 10px var(--shadow-light);
     height: 4rem;
-    transition: transform 0.3s ease;
 }
 
 .dark-mode nav {
     background-color: var(--bg-dark);
     box-shadow: 0 2px 10px var(--shadow-dark);
-}
-
-nav.hidden {
-    transform: translateY(-100%);
 }
 
 .nav-container {
@@ -1579,7 +1574,7 @@ footer p {
     bottom: 0;
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(4px);
-    z-index: 1100;
+    z-index: 1600;
     display: none;
     opacity: 0;
     transition: opacity 0.3s ease;
@@ -1594,7 +1589,7 @@ footer p {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) scale(0.95);
-    z-index: 1200;
+    z-index: 1700;
     display: none;
     background: var(--background-color);
     border-radius: 16px;
@@ -1760,30 +1755,12 @@ footer p {
     align-items: center;
     height: 65px; /* Ensure consistent height */
     border-radius: 20px 20px 0 0;
-    transition: transform 0.3s ease;
 }
 
 .dark-mode .bottom-nav {
     background-color: var(--bg-dark);
     border-color: var(--dark-border);
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.15);
-}
-
-.bottom-nav.hidden {
-    transform: translateY(100%);
-}
-
-/* The following styles will be overridden by the transform above */
-.bottom-nav.hidden .bottom-nav-item:not(.bottom-nav-add) {
-    opacity: 0;
-}
-
-.bottom-nav.hidden .bottom-nav-add {
-    opacity: 0;
-}
-
-.bottom-nav.hidden .nav-add-button {
-    transform: translateY(0);
 }
 
 .bottom-nav-item {

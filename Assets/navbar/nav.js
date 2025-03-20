@@ -171,15 +171,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Update menu sections for signed-in user
             menuSections.innerHTML = `
-                <a href="../saved/saved.html">
+                <a href="../jobs/SavedJobs.html">
                     <i class="fas fa-heart"></i>
                     Saved Jobs
-                    <span class="badge">4</span>
+                    <span class="badge">0</span>
                 </a>
                 <a href="../jobs/Applications.html">
                     <i class="fas fa-briefcase"></i>
                     Applications
-                    <span class="badge">2</span>
+                    <span class="badge">0</span>
                 </a>
                 <a href="../notifications/notifications.html">
                     <i class="fas fa-bell"></i>

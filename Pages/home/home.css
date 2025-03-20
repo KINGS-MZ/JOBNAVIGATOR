@@ -499,20 +499,15 @@ nav {
     top: 0;
     left: 0;
     right: 0;
-    z-index: 9999;
+    z-index: 1000;
     background-color: var(--bg-light);
     box-shadow: 0 2px 10px var(--shadow-light);
     height: 4rem;
-    transition: transform 0.3s ease;
 }
 
 .dark-mode nav {
     background-color: var(--bg-dark);
     box-shadow: 0 2px 10px var(--shadow-dark);
-}
-
-nav.hidden {
-    transform: translateY(-100%);
 }
 
 .nav-container {
@@ -880,7 +875,7 @@ nav.hidden {
     bottom: 0;
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(4px);
-    z-index: 1100;
+    z-index: 1600; /* Higher than bottom nav (1500) */
     display: none;
     opacity: 0;
     transition: opacity 0.3s ease;
@@ -895,15 +890,14 @@ nav.hidden {
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%) scale(0.95);
-    z-index: 1200;
-    display: none;
-    background: var(--toast-bg);
-    border-radius: 16px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-    padding: 32px;
     max-width: 400px;
     width: 90%;
-    text-align: center;
+    background-color: var(--toast-bg);
+    border-radius: 16px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    padding: 1.5rem;
+    z-index: 1700; /* Higher than overlay to appear above it */
+    display: none;
     opacity: 0;
     transition: all 0.3s ease;
 }
@@ -1039,18 +1033,12 @@ nav.hidden {
     align-items: center;
     height: 65px; /* Ensure consistent height */
     border-radius: 20px 20px 0 0;
-    transition: transform 0.3s ease;
 }
 
 .dark-mode .bottom-nav {
     background-color: var(--bg-dark);
     border-color: var(--dark-border);
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.15);
-}
-
-.bottom-nav.hidden {
-    transform: translateY(100%) !important;
-    opacity: 0 !important;
 }
 
 .bottom-nav-item {

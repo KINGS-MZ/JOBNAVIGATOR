@@ -1174,23 +1174,124 @@ footer p {
     font-size: 1rem;
 }
 
-/* Remove bottom nav bar styles */
-.bottom-nav,
-.bottom-nav-item,
-.bottom-nav-add,
-.nav-add-button,
-.bottom-nav.hidden {
-    display: none !important;
+/* Bottom Navigation Bar */
+.bottom-nav {
+    display: none; /* Hidden by default on desktop */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: var(--bg-light);
+    border-top: 1px solid var(--light-border);
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+    z-index: 999;
+    padding: 0.5rem 0.25rem;
+    justify-content: space-around;
+    align-items: center;
+    height: 65px; /* Ensure consistent height */
+    border-radius: 20px 20px 0 0;
 }
 
-/* Adjust body padding since we removed the bottom nav */
+.dark-mode .bottom-nav {
+    background-color: var(--bg-dark);
+    border-color: var(--dark-border);
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.15);
+}
+
+.bottom-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-grey);
+    text-decoration: none;
+    padding: 0.5rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    flex: 1;
+    text-align: center;
+}
+
+.dark-mode .bottom-nav-item {
+    color: var(--text-light);
+    opacity: 0.7;
+}
+
+.bottom-nav-item i {
+    font-size: 1.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.bottom-nav-item span {
+    font-size: 0.7rem;
+    font-weight: 500;
+}
+
+.bottom-nav-item.active {
+    color: var(--primary-blue);
+}
+
+.dark-mode .bottom-nav-item.active {
+    color: var(--primary-green);
+    opacity: 1;
+}
+
+.bottom-nav-item:hover {
+    background-color: var(--light-hover);
+}
+
+.dark-mode .bottom-nav-item:hover {
+    background-color: var(--dark-hover);
+}
+
 @media (max-width: 768px) {
+    .bottom-nav {
+        display: flex;
+    }
+    
     body {
-        padding-bottom: 2rem;
+        padding-bottom: 5.5rem; /* Increased padding for curved nav with add button */
     }
     
     footer {
-        display: block; /* Show footer on mobile since we removed bottom nav */
-        margin-bottom: 0;
+        margin-bottom: 5.5rem; /* Push footer above bottom nav */
+        display: none; /* Hide footer on mobile */
     }
+}
+
+/* Bottom Navigation Add Button Styles */
+.bottom-nav-add {
+    position: relative;
+    margin-top: -20px;
+    z-index: 10;
+}
+
+.nav-add-button {
+    width: 65px;
+    height: 65px;
+    background: var(--primary-blue);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 5px;
+    transform: translateY(-15px);
+    transition: all 0.3s ease;
+    position: relative;
+    border: 4px solid var(--bg-light);
+}
+
+.dark-mode .nav-add-button {
+    background: var(--primary-green);
+    border-color: var(--bg-dark);
+}
+
+.nav-add-button i {
+    font-size: 24px;
+    color: white;
+}
+
+.bottom-nav-add span {
+    margin-top: -10px;
 } 

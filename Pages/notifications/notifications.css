@@ -70,20 +70,15 @@ nav {
     top: 0;
     left: 0;
     right: 0;
-    z-index: 9999;
+    z-index: 1000;
     background-color: var(--bg-light);
     box-shadow: 0 2px 10px var(--shadow-light);
     height: 4rem;
-    transition: transform 0.3s ease;
 }
 
 .dark-mode nav {
     background-color: var(--bg-dark);
     box-shadow: 0 2px 10px var(--shadow-dark);
-}
-
-nav.hidden {
-    transform: translateY(-100%);
 }
 
 .nav-container {
@@ -959,18 +954,12 @@ main {
     align-items: center;
     height: 65px; /* Ensure consistent height */
     border-radius: 20px 20px 0 0;
-    transition: transform 0.3s ease;
 }
 
 .dark-mode .bottom-nav {
     background-color: var(--bg-dark);
     border-color: var(--dark-border);
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.15);
-}
-
-.bottom-nav.hidden {
-    transform: translateY(100%) !important;
-    opacity: 0 !important;
 }
 
 .bottom-nav-item {

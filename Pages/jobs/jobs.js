@@ -174,7 +174,7 @@ onAuthStateChanged(auth, async (user) => {
         // Update menu content for signed-in users
         if (menuSections) {
             menuSections.innerHTML = `
-                <a href="../saved/saved.html">
+                <a href="SavedJobs.html">
                     <i class="fas fa-heart"></i>
                     Saved Jobs
                     <span class="badge">4</span>
@@ -805,6 +805,41 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add console log to debug button selection
     console.log('Add Post button:', addPostBtn);
     console.log('Settings button:', settingsBtn);
+
+    // Add authentication check for bottom navigation protected items
+    const bottomNavAddBtn = document.querySelector('.bottom-nav .bottom-nav-add');
+    const bottomNavAlertsBtn = document.querySelector('.bottom-nav a[href="../notifications/notifications.html"]');
+    const bottomNavProfileBtn = document.querySelector('.bottom-nav a[href="../profile/profile.html"]');
+
+    // Add Post Button (bottom nav)
+    if (bottomNavAddBtn) {
+        bottomNavAddBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (handleProtectedAction('add-post')) {
+                window.location.href = '../posts/posts.html';
+            }
+        });
+    }
+
+    // Alerts Button (bottom nav)
+    if (bottomNavAlertsBtn) {
+        bottomNavAlertsBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (handleProtectedAction('alerts')) {
+                window.location.href = '../notifications/notifications.html';
+            }
+        });
+    }
+
+    // Profile Button (bottom nav)
+    if (bottomNavProfileBtn) {
+        bottomNavProfileBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (handleProtectedAction('profile')) {
+                window.location.href = '../profile/profile.html';
+            }
+        });
+    }
 });
 
 // Function to save a job to user's saved collection

@@ -45,7 +45,7 @@
                         </div>
                         
                         <div class="menu-sections">
-                            <a href="../saved/saved.html">
+                            <a href="SavedJobs.html">
                                 <i class="fas fa-heart"></i>
                                 Saved Jobs
                                 <span class="badge">4</span>
@@ -250,52 +250,6 @@
         // Check on load and on resize
         window.addEventListener('load', updateNavigation);
         window.addEventListener('resize', updateNavigation);
-        
-        // Hide navigation on scroll
-        (function() {
-            const topNav = document.querySelector('nav');
-            const bottomNav = document.querySelector('.bottom-nav');
-            let lastScrollY = window.scrollY;
-            let ticking = false;
-            
-            // Threshold for scroll distance before hiding/showing navs (in pixels)
-            const scrollThreshold = 20;
-            
-            function handleScroll() {
-                const currentScrollY = window.scrollY;
-                
-                // Calculate scroll direction and distance
-                const scrollDirection = currentScrollY > lastScrollY ? 'down' : 'up';
-                const scrollDistance = Math.abs(currentScrollY - lastScrollY);
-                
-                // Only proceed if we've scrolled more than the threshold
-                if (scrollDistance > scrollThreshold) {
-                    // Scrolling down and not at the top: hide ONLY bottom nav
-                    if (scrollDirection === 'down' && currentScrollY > 100) {
-                        if (bottomNav && window.innerWidth <= 768) {
-                            bottomNav.classList.add('hidden');
-                        }
-                    } 
-                    // Scrolling up: show bottom nav
-                    else if (scrollDirection === 'up') {
-                        if (bottomNav) {
-                            bottomNav.classList.remove('hidden');
-                        }
-                    }
-                    
-                    lastScrollY = currentScrollY;
-                }
-                
-                ticking = false;
-            }
-            
-            window.addEventListener('scroll', function() {
-                if (!ticking) {
-                    window.requestAnimationFrame(handleScroll);
-                    ticking = true;
-                }
-            });
-        })();
     </script>
 </body>
 </html>

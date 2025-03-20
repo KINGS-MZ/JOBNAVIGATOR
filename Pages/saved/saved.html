@@ -142,6 +142,35 @@
         </div>
     </main>
 
+    <!-- Bottom Navigation Bar -->
+    <div class="bottom-nav">
+        <a href="../home/home.html" class="bottom-nav-item">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+        <a href="../jobs/jobs.html" class="bottom-nav-item">
+            <i class="fas fa-briefcase"></i>
+            <span>Jobs</span>
+        </a>
+        
+        <!-- Center Add Post Button -->
+        <a href="../posts/posts.html" class="bottom-nav-item bottom-nav-add">
+            <div class="nav-add-button">
+                <i class="fas fa-plus"></i>
+            </div>
+            <span>Add</span>
+        </a>
+        
+        <a href="../notifications/notifications.html" class="bottom-nav-item">
+            <i class="fas fa-bell"></i>
+            <span>Alerts</span>
+        </a>
+        <a href="../profile/profile.html" class="bottom-nav-item active">
+            <i class="fas fa-user"></i>
+            <span>Profile</span>
+        </a>
+    </div>
+
     <!-- Footer -->
     <footer>
         <p> 2024 All Rights Reserved to IMAD EL KHAIDER</p>
@@ -157,13 +186,16 @@
     <!-- Script to manage navigation display based on screen size -->
     <script>
         function updateNavigation() {
+            const bottomNav = document.querySelector('.bottom-nav');
             const floatingMenu = document.querySelector('.floating-menu');
             
             if (window.innerWidth <= 768) {
-                // Mobile view: hide floating menu
+                // Mobile view: show bottom nav, hide floating menu
+                if (bottomNav) bottomNav.style.display = 'flex';
                 if (floatingMenu) floatingMenu.style.display = 'none';
             } else {
-                // Desktop view: show floating menu
+                // Desktop view: hide bottom nav, show floating menu
+                if (bottomNav) bottomNav.style.display = 'none';
                 if (floatingMenu) floatingMenu.style.display = 'flex';
             }
         }
