@@ -718,15 +718,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Function to show toast
     function showToast() {
-        toastDialog.style.display = 'block';
-        toastOverlay.style.display = 'block';
-        document.body.style.overflow = 'hidden';
-        
-        // Trigger animations
-        requestAnimationFrame(() => {
-            toastOverlay.classList.add('active');
-            toastDialog.classList.add('active');
-        });
+        // Add a small delay to ensure Firebase authentication state is fully loaded
+        setTimeout(() => {
+            // Double-check authentication state before showing toast
+            if (!auth.currentUser) {
+                toastDialog.style.display = 'block';
+                toastOverlay.style.display = 'block';
+                document.body.style.overflow = 'hidden';
+                
+                // Trigger animations
+                requestAnimationFrame(() => {
+                    toastOverlay.classList.add('active');
+                    toastDialog.classList.add('active');
+                });
+            }
+        }, 300); // 300ms delay to allow Firebase to complete auth check
     }
 
     // Function to hide toast
