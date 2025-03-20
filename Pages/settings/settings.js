@@ -357,7 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <span class="badge active">0</span>
                     </a>
                     <div class="menu-divider"></div>
-                    <a href="../profile/Profile.html">
+                    <a href="../profile/profile.html">
                         <i class="fas fa-user"></i>
                         My Profile
                     </a>
