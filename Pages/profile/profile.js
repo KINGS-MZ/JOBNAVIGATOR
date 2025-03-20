@@ -168,7 +168,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update menu sections with correct links for authenticated users
         if (menuSections) {
             menuSections.innerHTML = `
-                <a href="SavedJobs.html">
+                <a href="../saved/saved.html">
                     <i class="fas fa-heart"></i>
                     Saved Jobs
                     <span class="badge">4</span>

@@ -199,6 +199,8 @@ body.dark-mode .company-logo img {
 .company-details {
     flex: 1;
     text-align: left;
+    max-width: calc(100% - 120px); /* Allow space for logo/buttons */
+    overflow: hidden; /* Prevent overflow */
 }
 
 .company-details h1 {
@@ -207,6 +209,12 @@ body.dark-mode .company-logo img {
     color: var(--text-dark);
     margin: 0 0 0.5rem 0;
     line-height: 1.2;
+    overflow: hidden; /* Prevent overflow */
+    text-overflow: ellipsis; /* Add ellipsis for overflow */
+    display: -webkit-box;
+    -webkit-line-clamp: 2; /* Limit to 2 lines */
+    -webkit-box-orient: vertical;
+    word-break: break-word; /* Break very long words if needed */
 }
 
 .company-details h2 {
@@ -341,6 +349,7 @@ body.dark-mode .info-item i {
     display: flex;
     flex-wrap: wrap;
     gap: 0.8rem;
+    margin-bottom: 1rem;
 }
 
 .job-tag {
@@ -351,6 +360,11 @@ body.dark-mode .info-item i {
     font-size: 0.95rem;
     font-weight: 500;
     transition: all 0.3s ease;
+    white-space: nowrap;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: inline-block;
 }
 
 .job-tag:hover {
@@ -924,7 +938,6 @@ body.dark-mode .benefit-item::after {
         font-size: 0.9rem;
     }
     
-    /* Ensure job tags wrap properly */
     .job-tags {
         display: flex;
         flex-wrap: wrap;
@@ -934,6 +947,7 @@ body.dark-mode .benefit-item::after {
     .job-tag {
         font-size: 0.8rem;
         padding: 0.3rem 0.6rem;
+        max-width: 120px;
     }
     
     :root {

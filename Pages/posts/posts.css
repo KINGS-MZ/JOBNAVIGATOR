@@ -1098,6 +1098,10 @@ footer p {
     color: var(--primary-blue);
     border-radius: 4px;
     font-size: 0.85rem;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .dark-mode .tag {
@@ -1380,4 +1384,12 @@ footer p {
 
 .title-with-icon input[type="text"] {
     flex: 1;
+}
+
+.tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    overflow: hidden;
 }

@@ -4,81 +4,177 @@ import {
     collection,
     getDocs,
     query,
-    where
+    where,
+    doc,
+    getDoc,
+    setDoc,
+    deleteDoc
 } from '../../Firebase/firebase-config.js';
 import { 
     onAuthStateChanged
 } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
 
 // Handle authentication state and update UI
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
     const menuSections = document.querySelector('.menu-sections');
     
     if (user) {
-        // Update user info in the dropdown if user is signed in
-        const userNameElement = document.getElementById('user-name');
-        const userEmailElement = document.getElementById('user-email');
-        const avatarInitials = document.getElementById('avatar-initials');
-        const avatarInitialsDropdown = document.getElementById('avatar-initials-dropdown');
-        const avatarImage = document.getElementById('avatar-image');
-        const avatarImageDropdown = document.getElementById('avatar-image-dropdown');
-        
-        if (userNameElement && user.displayName) {
-            userNameElement.textContent = user.displayName;
-        }
-        
-        if (userEmailElement && user.email) {
-            userEmailElement.textContent = user.email;
-        }
-
-        // Handle profile picture
-        if (user.photoURL) {
-            if (avatarImage) {
-                avatarImage.src = user.photoURL;
-                avatarImage.style.display = 'block';
-            }
-            if (avatarImageDropdown) {
-                avatarImageDropdown.src = user.photoURL;
-                avatarImageDropdown.style.display = 'block';
-            }
-            if (avatarInitials) {
-                avatarInitials.style.display = 'none';
-            }
-            if (avatarInitialsDropdown) {
-                avatarInitialsDropdown.style.display = 'none';
-            }
-        } else {
-            if (avatarImage) {
-                avatarImage.style.display = 'none';
-            }
-            if (avatarImageDropdown) {
-                avatarImageDropdown.style.display = 'none';
-            }
-            const initials = user.displayName
-                ? user.displayName
-                    .split(' ')
-                    .map(name => name[0])
-                    .join('')
-                    .toUpperCase()
-                : 'JN';
+        // Fetch user profile data from Firestore
+        try {
+            const userRef = doc(db, "users", user.uid);
+            const userSnap = await getDoc(userRef);
+            
+            // Update user info in the dropdown if user is signed in
+            const userNameElement = document.getElementById('user-name');
+            const userEmailElement = document.getElementById('user-email');
+            const avatarInitials = document.getElementById('avatar-initials');
+            const avatarInitialsDropdown = document.getElementById('avatar-initials-dropdown');
+            const avatarImage = document.getElementById('avatar-image');
+            const avatarImageDropdown = document.getElementById('avatar-image-dropdown');
+            
+            if (userSnap.exists()) {
+                const userData = userSnap.data();
                 
-            if (avatarInitials) {
-                avatarInitials.style.display = 'flex';
-                avatarInitials.textContent = '';  // Clear any existing content
-                const guestIcon = document.createElement('i');
-                guestIcon.className = 'fa-solid fa-circle-user';
-                avatarInitials.appendChild(guestIcon);
+                // Use custom profile name if available, otherwise fallback to auth name
+                if (userNameElement) {
+                    userNameElement.textContent = userData.fullName || user.displayName || 'User';
+                }
+                
+                if (userEmailElement && user.email) {
+                    userEmailElement.textContent = user.email;
+                }
+                
+                // Handle profile picture - check for custom avatar first
+                if (userData.photoURL) {
+                    // User has a custom profile picture from Firestore
+                    if (avatarImage) {
+                        avatarImage.src = userData.photoURL;
+                        avatarImage.style.display = 'block';
+                    }
+                    if (avatarImageDropdown) {
+                        avatarImageDropdown.src = userData.photoURL;
+                        avatarImageDropdown.style.display = 'block';
+                    }
+                    if (avatarInitials) {
+                        avatarInitials.style.display = 'none';
+                    }
+                    if (avatarInitialsDropdown) {
+                        avatarInitialsDropdown.style.display = 'none';
+                    }
+                } else if (user.photoURL) {
+                    // Fallback to auth profile picture
+                    if (avatarImage) {
+                        avatarImage.src = user.photoURL;
+                        avatarImage.style.display = 'block';
+                    }
+                    if (avatarImageDropdown) {
+                        avatarImageDropdown.src = user.photoURL;
+                        avatarImageDropdown.style.display = 'block';
+                    }
+                    if (avatarInitials) {
+                        avatarInitials.style.display = 'none';
+                    }
+                    if (avatarInitialsDropdown) {
+                        avatarInitialsDropdown.style.display = 'none';
+                    }
+                } else {
+                    // No profile picture, show initials
+                    if (avatarImage) {
+                        avatarImage.style.display = 'none';
+                    }
+                    if (avatarImageDropdown) {
+                        avatarImageDropdown.style.display = 'none';
+                    }
+                    
+                    // Get initials from custom name if available
+                    const fullName = userData.fullName || user.displayName || '';
+                    const initials = fullName
+                        ? fullName
+                            .split(' ')
+                            .map(name => name[0])
+                            .join('')
+                            .toUpperCase()
+                        : 'JN';
+                    
+                    if (avatarInitials) {
+                        avatarInitials.style.display = 'flex';
+                        avatarInitials.textContent = initials;
+                    }
+                    if (avatarInitialsDropdown) {
+                        avatarInitialsDropdown.style.display = 'flex';
+                        avatarInitialsDropdown.textContent = initials;
+                    }
+                }
+            } else {
+                // If no Firestore data, fallback to auth data
+                if (userNameElement && user.displayName) {
+                    userNameElement.textContent = user.displayName;
+                }
+                
+                if (userEmailElement && user.email) {
+                    userEmailElement.textContent = user.email;
+                }
+                
+                // Handle default profile picture
+                if (user.photoURL) {
+                    if (avatarImage) {
+                        avatarImage.src = user.photoURL;
+                        avatarImage.style.display = 'block';
+                    }
+                    if (avatarImageDropdown) {
+                        avatarImageDropdown.src = user.photoURL;
+                        avatarImageDropdown.style.display = 'block';
+                    }
+                    if (avatarInitials) {
+                        avatarInitials.style.display = 'none';
+                    }
+                    if (avatarInitialsDropdown) {
+                        avatarInitialsDropdown.style.display = 'none';
+                    }
+                } else {
+                    if (avatarImage) {
+                        avatarImage.style.display = 'none';
+                    }
+                    if (avatarImageDropdown) {
+                        avatarImageDropdown.style.display = 'none';
+                    }
+                    const initials = user.displayName
+                        ? user.displayName
+                            .split(' ')
+                            .map(name => name[0])
+                            .join('')
+                            .toUpperCase()
+                        : 'JN';
+                        
+                    if (avatarInitials) {
+                        avatarInitials.style.display = 'flex';
+                        avatarInitials.textContent = initials;
+                    }
+                    if (avatarInitialsDropdown) {
+                        avatarInitialsDropdown.style.display = 'flex';
+                        avatarInitialsDropdown.textContent = initials;
+                    }
+                }
             }
-            if (avatarInitialsDropdown) {
-                avatarInitialsDropdown.style.display = 'flex';
-                avatarInitialsDropdown.innerHTML = '<i class="fas fa-user-circle"></i>';
+        } catch (error) {
+            console.error('Error fetching user profile:', error);
+            // Fallback to auth data if Firestore fetch fails
+            const userNameElement = document.getElementById('user-name');
+            const userEmailElement = document.getElementById('user-email');
+            
+            if (userNameElement && user.displayName) {
+                userNameElement.textContent = user.displayName;
+            }
+            
+            if (userEmailElement && user.email) {
+                userEmailElement.textContent = user.email;
             }
         }
 
         // Update menu content for signed-in users
         if (menuSections) {
             menuSections.innerHTML = `
-                <a href="SavedJobs.html">
+                <a href="../saved/saved.html">
                     <i class="fas fa-heart"></i>
                     Saved Jobs
                     <span class="badge">4</span>
@@ -190,39 +286,77 @@ function createJobCard(job) {
     
     // Use template literal only once
     const cardContent = `
-        <div class="company-logo">
-            <i class="${job.icon?.className || 'fas fa-building'}"></i>
+        <div class="job-header">
+            <div class="job-meta">
+                <div class="job-icon"><i class="${job.icon?.className || 'fas fa-building'}"></i></div>
+                <div class="job-info">
+                    <h3 class="job-title">${job.title}</h3>
+                    <div class="job-details">
+                        <span class="company-name">${job.company}</span>
+                        ${job.location ? `<span class="job-dot">•</span><span class="job-location">${job.location}</span>` : ''}
+                        ${job.type ? `<span class="job-dot">•</span><span class="job-type">${job.type}</span>` : ''}
+                    </div>
+                </div>
+            </div>
+            <div class="job-actions">
+                <button class="action-btn save-btn" title="Save job">
+                    <i class="far fa-bookmark"></i>
+                </button>
+                <button class="action-btn share-btn" title="Share job">
+                    <i class="fas fa-share-alt"></i>
+                </button>
+            </div>
         </div>
-        <h3 class="job-title">${job.title}</h3>
-        <p class="company-name">${job.company}</p>
-        <div class="job-details">
-            <span class="job-detail">
-                <i class="fas fa-map-marker-alt"></i>
-                ${job.location}
-            </span>
-            <span class="job-detail">
-                <i class="fas fa-clock"></i>
-                ${job.type}
-            </span>
-            ${job.salaryMin || job.salaryMax ? `
-                <span class="job-detail">
-                    <i class="fas fa-dollar-sign"></i>
-                    ${job.salaryMin ? job.salaryMin.toLocaleString() : '0'} - ${job.salaryMax ? job.salaryMax.toLocaleString() : '0'}
-                </span>
-            ` : ''}
+        <div class="job-content">
+            ${job.description ? `<p class="job-description">${job.description}</p>` : ''}
+            <div class="job-tags">
+                ${job.skills?.map(skill => `<span class="job-tag">${skill}</span>`).join('') || ''}
+            </div>
         </div>
-        <div class="job-tags">
-            ${job.skills?.map(skill => `<span class="job-tag">${skill}</span>`).join('') || ''}
+        <div class="job-footer">
+            <span class="job-posted">Posted ${formatDate(job.createdAt)}</span>
+            <a href="../visualize/visualize.html?id=${job.id}" class="view-details">View Job</a>
         </div>
-        <span class="job-posted">${formatDate(job.createdAt)}</span>
     `;
     
     card.innerHTML = cardContent;
 
     // Add click event to navigate to visualization page
-    card.addEventListener('click', () => {
-        window.location.href = `../visualize/visualize.html?id=${job.id}`;
+    card.addEventListener('click', (e) => {
+        // Don't navigate if clicking on action buttons
+        if (!e.target.closest('.action-btn')) {
+            window.location.href = `../visualize/visualize.html?id=${job.id}`;
+        }
     });
+    
+    // Add event listeners for buttons
+    setTimeout(() => {
+        const saveBtn = card.querySelector('.save-btn');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                // Toggle bookmark icon
+                const icon = saveBtn.querySelector('i');
+                if (icon.classList.contains('far')) {
+                    icon.classList.replace('far', 'fas');
+                    saveBtn.title = 'Remove from saved';
+                    handleProtectedAction(() => saveJob(job));
+                } else {
+                    icon.classList.replace('fas', 'far');
+                    saveBtn.title = 'Save job';
+                    handleProtectedAction(() => unsaveJob(job.id));
+                }
+            });
+        }
+        
+        const shareBtn = card.querySelector('.share-btn');
+        if (shareBtn) {
+            shareBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                handleProtectedAction(() => shareJob(job));
+            });
+        }
+    }, 0);
 
     // Use event delegation for better performance
     card.dataset.jobId = job.id;
@@ -672,6 +806,84 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Add Post button:', addPostBtn);
     console.log('Settings button:', settingsBtn);
 });
+
+// Function to save a job to user's saved collection
+async function saveJob(job) {
+    if (!auth.currentUser) {
+        showToast('Please sign in to save jobs');
+        return;
+    }
+    
+    try {
+        const userId = auth.currentUser.uid;
+        const savedJobRef = doc(db, 'users', userId, 'savedItems', job.id);
+        
+        // Prepare job data for saving
+        const jobData = {
+            type: 'job',
+            title: job.title,
+            company: job.company,
+            location: job.location,
+            postType: job.type,
+            description: job.description || '',
+            icon: 'fa-briefcase',
+            tags: job.skills || [],
+            url: `../visualize/visualize.html?id=${job.id}`,
+            createdAt: job.createdAt,
+            savedAt: new Date()
+        };
+        
+        await setDoc(savedJobRef, jobData);
+        showToast('Job saved successfully');
+    } catch (error) {
+        console.error('Error saving job:', error);
+        showToast('Failed to save job');
+    }
+}
+
+// Function to unsave a job
+async function unsaveJob(jobId) {
+    if (!auth.currentUser) {
+        return;
+    }
+    
+    try {
+        const userId = auth.currentUser.uid;
+        const savedJobRef = doc(db, 'users', userId, 'savedItems', jobId);
+        
+        await deleteDoc(savedJobRef);
+        showToast('Job removed from saved');
+    } catch (error) {
+        console.error('Error removing job:', error);
+        showToast('Failed to remove job');
+    }
+}
+
+// Function to share a job
+function shareJob(job) {
+    if (navigator.share) {
+        navigator.share({
+            title: job.title,
+            text: `Check out this job: ${job.title} at ${job.company}`,
+            url: window.location.origin + `/Pages/visualize/visualize.html?id=${job.id}`
+        })
+        .then(() => console.log('Shared successfully'))
+        .catch((error) => console.error('Error sharing:', error));
+    } else {
+        // Fallback for browsers that don't support navigator.share
+        const shareUrl = window.location.origin + `/Pages/visualize/visualize.html?id=${job.id}`;
+        
+        // Create a temporary input to copy the URL
+        const tempInput = document.createElement('input');
+        document.body.appendChild(tempInput);
+        tempInput.value = shareUrl;
+        tempInput.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempInput);
+        
+        showToast('Link copied to clipboard');
+    }
+}
 
 // Initialize Floating Menu
 function initializeFloatingMenu() {

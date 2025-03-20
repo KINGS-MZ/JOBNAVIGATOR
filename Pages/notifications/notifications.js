@@ -1,74 +1,161 @@
-import { 
-    auth
-} from '../../Firebase/firebase-config.js';
-import { 
-    onAuthStateChanged
-} from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
-
 // Check if user is signed in
-onAuthStateChanged(auth, (user) => {
+firebase.auth().onAuthStateChanged(async (user) => {
     if (!user) {
         // User is not signed in, redirect to login page
         window.location.href = '/Pages/login/login.html';
         return;
     }
-    // Update user info in the dropdown if user is signed in
-    const userNameElement = document.getElementById('user-name');
-    const userEmailElement = document.getElementById('user-email');
-    const avatarInitials = document.getElementById('avatar-initials');
-    const avatarInitialsDropdown = document.getElementById('avatar-initials-dropdown');
-    const avatarImage = document.getElementById('avatar-image');
-    const avatarImageDropdown = document.getElementById('avatar-image-dropdown');
     
-    if (userNameElement && user.displayName) {
-        userNameElement.textContent = user.displayName;
-    }
-    
-    if (userEmailElement && user.email) {
-        userEmailElement.textContent = user.email;
-    }
-
-    // Handle profile picture
-    if (user.photoURL) {
-        // User has a profile picture (e.g., from Google)
-        if (avatarImage) {
-            avatarImage.src = user.photoURL;
-            avatarImage.style.display = 'block';
-        }
-        if (avatarImageDropdown) {
-            avatarImageDropdown.src = user.photoURL;
-            avatarImageDropdown.style.display = 'block';
-        }
-        if (avatarInitials) {
-            avatarInitials.style.display = 'none';
-        }
-        if (avatarInitialsDropdown) {
-            avatarInitialsDropdown.style.display = 'none';
-        }
-    } else {
-        // No profile picture, show initials
-        if (avatarImage) {
-            avatarImage.style.display = 'none';
-        }
-        if (avatarImageDropdown) {
-            avatarImageDropdown.style.display = 'none';
-        }
-        const initials = user.displayName
-            ? user.displayName
-                .split(' ')
-                .map(name => name[0])
-                .join('')
-                .toUpperCase()
-            : 'JN';
+    // Fetch user profile data from Firestore
+    try {
+        const userRef = firebase.firestore().collection('users').doc(user.uid);
+        const userSnap = await userRef.get();
+        
+        // Update user info in the dropdown if user is signed in
+        const userNameElement = document.getElementById('user-name');
+        const userEmailElement = document.getElementById('user-email');
+        const avatarInitials = document.getElementById('avatar-initials');
+        const avatarInitialsDropdown = document.getElementById('avatar-initials-dropdown');
+        const avatarImage = document.getElementById('avatar-image');
+        const avatarImageDropdown = document.getElementById('avatar-image-dropdown');
+        
+        if (userSnap.exists) {
+            const userData = userSnap.data();
             
-        if (avatarInitials) {
-            avatarInitials.style.display = 'flex';
-            avatarInitials.textContent = initials;
+            // Use custom profile name if available, otherwise fallback to auth name
+            if (userNameElement) {
+                userNameElement.textContent = userData.fullName || user.displayName || 'User';
+            }
+            
+            if (userEmailElement && user.email) {
+                userEmailElement.textContent = user.email;
+            }
+
+            // Handle profile picture - check for custom avatar first
+            if (userData.photoURL) {
+                // User has a custom profile picture from Firestore
+                if (avatarImage) {
+                    avatarImage.src = userData.photoURL;
+                    avatarImage.style.display = 'block';
+                }
+                if (avatarImageDropdown) {
+                    avatarImageDropdown.src = userData.photoURL;
+                    avatarImageDropdown.style.display = 'block';
+                }
+                if (avatarInitials) {
+                    avatarInitials.style.display = 'none';
+                }
+                if (avatarInitialsDropdown) {
+                    avatarInitialsDropdown.style.display = 'none';
+                }
+            } else if (user.photoURL) {
+                // Fallback to auth profile picture
+                if (avatarImage) {
+                    avatarImage.src = user.photoURL;
+                    avatarImage.style.display = 'block';
+                }
+                if (avatarImageDropdown) {
+                    avatarImageDropdown.src = user.photoURL;
+                    avatarImageDropdown.style.display = 'block';
+                }
+                if (avatarInitials) {
+                    avatarInitials.style.display = 'none';
+                }
+                if (avatarInitialsDropdown) {
+                    avatarInitialsDropdown.style.display = 'none';
+                }
+            } else {
+                // No profile picture, show initials
+                if (avatarImage) {
+                    avatarImage.style.display = 'none';
+                }
+                if (avatarImageDropdown) {
+                    avatarImageDropdown.style.display = 'none';
+                }
+                
+                // Get initials from custom name if available
+                const fullName = userData.fullName || user.displayName || '';
+                const initials = fullName
+                    ? fullName
+                        .split(' ')
+                        .map(name => name[0])
+                        .join('')
+                        .toUpperCase()
+                    : user.email ? user.email[0].toUpperCase() : 'JN';
+                
+                if (avatarInitials) {
+                    avatarInitials.style.display = 'flex';
+                    avatarInitials.textContent = initials;
+                }
+                if (avatarInitialsDropdown) {
+                    avatarInitialsDropdown.style.display = 'flex';
+                    avatarInitialsDropdown.textContent = initials;
+                }
+            }
+        } else {
+            // If user document doesn't exist in Firestore, create one
+            const defaultUserData = {
+                fullName: user.displayName || '',
+                email: user.email,
+                uid: user.uid,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            // If user has a photo URL from auth, save it to Firestore
+            if (user.photoURL) {
+                defaultUserData.photoURL = user.photoURL;
+            }
+            
+            // Set the user document
+            await firebase.firestore().collection('users').doc(user.uid).set(defaultUserData);
+            
+            // Update UI with default data
+            if (userNameElement) {
+                userNameElement.textContent = defaultUserData.fullName || 'User';
+            }
+            
+            if (userEmailElement) {
+                userEmailElement.textContent = defaultUserData.email;
+            }
+            
+            // Handle avatar with default data
+            if (user.photoURL) {
+                if (avatarImage) {
+                    avatarImage.src = user.photoURL;
+                    avatarImage.style.display = 'block';
+                }
+                if (avatarImageDropdown) {
+                    avatarImageDropdown.src = user.photoURL;
+                    avatarImageDropdown.style.display = 'block';
+                }
+                if (avatarInitials) {
+                    avatarInitials.style.display = 'none';
+                }
+                if (avatarInitialsDropdown) {
+                    avatarInitialsDropdown.style.display = 'none';
+                }
+            } else {
+                // No profile picture, show initials
+                const initials = user.displayName
+                    ? user.displayName
+                        .split(' ')
+                        .map(name => name[0])
+                        .join('')
+                        .toUpperCase()
+                    : user.email ? user.email[0].toUpperCase() : 'JN';
+                
+                if (avatarInitials) {
+                    avatarInitials.style.display = 'flex';
+                    avatarInitials.textContent = initials;
+                }
+                if (avatarInitialsDropdown) {
+                    avatarInitialsDropdown.style.display = 'flex';
+                    avatarInitialsDropdown.textContent = initials;
+                }
+            }
         }
-        if (avatarInitialsDropdown) {
-            avatarInitialsDropdown.style.display = 'flex';
-            avatarInitialsDropdown.textContent = initials;
-        }
+    } catch (error) {
+        console.error("Error fetching user data:", error);
     }
 });
 
@@ -149,7 +236,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (logoutLink) {
         logoutLink.addEventListener('click', (event) => {
             event.preventDefault();
-            auth.signOut().then(() => {
+            firebase.auth().signOut().then(() => {
                 window.location.href = '../login/login.html';
             }).catch((error) => {
                 console.error('Error signing out:', error);

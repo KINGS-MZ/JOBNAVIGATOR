@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Job Navigator - Saved Posts</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <!-- CSS Files -->
+    <link rel="stylesheet" href="../../Assets/navbar/nav.css">
+    <link rel="stylesheet" href="saved.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav>
+        <div class="nav-container">
+            <div class="logo">
+                <span class="logo-icon">JN</span>
+                <span class="logo-text">Job Navigator</span>
+            </div>
+            
+            <div class="nav-right">
+                <button id="theme-toggle" aria-label="Toggle dark mode">
+                    <i class="fas fa-moon"></i>
+                </button>
+                
+                <div class="user-menu">
+                    <button id="user-menu-btn" class="user-btn" aria-label="User menu" type="button">
+                        <div class="user-avatar">
+                            <img id="avatar-image" alt="Profile picture" style="display: none;">
+                            <div class="avatar-initials" id="avatar-initials"></div>
+                        </div>
+                    </button>
+                    <div class="dropdown-menu" id="user-dropdown">
+                        <div class="dropdown-header">
+                            <div class="user-avatar">
+                                <img id="avatar-image-dropdown" alt="Profile picture" style="display: none;">
+                                <div class="avatar-initials" id="avatar-initials-dropdown"></div>
+                            </div>
+                            <div class="user-info">
+                                <span id="user-name">Guest User</span>
+                                <span id="user-email">guest@example.com</span>
+                            </div>
+                        </div>
+                        
+                        <div class="menu-sections">
+                            <a href="../saved/saved.html">
+                                <i class="fas fa-heart"></i>
+                                Saved Posts
+                                <span class="badge">4</span>
+                            </a>
+                            <a href="../jobs/Applications.html">
+                                <i class="fas fa-briefcase"></i>
+                                Applications
+                                <span class="badge">2</span>
+                            </a>
+                            <a href="../notifications/notifications.html">
+                                <i class="fas fa-bell"></i>
+                                Notifications
+                                <span class="badge active">3</span>
+                            </a>
+                            <div class="menu-divider"></div>
+                            <a href="../profile/profile.html">
+                                <i class="fas fa-user"></i>
+                                My Profile
+                            </a>
+                            <a href="../jobs/Resume.html">
+                                <i class="fas fa-file-alt"></i>
+                                My Resume
+                            </a>
+                            <a href="../settings/settings.html">
+                                <i class="fas fa-cog"></i>
+                                Settings
+                            </a>
+                            <div class="menu-divider"></div>
+                            <a href="#" id="logout-link" class="logout-link">
+                                <i class="fas fa-sign-out-alt"></i>
+                                Sign Out
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main>
+        <div class="content-wrapper">
+            <!-- Header Section -->
+            <section class="header-section">
+                <div class="navigation-controls">
+                    <button id="back-btn" class="nav-btn" onclick="history.back()">
+                        <i class="fas fa-arrow-left"></i>
+                    </button>
+                    <a href="../home/home.html" class="nav-btn" title="Go to home">
+                        <i class="fas fa-home"></i>
+                    </a>
+                </div>
+                <h1 class="page-title">Saved Posts</h1>
+                <p class="page-description">Posts you've saved for later</p>
+                
+                <div class="search-container">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="post-search" placeholder="Search saved posts">
+                    </div>
+                    <button class="search-btn" type="button">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </section>
+            
+            <!-- Loading Container -->
+            <div class="loading-container">
+                <dotlottie-player 
+                    src="https://lottie.host/6f65cb19-68f4-4012-80f9-66ea8e94f084/lQ66W9skG5.lottie" 
+                    background="transparent" 
+                    speed="1" 
+                    style="width: 200px; height: 200px" 
+                    loop 
+                    autoplay>
+                </dotlottie-player>
+                <p>Loading saved posts...</p>
+            </div>
+            
+            <!-- Empty State -->
+            <div class="empty-state" style="display: none;">
+                <div class="empty-illustration">
+                    <i class="fas fa-bookmark"></i>
+                </div>
+                <h2>No saved posts yet</h2>
+                <p>When you save posts, they'll appear here for easy access</p>
+                <a href="../jobs/jobs.html" class="btn-primary">Explore Posts</a>
+            </div>
+            
+            <!-- Posts Container -->
+            <div class="posts-container">
+                <!-- Posts will be loaded dynamically -->
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+        <p> 2024 All Rights Reserved to IMAD EL KHAIDER</p>
+    </footer>
+
+    <!-- Lottie Player -->
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@1.7.1/dist/lottie-player.js"></script>
+    <script src="https://unpkg.com/@dotlottie/player-component@2.7.12/dist/dotlottie-player.mjs" type="module"></script>
+    
+    <!-- Main JavaScript -->
+    <script type="module" src="saved.js"></script>
+    
+    <!-- Script to manage navigation display based on screen size -->
+    <script>
+        function updateNavigation() {
+            const floatingMenu = document.querySelector('.floating-menu');
+            
+            if (window.innerWidth <= 768) {
+                // Mobile view: hide floating menu
+                if (floatingMenu) floatingMenu.style.display = 'none';
+            } else {
+                // Desktop view: show floating menu
+                if (floatingMenu) floatingMenu.style.display = 'flex';
+            }
+        }
+        
+        // Check on load and on resize
+        window.addEventListener('load', updateNavigation);
+        window.addEventListener('resize', updateNavigation);
+    </script>
+</body>
+</html> 

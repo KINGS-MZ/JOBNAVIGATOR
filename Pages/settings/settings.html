@@ -43,12 +43,12 @@
                         </div>
                         
                         <div class="menu-sections">
-                            <a href="../../home/SavedJobs.html">
+                            <a href="../saved/saved.html">
                                 <i class="fas fa-heart"></i>
                                 Saved Jobs
                                 <span class="badge">4</span>
                             </a>
-                            <a href="../../home/Applications.html">
+                            <a href="../jobs/Applications.html">
                                 <i class="fas fa-briefcase"></i>
                                 Applications
                                 <span class="badge">2</span>
@@ -302,6 +302,30 @@
         </section>
     </main>
 
+    <!-- Bottom Navigation Bar -->
+    <div class="bottom-nav">
+        <a href="../home/home.html" class="bottom-nav-item">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+        <a href="../jobs/jobs.html" class="bottom-nav-item">
+            <i class="fas fa-briefcase"></i>
+            <span>Jobs</span>
+        </a>
+        <a href="../saved/saved.html" class="bottom-nav-item">
+            <i class="fas fa-heart"></i>
+            <span>Saved</span>
+        </a>
+        <a href="../notifications/notifications.html" class="bottom-nav-item">
+            <i class="fas fa-bell"></i>
+            <span>Alerts</span>
+        </a>
+        <a href="../profile/profile.html" class="bottom-nav-item">
+            <i class="fas fa-user"></i>
+            <span>Profile</span>
+        </a>
+    </div>
+
     <!-- Footer -->
     <footer class="footer">
         <div class="footer-content">
@@ -318,13 +342,14 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-storage-compat.js"></script>
     <script>
         const firebaseConfig = {
             apiKey: "AIzaSyCb-WQn8hxetYE2wWMQ37y7vRAKl0hFbkI",
             authDomain: "jobnav-799f0.firebaseapp.com",
             databaseURL: "https://jobnav-799f0-default-rtdb.firebaseio.com",
             projectId: "jobnav-799f0",
-            storageBucket: "jobnav-799f0.firebasestorage.app",
+            storageBucket: "jobnav-799f0.appspot.com",
             messagingSenderId: "908819629942",
             appId: "1:908819629942:web:e569e324a0959efaef1c57",
             measurementId: "G-58CZK5KRN4"
@@ -334,6 +359,7 @@
         firebase.initializeApp(firebaseConfig);
         window.auth = firebase.auth();
         window.db = firebase.firestore();
+        window.storage = firebase.storage();
     </script>
     <!-- Main JavaScript -->
     <script src="settings.js"></script>

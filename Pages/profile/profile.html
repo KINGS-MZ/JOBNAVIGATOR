@@ -43,7 +43,7 @@
                         </div>
                         
                         <div class="menu-sections">
-                            <a href="SavedJobs.html">
+                            <a href="../saved/saved.html">
                                 <i class="fas fa-heart"></i>
                                 Saved Jobs
                                 <span class="badge">4</span>
@@ -235,6 +235,55 @@
         </div>
     </main>
 
+    <!-- Bottom Navigation Bar -->
+    <div class="bottom-nav">
+        <a href="../home/home.html" class="bottom-nav-item">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+        <a href="../jobs/jobs.html" class="bottom-nav-item">
+            <i class="fas fa-briefcase"></i>
+            <span>Jobs</span>
+        </a>
+        
+        <!-- Center Add Post Button -->
+        <a href="../posts/posts.html" class="bottom-nav-item bottom-nav-add">
+            <div class="nav-add-button">
+                <i class="fas fa-plus"></i>
+            </div>
+            <span>Add</span>
+        </a>
+        
+        <a href="../notifications/notifications.html" class="bottom-nav-item">
+            <i class="fas fa-bell"></i>
+            <span>Alerts</span>
+        </a>
+        <a href="../profile/profile.html" class="bottom-nav-item active">
+            <i class="fas fa-user"></i>
+            <span>Profile</span>
+        </a>
+    </div>
+    
+    <div class="floating-menu">
+        <button class="menu-btn">
+            <i class="fas fa-bars"></i>
+        </button>
+        <div class="menu-items">
+            <a href="../home/home.html" class="menu-item home-btn">
+                <i class="fas fa-home"></i>
+            </a>
+            <a href="../jobs/jobs.html" class="menu-item jobs-btn">
+                <i class="fas fa-briefcase"></i>
+            </a>
+            <a href="../posts/posts.html" class="menu-item posts-btn">
+                <i class="fas fa-plus-circle"></i>
+            </a>
+            <a href="../settings/settings.html" class="menu-item settings-btn">
+                <i class="fas fa-cog"></i>
+            </a>
+        </div>
+    </div>
+
     <footer>
         <p>© 2024 All Rights Reserved to IMAD EL KHAIDER</p>
     </footer>
@@ -414,5 +463,72 @@
     </div>
 
     <script type="module" src="profile.js"></script>
+    
+    <!-- Script to manage navigation display based on screen size -->
+    <script>
+        function updateNavigation() {
+            const bottomNav = document.querySelector('.bottom-nav');
+            const floatingMenu = document.querySelector('.floating-menu');
+            
+            if (window.innerWidth <= 768) {
+                // Mobile view: show bottom nav, hide floating menu
+                if (bottomNav) bottomNav.style.display = 'flex';
+                if (floatingMenu) floatingMenu.style.display = 'none';
+            } else {
+                // Desktop view: hide bottom nav, show floating menu
+                if (bottomNav) bottomNav.style.display = 'none';
+                if (floatingMenu) floatingMenu.style.display = 'flex';
+            }
+        }
+        
+        // Check on load and on resize
+        window.addEventListener('load', updateNavigation);
+        window.addEventListener('resize', updateNavigation);
+        
+        // Hide navigation on scroll
+        (function() {
+            const bottomNav = document.querySelector('.bottom-nav');
+            let lastScrollY = window.scrollY;
+            let ticking = false;
+            
+            // Threshold for scroll distance before hiding/showing navs (in pixels)
+            const scrollThreshold = 20;
+            
+            function handleScroll() {
+                const currentScrollY = window.scrollY;
+                
+                // Calculate scroll direction and distance
+                const scrollDirection = currentScrollY > lastScrollY ? 'down' : 'up';
+                const scrollDistance = Math.abs(currentScrollY - lastScrollY);
+                
+                // Only proceed if we've scrolled more than the threshold
+                if (scrollDistance > scrollThreshold) {
+                    // Scrolling down and not at the top: hide ONLY bottom nav
+                    if (scrollDirection === 'down' && currentScrollY > 100) {
+                        if (bottomNav && window.innerWidth <= 768) {
+                            bottomNav.classList.add('hidden');
+                        }
+                    } 
+                    // Scrolling up: show bottom nav
+                    else if (scrollDirection === 'up') {
+                        if (bottomNav) {
+                            bottomNav.classList.remove('hidden');
+                        }
+                    }
+                    
+                    lastScrollY = currentScrollY;
+                }
+                
+                ticking = false;
+            }
+            
+            window.addEventListener('scroll', function() {
+                if (!ticking) {
+                    window.requestAnimationFrame(handleScroll);
+                    ticking = true;
+                }
+            });
+        })();
+    </script>
 </body>
 </html>

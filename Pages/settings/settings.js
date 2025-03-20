@@ -75,9 +75,17 @@ function updateUserInfo(userData, user) {
     userName.textContent = userData.fullName || user.displayName || 'Guest User';
     userEmail.textContent = user.email;
     
-    // Handle avatar
-    if (user.photoURL) {
-        // User has a profile picture
+    // Handle avatar - first check for photoURL in Firestore
+    if (userData.photoURL) {
+        // User has a profile picture in Firestore
+        avatarImage.src = userData.photoURL;
+        avatarImage.style.display = 'block';
+        avatarImageDropdown.src = userData.photoURL;
+        avatarImageDropdown.style.display = 'block';
+        avatarInitials.style.display = 'none';
+        avatarInitialsDropdown.style.display = 'none';
+    } else if (user.photoURL) {
+        // Fallback to Auth profile picture
         avatarImage.src = user.photoURL;
         avatarImage.style.display = 'block';
         avatarImageDropdown.src = user.photoURL;
@@ -120,6 +128,15 @@ async function loadUserProfile() {
         if (userDoc.exists) {
             console.log('User document found');
             const userData = userDoc.data();
+            
+            // If user has a photoURL in auth but not in Firestore, update Firestore
+            if (user.photoURL && !userData.photoURL) {
+                await userRef.update({
+                    photoURL: user.photoURL
+                });
+                userData.photoURL = user.photoURL;
+            }
+            
             updateUserInfo(userData, user);
         } else {
             console.log('Creating new user document');
@@ -132,6 +149,11 @@ async function loadUserProfile() {
                 createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                 uid: user.uid
             };
+            
+            // If user has a photo URL from auth, save it to Firestore
+            if (user.photoURL) {
+                defaultUserData.photoURL = user.photoURL;
+            }
             
             // Create the user document
             await userRef.set(defaultUserData);
@@ -155,6 +177,11 @@ async function saveProfileChanges() {
     }
 
     try {
+        // Show loading state
+        saveChangesBtn.disabled = true;
+        saveChangesBtn.textContent = 'Saving...';
+        
+        // Prepare data to update
         const updatedData = {
             fullName: fullNameInput.value,
             email: emailInput.value,
@@ -163,12 +190,25 @@ async function saveProfileChanges() {
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
         
+        // Update Firestore
         await firebase.firestore().collection('users').doc(user.uid).update(updatedData);
-        updateUserInfo(updatedData, user);
+        
+        // Get the updated user data
+        const userDoc = await firebase.firestore().collection('users').doc(user.uid).get();
+        const userData = userDoc.data();
+        
+        // Update UI
+        updateUserInfo(userData, user);
+        
+        // Show success message
         alert('Profile updated successfully!');
     } catch (error) {
         console.error('Error saving profile:', error);
         alert('Error saving profile: ' + error.message);
+    } finally {
+        // Reset button state
+        saveChangesBtn.disabled = false;
+        saveChangesBtn.textContent = 'Save Changes';
     }
 }
 
@@ -341,15 +381,15 @@ document.addEventListener('DOMContentLoaded', () => {
             const menuSections = document.querySelector('.menu-sections');
             if (menuSections) {
                 menuSections.innerHTML = `
-                    <a href="../jobs/SavedJobs.html">
+                    <a href="../saved/saved.html">
                         <i class="fas fa-heart"></i>
                         Saved Jobs
-                        <span class="badge">0</span>
+                        <span class="badge">4</span>
                     </a>
                     <a href="../jobs/Applications.html">
                         <i class="fas fa-briefcase"></i>
                         Applications
-                        <span class="badge">0</span>
+                        <span class="badge">2</span>
                     </a>
                     <a href="../notifications/notifications.html">
                         <i class="fas fa-bell"></i>

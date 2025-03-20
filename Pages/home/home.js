@@ -1,82 +1,174 @@
 import { 
-    auth
+    auth,
+    db,
+    doc,
+    getDoc
 } from '../../Firebase/firebase-config.js';
 import { 
     onAuthStateChanged
 } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
 
 // Only update UI if user is signed in
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, async (user) => {
     const menuSections = document.querySelector('.menu-sections');
     
     if (user) {
-        // Update user info in the dropdown if user is signed in
-        const userNameElement = document.getElementById('user-name');
-        const userEmailElement = document.getElementById('user-email');
-        const avatarInitials = document.getElementById('avatar-initials');
-        const avatarInitialsDropdown = document.getElementById('avatar-initials-dropdown');
-        const avatarImage = document.getElementById('avatar-image');
-        const avatarImageDropdown = document.getElementById('avatar-image-dropdown');
-        
-        if (userNameElement && user.displayName) {
-            userNameElement.textContent = user.displayName;
-        }
-        
-        if (userEmailElement && user.email) {
-            userEmailElement.textContent = user.email;
-        }
-
-        // Handle profile picture
-        if (user.photoURL) {
-            if (avatarImage) {
-                avatarImage.src = user.photoURL;
-                avatarImage.style.display = 'block';
-            }
-            if (avatarImageDropdown) {
-                avatarImageDropdown.src = user.photoURL;
-                avatarImageDropdown.style.display = 'block';
-            }
-            if (avatarInitials) {
-                avatarInitials.style.display = 'none';
-            }
-            if (avatarInitialsDropdown) {
-                avatarInitialsDropdown.style.display = 'none';
-            }
-        } else {
-            if (avatarImage) {
-                avatarImage.style.display = 'none';
-            }
-            if (avatarImageDropdown) {
-                avatarImageDropdown.style.display = 'none';
-            }
-            const initials = user.displayName
-                ? user.displayName
-                    .split(' ')
-                    .map(name => name[0])
-                    .join('')
-                    .toUpperCase()
-                : 'JN';
+        // Fetch user profile data from Firestore
+        try {
+            const userRef = doc(db, "users", user.uid);
+            const userSnap = await getDoc(userRef);
+            
+            // Update user info in the dropdown if user is signed in
+            const userNameElement = document.getElementById('user-name');
+            const userEmailElement = document.getElementById('user-email');
+            const avatarInitials = document.getElementById('avatar-initials');
+            const avatarInitialsDropdown = document.getElementById('avatar-initials-dropdown');
+            const avatarImage = document.getElementById('avatar-image');
+            const avatarImageDropdown = document.getElementById('avatar-image-dropdown');
+            
+            if (userSnap.exists()) {
+                const userData = userSnap.data();
                 
-            if (avatarInitials) {
-                avatarInitials.style.display = 'flex';
-                avatarInitials.textContent = '';  // Clear any existing content
-                const guestIcon = document.createElement('i');
-                guestIcon.className = 'fa-solid fa-circle-user';
-                avatarInitials.appendChild(guestIcon);
+                // Use custom profile name if available, otherwise fallback to auth name
+                if (userNameElement) {
+                    userNameElement.textContent = userData.fullName || user.displayName || 'User';
+                }
+                
+                if (userEmailElement && user.email) {
+                    userEmailElement.textContent = user.email;
+                }
+                
+                // Handle profile picture - check for custom avatar first
+                if (userData.photoURL) {
+                    // User has a custom profile picture from Firestore
+                    if (avatarImage) {
+                        avatarImage.src = userData.photoURL;
+                        avatarImage.style.display = 'block';
+                    }
+                    if (avatarImageDropdown) {
+                        avatarImageDropdown.src = userData.photoURL;
+                        avatarImageDropdown.style.display = 'block';
+                    }
+                    if (avatarInitials) {
+                        avatarInitials.style.display = 'none';
+                    }
+                    if (avatarInitialsDropdown) {
+                        avatarInitialsDropdown.style.display = 'none';
+                    }
+                } else if (user.photoURL) {
+                    // Fallback to auth profile picture
+                    if (avatarImage) {
+                        avatarImage.src = user.photoURL;
+                        avatarImage.style.display = 'block';
+                    }
+                    if (avatarImageDropdown) {
+                        avatarImageDropdown.src = user.photoURL;
+                        avatarImageDropdown.style.display = 'block';
+                    }
+                    if (avatarInitials) {
+                        avatarInitials.style.display = 'none';
+                    }
+                    if (avatarInitialsDropdown) {
+                        avatarInitialsDropdown.style.display = 'none';
+                    }
+                } else {
+                    // No profile picture, show initials
+                    if (avatarImage) {
+                        avatarImage.style.display = 'none';
+                    }
+                    if (avatarImageDropdown) {
+                        avatarImageDropdown.style.display = 'none';
+                    }
+                    
+                    // Get initials from custom name if available
+                    const fullName = userData.fullName || user.displayName || '';
+                    const initials = fullName
+                        ? fullName
+                            .split(' ')
+                            .map(name => name[0])
+                            .join('')
+                            .toUpperCase()
+                        : 'JN';
+                    
+                    if (avatarInitials) {
+                        avatarInitials.style.display = 'flex';
+                        avatarInitials.textContent = initials;
+                    }
+                    if (avatarInitialsDropdown) {
+                        avatarInitialsDropdown.style.display = 'flex';
+                        avatarInitialsDropdown.textContent = initials;
+                    }
+                }
+            } else {
+                // If no Firestore data, fallback to auth data
+                if (userNameElement && user.displayName) {
+                    userNameElement.textContent = user.displayName;
+                }
+                
+                if (userEmailElement && user.email) {
+                    userEmailElement.textContent = user.email;
+                }
+                
+                // Handle default profile picture
+                if (user.photoURL) {
+                    if (avatarImage) {
+                        avatarImage.src = user.photoURL;
+                        avatarImage.style.display = 'block';
+                    }
+                    if (avatarImageDropdown) {
+                        avatarImageDropdown.src = user.photoURL;
+                        avatarImageDropdown.style.display = 'block';
+                    }
+                    if (avatarInitials) {
+                        avatarInitials.style.display = 'none';
+                    }
+                    if (avatarInitialsDropdown) {
+                        avatarInitialsDropdown.style.display = 'none';
+                    }
+                } else {
+                    if (avatarImage) {
+                        avatarImage.style.display = 'none';
+                    }
+                    if (avatarImageDropdown) {
+                        avatarImageDropdown.style.display = 'none';
+                    }
+                    const initials = user.displayName
+                        ? user.displayName
+                            .split(' ')
+                            .map(name => name[0])
+                            .join('')
+                            .toUpperCase()
+                        : 'JN';
+                        
+                    if (avatarInitials) {
+                        avatarInitials.style.display = 'flex';
+                        avatarInitials.textContent = initials;
+                    }
+                    if (avatarInitialsDropdown) {
+                        avatarInitialsDropdown.style.display = 'flex';
+                        avatarInitialsDropdown.textContent = initials;
+                    }
+                }
             }
-            if (avatarInitialsDropdown) {
-                avatarInitialsDropdown.style.display = 'flex';
-                avatarInitialsDropdown.textContent = '';  // Clear any existing content
-                const guestIconDropdown = document.createElement('i');
-                guestIconDropdown.className = 'fa-solid fa-circle-user';
-                avatarInitialsDropdown.appendChild(guestIconDropdown);
+        } catch (error) {
+            console.error('Error fetching user profile:', error);
+            // Fallback to auth data if Firestore fetch fails
+            const userNameElement = document.getElementById('user-name');
+            const userEmailElement = document.getElementById('user-email');
+            
+            if (userNameElement && user.displayName) {
+                userNameElement.textContent = user.displayName;
+            }
+            
+            if (userEmailElement && user.email) {
+                userEmailElement.textContent = user.email;
             }
         }
 
         // Update menu content for signed-in users
         if (menuSections) {
             menuSections.innerHTML = `
-                <a href="../jobs/SavedJobs.html">
+                <a href="../saved/saved.html">
                     <i class="fas fa-heart"></i>
                     Saved Jobs
                     <span class="badge">4</span>
@@ -96,7 +188,7 @@ onAuthStateChanged(auth, (user) => {
                     <i class="fas fa-user"></i>
                     My Profile
                 </a>
-                <a href="../profile/Resume.html">
+                <a href="../profile/resume.html">
                     <i class="fas fa-file-alt"></i>
                     My Resume
                 </a>
@@ -435,3 +527,24 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Add Post button:', addPostBtn);
     console.log('Settings button:', settingsBtn);
 });
+
+// Update user profile
+function updateUserProfile(user) {
+    if (!user) return; // Don't proceed if no user (avoid redirection)
+    
+    // Store current user
+    currentUser = user;
+    
+    // Store authentication token in localStorage for persistence
+    user.getIdToken().then((token) => {
+        localStorage.setItem('userToken', token);
+    }).catch(err => {
+        console.error("Error getting user token:", err);
+    });
+    
+    // Update user info in dropdown
+    userNameElement.textContent = user.displayName || 'User';
+    userEmailElement.textContent = user.email || '';
+    
+    // Rest of function remains the same...
+}

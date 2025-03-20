@@ -1,4 +1,4 @@
-import { auth } from '../../Firebase/firebase-config.js';
+import { auth, db, doc, getDoc } from '../../Firebase/firebase-config.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -66,46 +66,120 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Handle user authentication state
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, async (user) => {
         if (user) {
-            // User is signed in
-            const displayName = user.displayName || 'User';
-            const email = user.email;
-            const photoURL = user.photoURL;
-            const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase();
+            // User is signed in - first try to get profile data from Firestore
+            try {
+                const userRef = doc(db, "users", user.uid);
+                const userSnap = await getDoc(userRef);
+                
+                if (userSnap.exists()) {
+                    const userData = userSnap.data();
+                    
+                    // Update user info with custom data from Firestore
+                    userName.textContent = userData.fullName || user.displayName || 'User';
+                    userEmail.textContent = user.email;
+                    
+                    // Update avatar - check for custom avatar first
+                    if (userData.photoURL) {
+                        // User has custom profile picture
+                        avatarImage.style.display = 'block';
+                        avatarImage.src = userData.photoURL;
+                        avatarImageDropdown.style.display = 'block';
+                        avatarImageDropdown.src = userData.photoURL;
+                        avatarInitials.style.display = 'none';
+                        avatarInitialsDropdown.style.display = 'none';
+                    } else if (user.photoURL) {
+                        // Fallback to auth profile picture
+                        avatarImage.style.display = 'block';
+                        avatarImage.src = user.photoURL;
+                        avatarImageDropdown.style.display = 'block';
+                        avatarImageDropdown.src = user.photoURL;
+                        avatarInitials.style.display = 'none';
+                        avatarInitialsDropdown.style.display = 'none';
+                    } else {
+                        // No profile picture, show initials
+                        avatarImage.style.display = 'none';
+                        avatarImageDropdown.style.display = 'none';
+                        avatarInitials.style.display = 'flex';
+                        avatarInitialsDropdown.style.display = 'flex';
+                        
+                        // Use custom name for initials if available
+                        const fullName = userData.fullName || user.displayName || '';
+                        const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase();
+                        
+                        avatarInitials.textContent = initials || 'JN';
+                        avatarInitialsDropdown.textContent = initials || 'JN';
+                    }
+                } else {
+                    // No Firestore data, fallback to auth data
+                    const displayName = user.displayName || 'User';
+                    const email = user.email;
+                    const photoURL = user.photoURL;
+                    const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase();
 
-            // Update user info
-            userName.textContent = displayName;
-            userEmail.textContent = email;
+                    // Update user info
+                    userName.textContent = displayName;
+                    userEmail.textContent = email;
 
-            // Update avatar
-            if (photoURL) {
-                avatarImage.style.display = 'block';
-                avatarImage.src = photoURL;
-                avatarImageDropdown.style.display = 'block';
-                avatarImageDropdown.src = photoURL;
-                avatarInitials.style.display = 'none';
-                avatarInitialsDropdown.style.display = 'none';
-            } else {
-                avatarImage.style.display = 'none';
-                avatarImageDropdown.style.display = 'none';
-                avatarInitials.style.display = 'flex';
-                avatarInitialsDropdown.style.display = 'flex';
-                avatarInitials.textContent = initials;
-                avatarInitialsDropdown.textContent = initials;
+                    // Update avatar
+                    if (photoURL) {
+                        avatarImage.style.display = 'block';
+                        avatarImage.src = photoURL;
+                        avatarImageDropdown.style.display = 'block';
+                        avatarImageDropdown.src = photoURL;
+                        avatarInitials.style.display = 'none';
+                        avatarInitialsDropdown.style.display = 'none';
+                    } else {
+                        avatarImage.style.display = 'none';
+                        avatarImageDropdown.style.display = 'none';
+                        avatarInitials.style.display = 'flex';
+                        avatarInitialsDropdown.style.display = 'flex';
+                        avatarInitials.textContent = initials;
+                        avatarInitialsDropdown.textContent = initials;
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching user profile:', error);
+                // Fallback to auth data if Firestore fetch fails
+                const displayName = user.displayName || 'User';
+                const email = user.email;
+                const photoURL = user.photoURL;
+                const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase();
+
+                // Update user info
+                userName.textContent = displayName;
+                userEmail.textContent = email;
+
+                // Update avatar
+                if (photoURL) {
+                    avatarImage.style.display = 'block';
+                    avatarImage.src = photoURL;
+                    avatarImageDropdown.style.display = 'block';
+                    avatarImageDropdown.src = photoURL;
+                    avatarInitials.style.display = 'none';
+                    avatarInitialsDropdown.style.display = 'none';
+                } else {
+                    avatarImage.style.display = 'none';
+                    avatarImageDropdown.style.display = 'none';
+                    avatarInitials.style.display = 'flex';
+                    avatarInitialsDropdown.style.display = 'flex';
+                    avatarInitials.textContent = initials;
+                    avatarInitialsDropdown.textContent = initials;
+                }
             }
 
             // Update menu sections for signed-in user
             menuSections.innerHTML = `
-                <a href="../jobs/SavedJobs.html">
+                <a href="../saved/saved.html">
                     <i class="fas fa-heart"></i>
                     Saved Jobs
-                    <span class="badge">0</span>
+                    <span class="badge">4</span>
                 </a>
                 <a href="../jobs/Applications.html">
                     <i class="fas fa-briefcase"></i>
                     Applications
-                    <span class="badge">0</span>
+                    <span class="badge">2</span>
                 </a>
                 <a href="../notifications/notifications.html">
                     <i class="fas fa-bell"></i>
