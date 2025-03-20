@@ -3,7 +3,8 @@ import {
     auth,
     db,
     doc,
-    getDoc
+    getDoc,
+    deleteDoc
 } from '../../Firebase/firebase-config.js';
 import { 
     onAuthStateChanged
@@ -375,6 +376,67 @@ function displayJobDetails(job) {
             'Salary not specified';
         document.getElementById('posted-date').textContent = `Posted ${formatDate(job.createdAt)}`;
 
+        // Check if the current user is the creator of the post
+        const deleteBtn = document.getElementById('delete-btn');
+        const editBtn = document.getElementById('edit-btn');
+        const applyBtn = document.querySelector('.apply-btn');
+        const saveBtn = document.querySelector('.save-btn');
+
+        if (auth.currentUser && job.createdBy && job.createdBy.uid && auth.currentUser.uid === job.createdBy.uid) {
+            // Show delete and edit buttons only if the current user is the creator
+            deleteBtn.style.display = 'flex';
+            editBtn.style.display = 'flex';
+            
+            // Hide apply and save buttons for the creator
+            applyBtn.style.display = 'none';
+            saveBtn.style.display = 'none';
+            
+            // Add event listener for edit button
+            editBtn.addEventListener('click', () => {
+                const jobId = getUrlParameter('id');
+                window.location.href = `../posts/posts.html?edit=${jobId}`;
+            });
+            
+            // Add event listener for delete button
+            deleteBtn.addEventListener('click', async () => {
+                if (confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+                    try {
+                        const jobId = getUrlParameter('id');
+                        const jobRef = doc(db, "jobs", jobId);
+                        await deleteDoc(jobRef);
+                        alert('Post deleted successfully');
+                        window.location.href = '../jobs/jobs.html';
+                    } catch (error) {
+                        console.error('Error deleting post:', error);
+                        alert('Failed to delete post: ' + error.message);
+                    }
+                }
+            });
+        } else {
+            // Hide delete and edit buttons for other users
+            deleteBtn.style.display = 'none';
+            editBtn.style.display = 'none';
+            
+            // Setup action buttons with authentication check for non-creators
+            applyBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (handleProtectedAction('apply')) {
+                    // Only proceed with email if user is signed in
+                    if (job.companyEmail) {
+                        window.location.href = `mailto:${job.companyEmail}?subject=Application for ${job.title} position`;
+                    }
+                }
+            });
+
+            saveBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (handleProtectedAction('save')) {
+                    // Handle save job functionality
+                    console.log('Saving job...');
+                }
+            });
+        }
+
         // Update company logo
         const logoImg = document.getElementById('company-logo');
         if (job.icon?.className) {
@@ -439,28 +501,6 @@ function displayJobDetails(job) {
             postedBy.innerHTML = `Posted by: ${job.createdBy.displayName || 'Anonymous'}`;
             mainContent.appendChild(postedBy);
         }
-
-        // Setup action buttons with authentication check
-        const applyBtn = document.querySelector('.apply-btn');
-        const saveBtn = document.querySelector('.save-btn');
-
-        applyBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (handleProtectedAction('apply')) {
-                // Only proceed with email if user is signed in
-                if (job.companyEmail) {
-                    window.location.href = `mailto:${job.companyEmail}?subject=Application for ${job.title} position`;
-                }
-            }
-        });
-
-        saveBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (handleProtectedAction('save')) {
-                // Handle save job functionality
-                console.log('Saving job...');
-            }
-        });
 
         console.log('Job details displayed successfully');
     } catch (error) {

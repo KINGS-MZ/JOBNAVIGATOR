@@ -336,9 +336,62 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('User display name:', user.displayName);
             console.log('User photo URL:', user.photoURL);
             loadUserProfile();
+            
+            // Update menu content for signed-in users
+            const menuSections = document.querySelector('.menu-sections');
+            if (menuSections) {
+                menuSections.innerHTML = `
+                    <a href="../jobs/SavedJobs.html">
+                        <i class="fas fa-heart"></i>
+                        Saved Jobs
+                        <span class="badge">0</span>
+                    </a>
+                    <a href="../jobs/Applications.html">
+                        <i class="fas fa-briefcase"></i>
+                        Applications
+                        <span class="badge">0</span>
+                    </a>
+                    <a href="../notifications/notifications.html">
+                        <i class="fas fa-bell"></i>
+                        Notifications
+                        <span class="badge active">0</span>
+                    </a>
+                    <div class="menu-divider"></div>
+                    <a href="../profile/Profile.html">
+                        <i class="fas fa-user"></i>
+                        My Profile
+                    </a>
+                    <a href="../profile/Resume.html">
+                        <i class="fas fa-file-alt"></i>
+                        My Resume
+                    </a>
+                    <a href="settings.html">
+                        <i class="fas fa-cog"></i>
+                        Settings
+                    </a>
+                    <div class="menu-divider"></div>
+                    <a href="#" id="logout-link" class="logout-link">
+                        <i class="fas fa-sign-out-alt"></i>
+                        Sign Out
+                    </a>
+                `;
+                
+                // Reattach logout event listener
+                const logoutLink = document.getElementById('logout-link');
+                if (logoutLink) {
+                    logoutLink.addEventListener('click', (event) => {
+                        event.preventDefault();
+                        firebase.auth().signOut().then(() => {
+                            window.location.href = '../login/login.html';
+                        }).catch((error) => {
+                            console.error('Error signing out:', error);
+                        });
+                    });
+                }
+            }
         } else {
             console.log('No user is signed in, redirecting to login');
-            window.location.href = '../../index.html';
+            window.location.href = '../login/login.html';
         }
     });
 

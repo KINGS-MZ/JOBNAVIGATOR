@@ -228,10 +228,9 @@ body.dark-mode .company-details h2 {
 
 .job-actions {
     display: flex;
+    flex-wrap: wrap;
     gap: 1rem;
-    flex-shrink: 0;
-    justify-content: flex-end;
-    margin-left: auto;
+    margin-top: 1.5rem;
 }
 
 .apply-btn, .save-btn {
@@ -847,9 +846,9 @@ body.dark-mode .copyright {
         margin: 2rem auto 0;
     }
     
-    .apply-btn, .save-btn {
-        padding: 0.8rem 1.5rem;
-        font-size: 0.95rem;
+    .apply-btn, .save-btn, .delete-btn, .edit-btn {
+        font-size: 0.9rem;
+        padding: 0.6rem 1rem;
     }
     
     .benefits-list {
@@ -888,11 +887,15 @@ body.dark-mode .benefit-item::after {
     
     .job-actions {
         flex-direction: column;
+        width: 100%;
     }
     
     .apply-btn,
-    .save-btn {
+    .save-btn,
+    .delete-btn,
+    .edit-btn {
         width: 100%;
+        margin: 0.5rem 0;
         justify-content: center;
     }
     
@@ -1596,4 +1599,77 @@ body.dark-mode .menu-sections a.sign-in-link i {
 .toast-btn i {
     font-size: 1.1rem;
     margin-right: 8px;
+}
+
+.delete-btn {
+    color: #e74c3c;
+    border: 1px solid rgba(231, 76, 60, 0.3);
+    background-color: rgba(231, 76, 60, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.7rem 1.2rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.delete-btn:hover {
+    background-color: rgba(231, 76, 60, 0.2);
+    border-color: rgba(231, 76, 60, 0.5);
+}
+
+.delete-btn i {
+    margin-right: 8px;
+}
+
+body.dark-mode .delete-btn {
+    color: #e74c3c;
+    border-color: rgba(231, 76, 60, 0.5);
+    background-color: rgba(231, 76, 60, 0.2);
+}
+
+body.dark-mode .delete-btn:hover {
+    background-color: rgba(231, 76, 60, 0.3);
+    border-color: rgba(231, 76, 60, 0.7);
+}
+
+body.dark-mode .save-btn:hover {
+    background: var(--text-light);
+    color: var(--bg-dark);
+}
+
+.edit-btn {
+    color: #3498db;
+    border: 1px solid rgba(52, 152, 219, 0.3);
+    background-color: rgba(52, 152, 219, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.7rem 1.2rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.edit-btn:hover {
+    background-color: rgba(52, 152, 219, 0.2);
+    border-color: rgba(52, 152, 219, 0.5);
+}
+
+.edit-btn i {
+    margin-right: 8px;
+}
+
+body.dark-mode .edit-btn {
+    color: #3498db;
+    border-color: rgba(52, 152, 219, 0.5);
+    background-color: rgba(52, 152, 219, 0.2);
+}
+
+body.dark-mode .edit-btn:hover {
+    background-color: rgba(52, 152, 219, 0.3);
+    border-color: rgba(52, 152, 219, 0.7);
 }

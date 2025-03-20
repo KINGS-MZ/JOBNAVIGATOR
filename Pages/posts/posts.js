@@ -2,7 +2,10 @@ import {
     auth,
     db,
     collection,
-    addDoc
+    addDoc,
+    doc,
+    getDoc,
+    updateDoc
 } from '../../Firebase/firebase-config.js';
 import { 
     onAuthStateChanged,
@@ -10,13 +13,55 @@ import {
 } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Variables to track edit mode
+    let isEditMode = false;
+    let editJobId = null;
+    
+    // Check if we're in edit mode by looking for edit parameter in URL
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('edit')) {
+        isEditMode = true;
+        editJobId = urlParams.get('edit');
+    }
+
     // Check if user is signed in
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, async (user) => {
         if (!user) {
             // User is not signed in, redirect to login page
             window.location.href = '/Pages/login/login.html';
             return;
         }
+        
+        // Update UI for edit mode if applicable
+        if (isEditMode) {
+            // Update page title and description
+            const sectionHeader = document.querySelector('.section-header');
+            if (sectionHeader) {
+                sectionHeader.innerHTML = `
+                    <h2>Edit Job Post</h2>
+                    <p>Update your job posting details</p>
+                `;
+            }
+            
+            // Update buttons
+            const publishButton = document.querySelector('.btn-primary');
+            const draftButton = document.querySelector('.btn-secondary');
+            
+            if (publishButton) {
+                publishButton.innerHTML = `
+                    <i class="fas fa-save"></i>
+                    Save Changes
+                `;
+            }
+            
+            if (draftButton) {
+                draftButton.style.display = 'none';
+            }
+            
+            // Fetch the job data for editing
+            await fetchJobForEditing(editJobId);
+        }
+        
         // Update user info in the dropdown if user is signed in
         const userNameElement = document.getElementById('user-name');
         const userEmailElement = document.getElementById('user-email');
@@ -130,13 +175,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // Prevent default form submission
     jobForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        submitForm('published');
+        if (isEditMode) {
+            updateJob();
+        } else {
+            submitForm('published');
+        }
     });
 
-    draftButton.addEventListener('click', (e) => {
-        e.preventDefault();
-        submitForm('draft');
-    });
+    if (draftButton) {
+        draftButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            submitForm('draft');
+        });
+    }
 
     async function submitForm(status) {
         try {
@@ -519,4 +570,134 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     });
+
+    // Function to fetch job data for editing
+    async function fetchJobForEditing(jobId) {
+        try {
+            console.log('Fetching job data for editing...');
+            
+            const jobRef = doc(db, "jobs", jobId);
+            const jobDoc = await getDoc(jobRef);
+            
+            if (!jobDoc.exists()) {
+                console.error('Job not found');
+                alert('Job post not found');
+                window.location.href = '../jobs/jobs.html';
+                return;
+            }
+            
+            const jobData = jobDoc.data();
+            
+            // Check if the current user is the creator of the post
+            if (auth.currentUser.uid !== jobData.createdBy.uid) {
+                console.error('Not authorized to edit this post');
+                alert('You are not authorized to edit this post');
+                window.location.href = '../jobs/jobs.html';
+                return;
+            }
+            
+            // Populate form with existing data
+            document.getElementById('jobTitle').value = jobData.title || '';
+            document.getElementById('companyName').value = jobData.company || '';
+            document.getElementById('location').value = jobData.location || '';
+            document.getElementById('employmentType').value = jobData.type || '';
+            document.getElementById('salaryMin').value = jobData.salaryMin || '';
+            document.getElementById('salaryMax').value = jobData.salaryMax || '';
+            document.getElementById('companyEmail').value = jobData.companyEmail || '';
+            editorContent.innerHTML = jobData.description || '';
+            
+            // Set the icon
+            if (jobData.icon && jobData.icon.className) {
+                selectedIconData = {
+                    className: jobData.icon.className,
+                    name: jobData.icon.name || 'briefcase'
+                };
+                iconSelector.querySelector('i').className = jobData.icon.className;
+            }
+            
+            // Add skills
+            if (jobData.skills && Array.isArray(jobData.skills)) {
+                jobData.skills.forEach(skill => {
+                    addTag(skill, document.getElementById('skillsContainer'), skillTags);
+                });
+            }
+            
+            // Add benefits
+            if (jobData.benefits && Array.isArray(jobData.benefits)) {
+                jobData.benefits.forEach(benefit => {
+                    addTag(benefit, document.getElementById('benefitsContainer'), benefitTags);
+                });
+            }
+            
+            console.log('Job data loaded for editing');
+        } catch (error) {
+            console.error('Error fetching job data:', error);
+            alert('Error loading job data: ' + error.message);
+        }
+    }
+    
+    // Function to update existing job
+    async function updateJob() {
+        try {
+            console.log('Updating job post...');
+            
+            // Get form values
+            const title = document.getElementById('jobTitle').value;
+            const company = document.getElementById('companyName').value;
+            const location = document.getElementById('location').value;
+            const type = document.getElementById('employmentType').value;
+            const salaryMin = document.getElementById('salaryMin').value;
+            const salaryMax = document.getElementById('salaryMax').value;
+            const description = editorContent.innerHTML;
+            const companyEmail = document.getElementById('companyEmail').value;
+
+            if (!title || !company || !location || !type || !description || !companyEmail) {
+                console.log('Missing required fields');
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            // Get current user data
+            const user = auth.currentUser;
+            if (!user) {
+                alert('You must be signed in to update a job post');
+                return;
+            }
+
+            const formData = {
+                title,
+                company,
+                location,
+                type,
+                icon: {
+                    className: selectedIconData.className,
+                    name: selectedIconData.name
+                },
+                salaryMin: parseFloat(salaryMin) || 0,
+                salaryMax: parseFloat(salaryMax) || 0,
+                description,
+                skills: Array.from(skillTags),
+                benefits: Array.from(benefitTags),
+                status: 'published',
+                updatedAt: new Date().toISOString(),
+                companyEmail
+            };
+
+            console.log('Updating job in Firebase:', formData);
+
+            // Update job in Firebase
+            const jobRef = doc(db, "jobs", editJobId);
+            await updateDoc(jobRef, formData);
+            
+            console.log('Job updated successfully');
+            alert('Job post updated successfully!');
+            
+            // Redirect to the updated job page (replace current history instead of adding to it)
+            window.location.replace(`../visualize/visualize.html?id=${editJobId}`);
+            
+        } catch (error) {
+            console.error("Error updating job post:", error);
+            alert('Error updating job post: ' + error.message);
+        }
+    }
 });

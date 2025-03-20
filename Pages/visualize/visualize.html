@@ -54,7 +54,7 @@
     </nav>
 
     <!-- Back Button -->
-    <button onclick="window.location.href='../jobs/jobs.html'" class="back-button">
+    <button onclick="window.location.replace('../jobs/jobs.html')" class="back-button">
         <i class="fas fa-arrow-left"></i>
         Back
     </button>
@@ -88,6 +88,14 @@
                     <button class="save-btn">
                         <i class="far fa-bookmark"></i>
                         Save Job
+                    </button>
+                    <button class="edit-btn" id="edit-btn" style="display: none;">
+                        <i class="fas fa-edit"></i>
+                        Edit Post
+                    </button>
+                    <button class="delete-btn" id="delete-btn" style="display: none;">
+                        <i class="fas fa-trash"></i>
+                        Delete Post
                     </button>
                 </div>
             </div>
