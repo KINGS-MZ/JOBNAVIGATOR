@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="nav.css">
+    <link rel="stylesheet" href="../floating-button/float.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">
+            <div class="logo-box">JN</div>
+            <span class="nav-title">Job Navigator</span>
+        </div>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle dark mode">
+            <i class="fas fa-moon"></i>
+            <i class="fas fa-sun"></i>
+        </button>
+    </nav>
+
+    <div class="floating-container">
+        <div class="floating-menu">
+            <a href="#" class="menu-item" data-tooltip="Home">
+                <i class="fas fa-home"></i>
+            </a>
+            <a href="#" class="menu-item" data-tooltip="Jobs">
+                <i class="fas fa-briefcase"></i>
+            </a>
+            <a href="#" class="menu-item" data-tooltip="Courses">
+                <i class="fas fa-graduation-cap"></i>
+            </a>
+            <a href="#" class="menu-item" data-tooltip="Applications">
+                <i class="fas fa-file-alt"></i>
+            </a>
+            <a href="#" class="menu-item" id="loginBtn" data-tooltip="Sign In">
+                <i class="fas fa-sign-in-alt"></i>
+            </a>
+        </div>
+        <button class="floating-btn" id="floating-btn">
+            <i class="fas fa-bars"></i>
+        </button>
+    </div>
+
+    <script src="nav.js"></script>
+</body>
+</html>
