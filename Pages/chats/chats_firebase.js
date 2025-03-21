@@ -508,6 +508,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load user's chats from Firebase
     async function loadUserChats(userId) {
         try {
+            // Initialize our tracking set if not already done
+            if (!window.processedChatIds) {
+                window.processedChatIds = new Set();
+            } else {
+                // Clear the set for a fresh load
+                window.processedChatIds.clear();
+            }
+            
             // Fetch user's chats from Firestore
             const chatsSnapshot = await firebase.firestore()
                 .collection('chats')
@@ -527,6 +535,11 @@ document.addEventListener('DOMContentLoaded', () => {
             // Process each chat
             const chats = [];
             for (const doc of chatsSnapshot.docs) {
+                const chatId = doc.id;
+                
+                // Add this chat ID to our tracking set
+                window.processedChatIds.add(chatId);
+                
                 const chatData = doc.data();
                 const otherUserId = chatData.participants.find(id => id !== userId);
                 
@@ -590,29 +603,30 @@ document.addEventListener('DOMContentLoaded', () => {
             // Sort chats by last message time
             chats.sort((a, b) => b.lastMessage.timestamp - a.lastMessage.timestamp);
             
-            // Create HTML for each chat
+            // Create HTML for each chat, ensuring no duplicates
             chats.forEach((chat, index) => {
-                const contactItem = createContactElement(chat, userId);
-                contactsList.appendChild(contactItem);
-                
-                // CHANGE: Remove auto-selection of first contact
-                // Instead, show the empty state by default
-                
-                // Add click handler
-                contactItem.addEventListener('click', () => {
-                    // Remove active class from all contacts
-                    document.querySelectorAll('.contact-item').forEach(item => item.classList.remove('active'));
-                    // Add active class to clicked contact
-                    contactItem.classList.add('active');
+                // Double-check we don't already have this chat in the DOM
+                const existingChat = document.querySelector(`.contact-item[data-chat-id="${chat.id}"]`);
+                if (!existingChat) {
+                    const contactItem = createContactElement(chat, userId);
+                    contactsList.appendChild(contactItem);
                     
-                    // Load the chat
-                    loadChat(chat.id, chat.otherUser);
-                    
-                    // On mobile, show the messages section
-                    if (window.innerWidth <= 768) {
-                        showMessages();
-                    }
-                });
+                    // Add click handler
+                    contactItem.addEventListener('click', () => {
+                        // Remove active class from all contacts
+                        document.querySelectorAll('.contact-item').forEach(item => item.classList.remove('active'));
+                        // Add active class to clicked contact
+                        contactItem.classList.add('active');
+                        
+                        // Load the chat
+                        loadChat(chat.id, chat.otherUser);
+                        
+                        // On mobile, show the messages section
+                        if (window.innerWidth <= 768) {
+                            showMessages();
+                        }
+                    });
+                }
             });
             
             // Show empty message state since no chat is selected by default
@@ -745,11 +759,19 @@ document.addEventListener('DOMContentLoaded', () => {
         dateDiv.textContent = 'Today';
         messagesContainer.appendChild(dateDiv);
         
-        // We're removing the typing indicator element from the messages area
-        // but keeping it in the header and contact list
-        
         // Track message IDs to prevent duplicates
         window.loadedMessageIds = new Set();
+        
+        // Make sure the empty state is hidden
+        messagesContainer.classList.remove('empty-state');
+        
+        // Clean up existing listeners before setting up new ones
+        if (window.currentMessageListener) {
+            window.currentMessageListener();
+        }
+        
+        // Set up typing indicator for this chat
+        setupTypingIndicator(chatId, contact);
         
         // Set up real-time listener for messages
         const messagesRef = firebase.firestore()
@@ -758,12 +780,26 @@ document.addEventListener('DOMContentLoaded', () => {
             .collection('messages')
             .orderBy('timestamp', 'asc');
         
-        // Store the unsubscribe function to clean up later
-        if (window.currentMessageListener) {
-            window.currentMessageListener();
-        }
+        // Display loading indicator while messages are being loaded
+        const loadingIndicator = document.createElement('div');
+        loadingIndicator.className = 'messages-loading';
+        loadingIndicator.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
+        messagesContainer.appendChild(loadingIndicator);
         
+        // Store the unsubscribe function to clean up later
         window.currentMessageListener = messagesRef.onSnapshot(snapshot => {
+            // Remove loading indicator once we get data
+            const loadingIndicator = messagesContainer.querySelector('.messages-loading');
+            if (loadingIndicator) {
+                loadingIndicator.remove();
+            }
+            
+            // Keep track if we need to scroll after processing
+            let shouldScrollToBottom = true;
+            
+            // Get visible height before we add messages
+            const initialScrollHeight = messagesContainer.scrollHeight;
+            
             // Process new messages
             snapshot.docChanges().forEach(change => {
                 if (change.type === 'added') {
@@ -810,10 +846,18 @@ document.addEventListener('DOMContentLoaded', () => {
                             
                             // If no temp message was found, add it normally
                             if (!tempFound) {
+                                // Don't auto-scroll if user is scrolled up
+                                if (!isUserAtBottom()) {
+                                    shouldScrollToBottom = false;
+                                }
                                 addMessageToUI(messageId, message, currentUserID);
                             }
                         } else {
                             // Not our message, add normally
+                            // Don't auto-scroll if user is scrolled up
+                            if (!isUserAtBottom()) {
+                                shouldScrollToBottom = false;
+                            }
                             addMessageToUI(messageId, message, currentUserID);
                             
                             // Update the contact preview for messages from others
@@ -844,17 +888,44 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
             
-            // Scroll to bottom if we're already at the bottom
-            if (isUserAtBottom()) {
-                scrollToBottom();
+            // If this is the initial load or the user was at the bottom, scroll to bottom
+            if (shouldScrollToBottom || snapshot.docChanges().length === snapshot.size) {
+                // Ensure we scroll after the DOM updates
+                setTimeout(() => {
+                    scrollToBottom();
+                }, 0);
             }
             
-            // Mark messages as read
-            markMessagesAsRead(chatId, currentUserID);
+            // Mark messages as read if user is looking at this chat
+            if (currentChatId === chatId) {
+                markMessagesAsRead(chatId, currentUserID);
+            }
+            
+            // Update unread badge on contact list
+            const contactItem = document.querySelector(`.contact-item[data-chat-id="${chatId}"]`);
+            if (contactItem && contactItem.classList.contains('active')) {
+                // Update UI to remove unread count
+                const unreadBadge = contactItem.querySelector('.unread-count');
+                if (unreadBadge) {
+                    unreadBadge.remove();
+                }
+            }
+        }, error => {
+            console.error("Error loading messages:", error);
+            // Show error UI
+            messagesContainer.innerHTML = `
+                <div class="error-message">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <p>Failed to load messages. Please try again.</p>
+                </div>
+            `;
         });
         
-        // Set up typing indicator listener
-        setupTypingIndicator(chatId, contact);
+        // Update message input placeholder
+        messageInput.placeholder = `Message ${contact.name}...`;
+        
+        // Update the contact status display real-time
+        updateCurrentContactStatus(contact.status === 'online');
     }
     
     // Update existing message in the UI (for edits or status changes)
@@ -963,9 +1034,12 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
         
-        // Get messages container
+        // Check if messagesContainer exists before adding message
         const messagesContainer = document.querySelector('.messages-container');
         if (!messagesContainer) return;
+        
+        // Save current scroll position and check if user was at bottom
+        const wasAtBottom = isUserAtBottom();
         
         messagesContainer.appendChild(messageDiv);
         
@@ -1026,6 +1100,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update the contact preview if this is a new received message
         if (!isSentByCurrentUser && !isTemp) {
             updateContactPreview(currentChatId, message.text);
+        }
+        
+        // If user was at bottom before adding message, scroll to bottom
+        if (wasAtBottom || isSentByCurrentUser) {
+            scrollToBottom();
         }
     }
     
@@ -1511,13 +1590,26 @@ document.addEventListener('DOMContentLoaded', () => {
             document.body.classList.add('chat-open');
         }
         
-        // Scroll to the bottom of messages
-        scrollToBottom();
+        // Set a short timeout to ensure the DOM has updated
+        // before attempting to scroll
+        setTimeout(() => {
+            scrollToBottom();
+        }, 50);
     }
     
     // Helper function to scroll to bottom of messages
     function scrollToBottom() {
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        // Use requestAnimationFrame to ensure DOM is updated before scrolling
+        requestAnimationFrame(() => {
+            if (messagesContainer) {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                // For mobile issues, sometimes we need to force the scroll again after a small delay
+                setTimeout(() => {
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }, 100);
+            }
+        });
     }
     
     // Helper function to format timestamps for contact list
@@ -2121,6 +2213,19 @@ service cloud.firestore {
             window.newChatListener();
         }
         
+        // Create a Set to track chat IDs we've already seen
+        if (!window.processedChatIds) {
+            window.processedChatIds = new Set();
+        }
+        
+        // Add all existing chat IDs to our tracking set
+        document.querySelectorAll('.contact-item[data-chat-id]').forEach(item => {
+            const chatId = item.dataset.chatId;
+            if (chatId) {
+                window.processedChatIds.add(chatId);
+            }
+        });
+        
         // Listen for changes to the chats collection where this user is a participant
         window.newChatListener = firebase.firestore()
             .collection('chats')
@@ -2135,13 +2240,17 @@ service cloud.firestore {
                         const chatId = change.doc.id;
                         const chatData = change.doc.data();
                         
-                        // Check if this chat already exists in the UI
-                        const existingChat = document.querySelector(`.contact-item[data-chat-id="${chatId}"]`);
-                        if (!existingChat) {
-                            newChats.push({
-                                id: chatId,
-                                data: chatData
-                            });
+                        // Check if this chat already exists in our tracking set
+                        if (!window.processedChatIds.has(chatId)) {
+                            // Also double-check the DOM to be sure
+                            const existingChat = document.querySelector(`.contact-item[data-chat-id="${chatId}"]`);
+                            if (!existingChat) {
+                                window.processedChatIds.add(chatId); // Add to our tracking set
+                                newChats.push({
+                                    id: chatId,
+                                    data: chatData
+                                });
+                            }
                         }
                     }
                 });
@@ -2831,4 +2940,89 @@ service cloud.firestore {
             markMessagesAsRead(chatId, currentUserID);
         }
     }
+
+    // Add CSS styles for proper message display in mobile view
+    addStyleToPage(`
+        /* Improved messages container styling for mobile */
+        .messages-container {
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            height: calc(100% - 60px);
+            padding: 1rem;
+            -webkit-overflow-scrolling: touch; /* Smoother scrolling on iOS */
+        }
+        
+        /* Fix for message ordering issues */
+        .message {
+            position: relative;
+            max-width: 80%;
+            margin-bottom: 0.75rem;
+            order: 0; /* Ensure proper ordering */
+        }
+        
+        /* Loading indicator for messages */
+        .messages-loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 1rem;
+            height: 60px;
+        }
+        
+        .loading-spinner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            color: var(--primary-blue);
+        }
+        
+        .loading-spinner i {
+            font-size: 1.5rem;
+        }
+        
+        /* Error message */
+        .error-message {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            text-align: center;
+            color: #e74c3c;
+        }
+        
+        .error-message i {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+        }
+        
+        /* Improved mobile specific styles */
+        @media (max-width: 768px) {
+            .messages-container {
+                height: calc(100vh - 120px); /* Adjust for mobile header and input */
+            }
+            
+            .chat-open .messages-container {
+                padding-bottom: 2rem; /* Extra space to ensure all messages are visible */
+            }
+            
+            /* Fix for iOS momentum scrolling issues */
+            body.chat-open {
+                overflow: hidden;
+            }
+            
+            .message-input-container {
+                position: sticky;
+                bottom: 0;
+                background: var(--bg-light);
+                z-index: 5;
+            }
+            
+            .dark-mode .message-input-container {
+                background: var(--bg-dark);
+            }
+        }
+    `);
 });
