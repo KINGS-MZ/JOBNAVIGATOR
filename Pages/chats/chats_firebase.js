@@ -2090,28 +2090,164 @@ service cloud.firestore {
         }
     });
 
-    // Initialize the chat UI
+    // Function to initialize the chat UI
     function initializeChatsUI() {
-        // Set up permissions and load data
-        setupFirebasePermissions(currentUserID);
-        loadUserChats(currentUserID);
-        
-        // Set up presence monitoring
-        setupPresenceTracking(currentUserID);
-        
-        // Add click handlers for existing static contact items (for demo purposes)
-        addContactClickHandlers();
-        
-        // Set up new chat button click handler
+        // Set up new chat button
         setupNewChatButton();
         
-        // Make sure to show empty state initially
-        showEmptyMessagesState();
-        
-        // Check for pending chat requests (from failed attempts)
+        // Check for pending chat requests from previous page load
         checkPendingChatRequests();
+        
+        // Setup real-time listeners for user's chats
+        if (currentUserID) {
+            // Set up Firestore permissions
+            setupFirebasePermissions(currentUserID);
+            
+            // Set up presence tracking
+            setupPresenceTracking(currentUserID);
+            
+            // First, load initial chats
+            loadUserChats(currentUserID);
+            
+            // Then set up a real-time listener for new chats
+            setupNewChatListener(currentUserID);
+        }
     }
-    
+
+    // Function to listen for new chats added to the user's chats
+    function setupNewChatListener(userId) {
+        // Clean up previous listener if it exists
+        if (window.newChatListener) {
+            window.newChatListener();
+        }
+        
+        // Listen for changes to the chats collection where this user is a participant
+        window.newChatListener = firebase.firestore()
+            .collection('chats')
+            .where('participants', 'array-contains', userId)
+            .onSnapshot(async (snapshot) => {
+                // We only want to process new chats here
+                const newChats = [];
+                
+                snapshot.docChanges().forEach(change => {
+                    // Only handle newly added chats
+                    if (change.type === 'added') {
+                        const chatId = change.doc.id;
+                        const chatData = change.doc.data();
+                        
+                        // Check if this chat already exists in the UI
+                        const existingChat = document.querySelector(`.contact-item[data-chat-id="${chatId}"]`);
+                        if (!existingChat) {
+                            newChats.push({
+                                id: chatId,
+                                data: chatData
+                            });
+                        }
+                    }
+                });
+                
+                // If we found new chats, process them
+                if (newChats.length > 0) {
+                    processNewChats(newChats, userId);
+                }
+            }, error => {
+                console.error('Error listening for new chats:', error);
+            });
+    }
+
+    // Function to process new chats and add them to the UI
+    async function processNewChats(newChats, currentUserId) {
+        const contactsList = document.querySelector('.contacts-list');
+        if (!contactsList) return;
+        
+        // Remove empty state if it exists
+        const emptyState = contactsList.querySelector('.empty-contacts-state');
+        if (emptyState) {
+            emptyState.remove();
+        }
+        
+        // Process each new chat
+        for (const chat of newChats) {
+            try {
+                const chatData = chat.data;
+                const otherUserId = chatData.participants.find(id => id !== currentUserId);
+                
+                // Get the other user's info
+                const otherUserDoc = await firebase.firestore().collection('users').doc(otherUserId).get();
+                let otherUserData = otherUserDoc.exists ? otherUserDoc.data() : { name: 'User' };
+                
+                // Get the last message (might be empty for new chats)
+                const lastMessageQuery = await firebase.firestore()
+                    .collection('chats')
+                    .doc(chat.id)
+                    .collection('messages')
+                    .orderBy('timestamp', 'desc')
+                    .limit(1)
+                    .get();
+                
+                let lastMessage = {
+                    text: 'No messages yet',
+                    timestamp: new Date()
+                };
+                
+                if (!lastMessageQuery.empty) {
+                    const messageData = lastMessageQuery.docs[0].data();
+                    lastMessage = {
+                        text: messageData.text,
+                        timestamp: messageData.timestamp?.toDate() || new Date(),
+                        senderId: messageData.senderId,
+                        read: messageData.read
+                    };
+                }
+                
+                // Create chat object
+                const chatObj = {
+                    id: chat.id,
+                    otherUser: {
+                        id: otherUserId,
+                        name: otherUserData?.fullName || otherUserData?.name || otherUserData?.displayName || 'User',
+                        photoURL: otherUserData?.photoURL || null,
+                        status: otherUserData?.status || 'offline'
+                    },
+                    lastMessage,
+                    unreadCount: 0 // Start with 0 unread, will be updated by listener
+                };
+                
+                // Create and add the contact element to the list
+                const contactItem = createContactElement(chatObj, currentUserId);
+                
+                // If this is the first chat, insert at the beginning
+                if (contactsList.children.length === 0) {
+                    contactsList.appendChild(contactItem);
+                } else {
+                    // Otherwise, insert at the top (most recent)
+                    contactsList.insertBefore(contactItem, contactsList.firstChild);
+                }
+                
+                // Add click handler
+                contactItem.addEventListener('click', () => {
+                    // Remove active class from all contacts
+                    document.querySelectorAll('.contact-item').forEach(item => item.classList.remove('active'));
+                    // Add active class to clicked contact
+                    contactItem.classList.add('active');
+                    
+                    // Load the chat
+                    loadChat(chatObj.id, chatObj.otherUser);
+                    
+                    // On mobile, show the messages section
+                    if (window.innerWidth <= 768) {
+                        showMessages();
+                    }
+                });
+            } catch (error) {
+                console.error('Error processing new chat:', error, chat);
+            }
+        }
+        
+        // Update the chat preview listeners to include the new chats
+        setupChatPreviewListeners(currentUserId);
+    }
+
     // Check for any pending chat requests and retry them
     async function checkPendingChatRequests() {
         const pendingChatUser = localStorage.getItem('pendingChatUser');
