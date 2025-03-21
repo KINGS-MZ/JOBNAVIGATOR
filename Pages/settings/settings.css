@@ -20,6 +20,13 @@
     box-sizing: border-box;
 }
 
+html, body {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    height: 100%;
+}
+
 html {
     transition: all 0.3s ease;
 }
@@ -39,6 +46,22 @@ html.dark-mode,
 body.dark-mode {
     background-color: var(--bg-dark);
     color: var(--text-light);
+}
+
+/* Main content should flex-grow to push footer down */
+main {
+    flex: 1 0 auto; /* flex-grow: 1, flex-shrink: 0, flex-basis: auto */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Settings container should also be able to flex-grow */
+.settings-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem;
+    flex: 1 0 auto;
 }
 
 /* Navbar Styles */
@@ -908,9 +931,10 @@ input:checked + .slider:before {
 /* Footer */
 .footer {
     background-color: var(--bg-light);
-    padding: 1.5rem 0;
-    margin-top: 2rem;
+    padding: 0.75rem 0;
+    margin-top: auto;
     border-top: 1px solid var(--shadow-light);
+    flex-shrink: 0; /* Prevent footer from shrinking */
 }
 
 .dark-mode .footer {
@@ -953,44 +977,94 @@ input:checked + .slider:before {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+    html {
+        padding-bottom: 0 !important;
+    }
+    
+    .bottom-nav {
+        display: flex;
+    }
+    
+    body {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        padding-bottom: 0 !important; /* Force override any padding that might be causing the gap */
+        margin-bottom: 0 !important;
+    }
+    
+    main {
+        flex: 1 0 auto;
+    }
+    
+    footer {
+        margin-bottom: 0;
+        padding-bottom: 0;
+        border-bottom: none;
+    }
+    
     .settings-container {
-        padding: 0 1rem;
-        margin: 1.5rem auto;
+        padding: 0 1rem 1rem 1rem;
+        margin: 0.5rem auto 0;
+        flex: 1 0 auto;
     }
-
+    
     .settings-title {
-        font-size: 2rem;
-        margin-bottom: 1.5rem;
+        font-size: 1.75rem;
+        margin-bottom: 1.25rem;
     }
-
+    
     .settings-grid {
         grid-template-columns: 1fr;
         gap: 1rem;
     }
-
+    
     .settings-card {
         padding: 1.25rem;
     }
-
+    
     .theme-selector {
         flex-direction: column;
     }
-
+    
     .theme-btn {
         width: 100%;
     }
-
+    
     .settings-actions {
         flex-direction: column-reverse;
     }
-
+    
     .btn {
         width: 100%;
         text-align: center;
     }
-
+    
     .footer {
-        padding: 1rem 0;
+        position: static;
+        padding: 0.5rem 0;
+        margin-top: auto;
+        border-top: 1px solid var(--shadow-light);
+        background-color: var(--bg-light);
+    }
+    
+    .dark-mode .footer {
+        background-color: var(--bg-dark);
+        border-top: 1px solid var(--shadow-dark);
+    }
+    
+    .footer-content {
+        padding: 0 1rem;
+    }
+    
+    .nav-buttons {
+        margin-bottom: 0.75rem;
+        margin-top: 0.5rem;
+    }
+    
+    .nav-btn {
+        width: 36px;
+        height: 36px;
     }
 }
 
@@ -1115,11 +1189,96 @@ input:checked + .slider:before {
     }
     
     body {
-        padding-bottom: 4.5rem; /* Add padding to body to account for fixed bottom nav */
+        padding-bottom: 0 !important; /* Force override any padding that might be causing the gap */
     }
     
     footer {
-        margin-bottom: 4.5rem; /* Push footer above bottom nav */
-        display: none; /* Hide footer on mobile */
+        margin-bottom: 0;
+    }
+}
+
+/* Add a class to the body specifically for settings page */
+body.settings-page {
+    padding-bottom: 0 !important;
+}
+
+/* For settings page specifically */
+.settings-page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow-x: hidden;
+}
+
+.settings-page footer {
+    margin-top: auto;
+}
+
+/* Navigation Buttons */
+.nav-buttons {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.nav-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: var(--bg-light);
+    color: var(--primary-blue);
+    text-decoration: none;
+    box-shadow: 0 2px 8px var(--shadow-light);
+    transition: all 0.3s ease;
+}
+
+.dark-mode .nav-btn {
+    background-color: var(--card-bg-dark);
+    color: var(--primary-green);
+    box-shadow: 0 2px 8px var(--shadow-dark);
+}
+
+.nav-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--shadow-light);
+}
+
+.dark-mode .nav-btn:hover {
+    box-shadow: 0 4px 12px var(--shadow-dark);
+}
+
+.nav-btn i {
+    font-size: 1.25rem;
+}
+
+@media (max-width: 768px) {
+    .nav-buttons {
+        margin-bottom: 0.75rem;
+        margin-top: 0.5rem;
+    }
+    
+    .nav-btn {
+        width: 36px;
+        height: 36px;
+    }
+    
+    .settings-title {
+        font-size: 1.75rem;
+        margin-bottom: 1.25rem;
+    }
+}
+
+/* Page Header */
+.page-header {
+    margin-bottom: 2rem;
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        margin-bottom: 1.5rem;
     }
 }

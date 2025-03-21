@@ -4,7 +4,12 @@ import {
     db,
     doc,
     getDoc,
-    deleteDoc
+    deleteDoc,
+    setDoc,
+    collection,
+    query,
+    where,
+    getDocs
 } from '../../Firebase/firebase-config.js';
 import { 
     onAuthStateChanged
@@ -172,12 +177,12 @@ onAuthStateChanged(auth, (user) => {
 
         // Update menu sections for signed-in user
         menuSections.innerHTML = `
-            <a href="../jobs/SavedJobs.html">
+            <a href="../saved/saved.html">
                 <i class="fas fa-heart"></i>
                 Saved Jobs
                 <span class="badge">0</span>
             </a>
-            <a href="../jobs/Applications.html">
+            <a href="../applications/applications.html">
                 <i class="fas fa-briefcase"></i>
                 Applications
                 <span class="badge">0</span>
@@ -324,6 +329,10 @@ function showLoading() {
     });
 }
 
+// Variable to store if job is saved
+let isJobSaved = false;
+let currentJob = null;
+
 // Function to load job details
 async function loadJobDetails() {
     console.log('Starting loadJobDetails...');
@@ -360,6 +369,9 @@ async function loadJobDetails() {
 // Function to display job details
 function displayJobDetails(job) {
     console.log('Displaying job details:', job);
+    
+    // Store the current job for later use
+    currentJob = job;
 
     try {
         // Hide loading state and show content
@@ -428,12 +440,17 @@ function displayJobDetails(job) {
                 }
             });
 
+            // Check if the job is saved
+            checkIfJobIsSaved(job.id).then(saved => {
+                isJobSaved = saved;
+                updateSaveButtonUI(saveBtn);
+            });
+
             saveBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                if (handleProtectedAction('save')) {
-                    // Handle save job functionality
-                    console.log('Saving job...');
-                }
+                handleProtectedAction(() => {
+                    toggleSaveJob(job);
+                });
             });
         }
 
@@ -560,29 +577,41 @@ const toastSignIn = document.getElementById('toastSignIn');
 const toastSignUp = document.getElementById('toastSignUp');
 
 // Function to show toast
-function showToast() {
-    toastDialog.style.display = 'block';
-    toastOverlay.style.display = 'block';
-    document.body.style.overflow = 'hidden';
+function showToast(message) {
+    const toastDialog = document.getElementById('toastDialog');
+    const toastOverlay = document.getElementById('toastOverlay');
+    const toastMessage = document.querySelector('.toast-message');
+    const toastTitle = document.querySelector('.toast-title');
+    const toastActions = document.querySelector('.toast-actions');
     
-    // Trigger animations
-    requestAnimationFrame(() => {
+    if (message && auth.currentUser) {
+        // Show a success/error toast
+        toastTitle.textContent = 'Notification';
+        toastMessage.textContent = message;
+        toastActions.style.display = 'none';
+    } else {
+        // Show the sign in required toast
+        toastTitle.textContent = 'Sign in Required';
+        toastMessage.textContent = 'You need to be signed in to perform this action. Please sign in or create an account to continue.';
+        toastActions.style.display = 'flex';
+    }
+    
+    toastDialog.classList.add('active');
         toastOverlay.classList.add('active');
-        toastDialog.classList.add('active');
-    });
+    
+    // Auto-hide the toast after 3 seconds if it's a notification
+    if (message && auth.currentUser) {
+        setTimeout(hideToast, 3000);
+    }
 }
 
 // Function to hide toast
 function hideToast() {
-    toastOverlay.classList.remove('active');
-    toastDialog.classList.remove('active');
-    document.body.style.overflow = '';
+    const toastDialog = document.getElementById('toastDialog');
+    const toastOverlay = document.getElementById('toastOverlay');
     
-    // Wait for animations to finish before hiding
-    setTimeout(() => {
-        toastOverlay.style.display = 'none';
-        toastDialog.style.display = 'none';
-    }, 300); // Match the transition duration in CSS
+    toastDialog.classList.remove('active');
+    toastOverlay.classList.remove('active');
 }
 
 // Function to check if user is signed in
@@ -613,4 +642,89 @@ toastSignIn.addEventListener('click', () => {
 toastSignUp.addEventListener('click', () => {
     const currentPage = encodeURIComponent(window.location.href);
     window.location.href = `../login/login.html?redirect=${currentPage}&section=signup`;
-});// Force refresh trigger
+});
+
+// Function to check if a job is saved by the current user
+async function checkIfJobIsSaved(jobId) {
+    if (!auth.currentUser) {
+        return false;
+    }
+    
+    try {
+        const userId = auth.currentUser.uid;
+        const savedJobRef = doc(db, 'users', userId, 'savedItems', jobId);
+        const savedJobSnap = await getDoc(savedJobRef);
+        
+        return savedJobSnap.exists();
+    } catch (error) {
+        console.error('Error checking if job is saved:', error);
+        return false;
+    }
+}
+
+// Function to update the save button UI
+function updateSaveButtonUI(saveBtn) {
+    if (!saveBtn) return;
+    
+    const icon = saveBtn.querySelector('i') || document.createElement('i');
+    if (!saveBtn.querySelector('i')) {
+        saveBtn.appendChild(icon);
+    }
+    
+    if (isJobSaved) {
+        icon.className = 'fas fa-bookmark';
+        saveBtn.title = 'Remove from saved';
+        saveBtn.querySelector('span').textContent = 'Saved';
+    } else {
+        icon.className = 'far fa-bookmark';
+        saveBtn.title = 'Save job';
+        saveBtn.querySelector('span').textContent = 'Save';
+    }
+}
+
+// Function to toggle job saved state
+async function toggleSaveJob(job) {
+    if (!auth.currentUser) {
+        showToast();
+        return;
+    }
+    
+    try {
+        const userId = auth.currentUser.uid;
+        const jobId = job.id;
+        const savedJobRef = doc(db, 'users', userId, 'savedItems', jobId);
+        const saveBtn = document.querySelector('.save-btn');
+        
+        if (isJobSaved) {
+            // Unsave the job
+            await deleteDoc(savedJobRef);
+            isJobSaved = false;
+        } else {
+            // Save the job
+            const jobData = {
+                type: 'job',
+                title: job.title,
+                company: job.company,
+                location: job.location,
+                postType: job.type,
+                description: job.description || '',
+                icon: 'fa-briefcase',
+                tags: job.skills || [],
+                url: `../visualize/visualize.html?id=${jobId}`,
+                createdAt: job.createdAt,
+                savedAt: new Date(),
+                jobId: jobId // Store the original job ID for reference
+            };
+            
+            await setDoc(savedJobRef, jobData);
+            isJobSaved = true;
+        }
+        
+        // Just update the UI without showing a toast notification
+        updateSaveButtonUI(saveBtn);
+    } catch (error) {
+        console.error('Error toggling job save state:', error);
+    }
+}
+
+// Force refresh trigger

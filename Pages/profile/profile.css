@@ -599,7 +599,8 @@ main {
     justify-content: flex-end;
 }
 
-.btn-primary, .btn-secondary {
+/* Button Styles */
+.btn-primary, .btn-secondary, .btn-follow, .btn-message {
     padding: 0.75rem 1.5rem;
     border-radius: 8px;
     border: none;
@@ -608,30 +609,158 @@ main {
     align-items: center;
     gap: 0.5rem;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.3s ease;
 }
 
 .btn-primary {
-    background: var(--primary-blue);
+    background-color: var(--primary-blue);
     color: white;
+    border: none;
 }
 
 .dark-mode .btn-primary {
-    background: var(--primary-green);
+    background-color: var(--primary-green);
+    color: white;
 }
 
 .btn-secondary {
-    background: var(--light-hover);
+    background-color: #f8f9fa;
     color: var(--text-dark);
+    border: 1px solid #e1e4e8;
 }
 
 .dark-mode .btn-secondary {
-    background: var(--dark-hover);
+    background-color: #2d3748;
     color: var(--text-light);
+    border: 1px solid #4a5568;
 }
 
-.btn-primary:hover, .btn-secondary:hover {
+.btn-follow {
+    background-color: var(--primary-blue);
+    color: white;
+    border: none;
+}
+
+.dark-mode .btn-follow {
+    background-color: var(--primary-green);
+    color: white;
+}
+
+.btn-message {
+    background-color: white;
+    color: var(--primary-blue);
+    border: 1px solid var(--primary-blue);
+}
+
+.dark-mode .btn-message {
+    background-color: var(--bg-dark);
+    color: var(--primary-green);
+    border: 1px solid var(--primary-green);
+}
+
+.btn-follow.following {
+    background-color: white;
+    color: var(--primary-blue);
+    border: 1px solid var(--primary-blue);
+}
+
+.btn-follow.following .fa-user-plus:before {
+    content: "\f00c"; /* Change to checkmark icon */
+}
+
+.btn-follow.following span:before {
+    content: "Following";
+}
+
+.dark-mode .btn-follow.following {
+    background-color: var(--bg-dark);
+    color: var(--primary-green);
+    border: 1px solid var(--primary-green);
+}
+
+.btn-primary:hover {
+    background-color: #2980b9; /* Darker blue */
     transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dark-mode .btn-primary:hover {
+    background-color: #27ae60; /* Darker green */
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-secondary:hover {
+    background-color: #e9ecef;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dark-mode .btn-secondary:hover {
+    background-color: #3a4a5c;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-follow:hover {
+    background-color: #2980b9; /* Darker blue */
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dark-mode .btn-follow:hover {
+    background-color: #27ae60; /* Darker green */
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-message:hover {
+    background-color: #e6f7ff; /* Light blue */
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dark-mode .btn-message:hover {
+    background-color: #1e3a58; /* Dark blue-green */
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-follow.following:hover {
+    background-color: #ffebeb; /* Light red */
+    color: #e53935; /* Red for "Unfollow" */
+    border-color: #e53935;
+}
+
+.btn-follow.following:hover .fa-user-plus:before {
+    content: "\f00d"; /* Change to X icon */
+}
+
+.btn-follow.following:hover span:before {
+    content: "Unfollow";
+}
+
+.dark-mode .btn-follow.following:hover {
+    background-color: rgba(229, 57, 53, 0.2); /* Dark red with transparency */
+    color: #ff6b6b;
+    border-color: #ff6b6b;
+}
+
+/* Profile visibility classes */
+.own-profile-btn {
+    display: none; /* Hidden by default */
+}
+
+.other-profile-btn {
+    display: none; /* Hidden by default */
+}
+
+.own-profile .own-profile-btn {
+    display: flex; /* Show when viewing own profile */
+}
+
+.other-profile .other-profile-btn {
+    display: flex; /* Show when viewing another profile */
 }
 
 /* Profile Grid Layout */
@@ -1708,7 +1837,6 @@ input[type="month"]::before {
     justify-content: space-around;
     align-items: center;
     height: 65px; /* Ensure consistent height */
-    border-radius: 20px 20px 0 0;
 }
 
 .dark-mode .bottom-nav {
@@ -1737,13 +1865,12 @@ input[type="month"]::before {
 }
 
 .bottom-nav-item i {
-    font-size: 1.25rem;
-    margin-bottom: 0.25rem;
+    font-size: 1.5rem;
+    margin-bottom: 0;
 }
 
 .bottom-nav-item span {
-    font-size: 0.7rem;
-    font-weight: 500;
+    display: none;
 }
 
 .bottom-nav-item.active {
@@ -1791,10 +1918,10 @@ input[type="month"]::before {
 }
 
 .nav-add-button {
-    width: 65px;
-    height: 65px;
+    width: 55px;
+    height: 55px;
     background: var(--primary-blue);
-    border-radius: 50%;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1817,7 +1944,7 @@ input[type="month"]::before {
 }
 
 .bottom-nav-add span {
-    margin-top: -10px;
+    display: none;
 }
 
 /* Floating Menu */

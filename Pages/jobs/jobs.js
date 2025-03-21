@@ -24,6 +24,9 @@ onAuthStateChanged(auth, async (user) => {
             const userRef = doc(db, "users", user.uid);
             const userSnap = await getDoc(userRef);
             
+            // Load user's saved jobs for displaying correct save state
+            await loadUserSavedJobs();
+            
             // Update user info in the dropdown if user is signed in
             const userNameElement = document.getElementById('user-name');
             const userEmailElement = document.getElementById('user-email');
@@ -173,11 +176,14 @@ onAuthStateChanged(auth, async (user) => {
 
         // Update menu content for signed-in users
         if (menuSections) {
+            // Load the count of saved jobs
+            const savedJobsCount = userSavedJobs.size;
+            
             menuSections.innerHTML = `
-                <a href="SavedJobs.html">
+                <a href="../saved/saved.html">
                     <i class="fas fa-heart"></i>
                     Saved Jobs
-                    <span class="badge">4</span>
+                    <span class="badge">${savedJobsCount}</span>
                 </a>
                 <a href="Applications.html">
                     <i class="fas fa-briefcase"></i>
@@ -273,16 +279,21 @@ function formatDate(dateString) {
     });
 }
 
-// Global variables for pagination
-let currentPage = 1;
-const jobsPerPage = 10;
+// Global variables
 let allJobs = [];
 let filteredJobs = [];
+let currentPage = 1;
+const jobsPerPage = 10;
+let userSavedJobs = new Set(); // Add this new variable to track saved jobs
 
 // Function to create job card with optimized performance
 function createJobCard(job) {
     const card = document.createElement('div');
     card.className = 'job-card';
+    
+    // Check if this job is saved by the current user
+    const isSaved = userSavedJobs.has(job.id);
+    console.log(`Creating card for job ${job.id}, saved state: ${isSaved}`);
     
     // Use template literal only once
     const cardContent = `
@@ -299,8 +310,8 @@ function createJobCard(job) {
                 </div>
             </div>
             <div class="job-actions">
-                <button class="action-btn save-btn" title="Save job">
-                    <i class="far fa-bookmark"></i>
+                <button class="action-btn save-btn" title="${isSaved ? 'Remove from saved' : 'Save job'}">
+                    <i class="${isSaved ? 'fas' : 'far'} fa-bookmark"></i>
                 </button>
                 <button class="action-btn share-btn" title="Share job">
                     <i class="fas fa-share-alt"></i>
@@ -338,13 +349,31 @@ function createJobCard(job) {
                 // Toggle bookmark icon
                 const icon = saveBtn.querySelector('i');
                 if (icon.classList.contains('far')) {
+                    // Save the job
                     icon.classList.replace('far', 'fas');
                     saveBtn.title = 'Remove from saved';
-                    handleProtectedAction(() => saveJob(job));
+                    handleProtectedAction(() => {
+                        saveJob(job).then(() => {
+                            // Update the saved state after successful save
+                            if (auth.currentUser) {
+                                console.log(`Job ${job.id} was saved successfully`);
+                                card.setAttribute('data-saved', 'true');
+                            }
+                        });
+                    });
                 } else {
+                    // Unsave the job
                     icon.classList.replace('fas', 'far');
                     saveBtn.title = 'Save job';
-                    handleProtectedAction(() => unsaveJob(job.id));
+                    handleProtectedAction(() => {
+                        unsaveJob(job.id).then(() => {
+                            // Update the saved state after successful unsave
+                            if (auth.currentUser) {
+                                console.log(`Job ${job.id} was unsaved successfully`);
+                                card.setAttribute('data-saved', 'false');
+                            }
+                        });
+                    });
                 }
             });
         }
@@ -444,6 +473,22 @@ async function loadJobs(searchQuery = '') {
         currentPage = 1;
         jobsContainer.innerHTML = '';
 
+        // Force load user's saved jobs if logged in BEFORE displaying any jobs
+        // This ensures the saved state is correctly reflected in the UI
+        if (auth.currentUser) {
+            console.log("User is logged in, loading saved jobs...");
+            await loadUserSavedJobs();
+            console.log(`After loading, userSavedJobs has ${userSavedJobs.size} items`);
+            // Log the contents of userSavedJobs for debugging
+            userSavedJobs.forEach(jobId => {
+                console.log(`Saved job ID: ${jobId}`);
+            });
+        } else {
+            console.log("User is not logged in, skipping saved jobs loading");
+            // Clear the set to ensure no stale data
+            userSavedJobs.clear();
+        }
+
         // Fetch jobs if not already fetched
         if (allJobs.length === 0) {
             const jobsQuery = query(collection(db, "jobs"), where("status", "==", "published"));
@@ -456,6 +501,7 @@ async function loadJobs(searchQuery = '') {
             
             // Store all jobs in memory
             allJobs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            console.log(`Loaded ${allJobs.length} jobs from Firestore`);
         }
 
         // Filter jobs
@@ -614,114 +660,42 @@ function handleFilters() {
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    // Initialize floating menu first
-    initializeFloatingMenu();
-    
-    // Initialize search and filters
-    handleSearch();
-    handleFilters();
-    updateSearchInputs();
-    loadJobs();
-
-    // Theme Toggle
-    const themeToggle = document.getElementById('theme-toggle');
-    const themeIcon = themeToggle.querySelector('i');
-
-    // Initialize theme
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const storedTheme = localStorage.getItem('theme');
-    const isDark = storedTheme ? storedTheme === 'dark' : prefersDark;
-
-    if (isDark) {
-        document.documentElement.classList.add('dark-mode');
-        document.body.classList.add('dark-mode');
-        themeIcon.className = 'fas fa-sun';
-    }
-
-    function toggleTheme() {
-        document.documentElement.classList.toggle('dark-mode');
-        document.body.classList.toggle('dark-mode');
-        const isDark = document.body.classList.contains('dark-mode');
-        
-        // Update icon
-        themeIcon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
-        
-        // Save preference
-        localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    }
-
-    themeToggle.addEventListener('click', toggleTheme);
-
-    // Dropdown Menu
-    const userMenuBtn = document.getElementById('user-menu-btn');
-    const userDropdown = document.getElementById('user-dropdown');
-
-    if (!userMenuBtn || !userDropdown) {
-        console.error('Dropdown elements not found');
-    } else {
-        let isDropdownOpen = false;
-
-        function toggleDropdown(event) {
-            event.stopPropagation();
-            isDropdownOpen = !isDropdownOpen;
-            userDropdown.classList.toggle('show');
-            userMenuBtn.classList.toggle('active');
-        }
-
-        // Add click event listener to the user menu button
-        userMenuBtn.addEventListener('click', toggleDropdown);
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', (event) => {
-            if (isDropdownOpen && !userMenuBtn.contains(event.target) && !userDropdown.contains(event.target)) {
-                isDropdownOpen = false;
-                userDropdown.classList.remove('show');
-                userMenuBtn.classList.remove('active');
-            }
-        });
-
-        // Prevent dropdown from closing when clicking inside it
-        userDropdown.addEventListener('click', (event) => {
-            event.stopPropagation();
-        });
-
-        // Close dropdown when pressing Escape key
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape' && isDropdownOpen) {
-                isDropdownOpen = false;
-                userDropdown.classList.remove('show');
-                userMenuBtn.classList.remove('active');
-            }
-        });
-    }
-
-    // Handle logout
-    const logoutLink = document.getElementById('logout-link');
-    if (logoutLink) {
-        logoutLink.addEventListener('click', (event) => {
-            event.preventDefault();
-            auth.signOut().then(() => {
-                window.location.href = '../login/login.html';
-            }).catch((error) => {
-                console.error('Error signing out:', error);
-            });
-        });
-    }
-
-    // Toast Dialog Functionality
+// Function to show toast
+function showToast(message) {
     const toastDialog = document.getElementById('toastDialog');
     const toastOverlay = document.getElementById('toastOverlay');
-    const toastClose = document.getElementById('toastClose');
-    const toastSignIn = document.getElementById('toastSignIn');
-    const toastSignUp = document.getElementById('toastSignUp');
-
-    // Function to show toast
-    function showToast() {
+    const toastMessage = document.querySelector('.toast-message');
+    const toastTitle = document.querySelector('.toast-title');
+    const toastActions = document.querySelector('.toast-actions');
+    
+    if (message && auth.currentUser) {
+        // Show a success/error toast with the provided message
+        toastTitle.textContent = 'Notification';
+        toastMessage.textContent = message;
+        toastActions.style.display = 'none';
+        
+        toastDialog.style.display = 'block';
+        toastOverlay.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        
+        // Trigger animations
+        requestAnimationFrame(() => {
+            toastOverlay.classList.add('active');
+            toastDialog.classList.add('active');
+        });
+        
+        // Auto-hide the toast after 3 seconds if it's a notification
+        setTimeout(hideToast, 3000);
+    } else {
         // Add a small delay to ensure Firebase authentication state is fully loaded
         setTimeout(() => {
             // Double-check authentication state before showing toast
             if (!auth.currentUser) {
+                // Show the sign in required toast
+                toastTitle.textContent = 'Sign in Required';
+                toastMessage.textContent = 'You need to be signed in to perform this action. Please sign in or create an account to continue.';
+                toastActions.style.display = 'flex';
+                
                 toastDialog.style.display = 'block';
                 toastOverlay.style.display = 'block';
                 document.body.style.overflow = 'hidden';
@@ -734,9 +708,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }, 300); // 300ms delay to allow Firebase to complete auth check
     }
+    }
 
     // Function to hide toast
     function hideToast() {
+    const toastOverlay = document.getElementById('toastOverlay');
+    const toastDialog = document.getElementById('toastDialog');
+    
         toastOverlay.classList.remove('active');
         toastDialog.classList.remove('active');
         document.body.style.overflow = '';
@@ -758,101 +736,62 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!isUserSignedIn()) {
             showToast();
             return false;
-        }
-        return true;
     }
-
-    // Event listeners for toast actions
-    if (toastClose) toastClose.addEventListener('click', hideToast);
-    if (toastOverlay) toastOverlay.addEventListener('click', hideToast);
-
-    // Redirect to login page with sign in section
-    if (toastSignIn) {
-        toastSignIn.addEventListener('click', () => {
-            const currentPage = encodeURIComponent(window.location.href);
-            window.location.href = `../login/login.html?redirect=${currentPage}`;
-        });
+    
+    // If user is signed in, execute the provided action
+    if (typeof action === 'function') {
+        action();
     }
+    
+    return true;
+}
 
-    // Redirect to login page with sign up section
-    if (toastSignUp) {
-        toastSignUp.addEventListener('click', () => {
-            const currentPage = encodeURIComponent(window.location.href);
-            window.location.href = `../login/login.html?redirect=${currentPage}&section=signup`;
-        });
-    }
-
-    // Add authentication check for protected buttons in the floating menu
-    const addPostBtn = document.querySelector('.menu-items .posts-btn');
-    const settingsBtn = document.querySelector('.menu-items .settings-btn');
-
-    if (addPostBtn) {
-        addPostBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (handleProtectedAction('add-post')) {
-                window.location.href = '../posts/posts.html';
-            }
+// Listen for auth state changes to reload saved jobs
+auth.onAuthStateChanged(user => {
+    console.log("Auth state changed, refreshing saved jobs status");
+    if (user) {
+        loadUserSavedJobs().then(() => {
+            // Refresh displayed job cards to show correct saved state
+            refreshSavedJobStatus();
         });
     } else {
-        console.error('Add Post button not found');
-    }
-
-    if (settingsBtn) {
-        settingsBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (handleProtectedAction('settings')) {
-                window.location.href = '../settings/settings.html';
-            }
-        });
-    } else {
-        console.error('Settings button not found');
-    }
-
-    // Add console log to debug button selection
-    console.log('Add Post button:', addPostBtn);
-    console.log('Settings button:', settingsBtn);
-
-    // Add authentication check for bottom navigation protected items
-    const bottomNavAddBtn = document.querySelector('.bottom-nav .bottom-nav-add');
-    const bottomNavAlertsBtn = document.querySelector('.bottom-nav a[href="../notifications/notifications.html"]');
-    const bottomNavProfileBtn = document.querySelector('.bottom-nav a[href="../profile/profile.html"]');
-
-    // Add Post Button (bottom nav)
-    if (bottomNavAddBtn) {
-        bottomNavAddBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (handleProtectedAction('add-post')) {
-                window.location.href = '../posts/posts.html';
-            }
-        });
-    }
-
-    // Alerts Button (bottom nav)
-    if (bottomNavAlertsBtn) {
-        bottomNavAlertsBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (handleProtectedAction('alerts')) {
-                window.location.href = '../notifications/notifications.html';
-            }
-        });
-    }
-
-    // Profile Button (bottom nav)
-    if (bottomNavProfileBtn) {
-        bottomNavProfileBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            if (handleProtectedAction('profile')) {
-                window.location.href = '../profile/profile.html';
-            }
-        });
+        userSavedJobs.clear();
+        refreshSavedJobStatus();
     }
 });
+
+// Function to refresh saved status of displayed job cards
+function refreshSavedJobStatus() {
+    console.log("Refreshing saved status for all displayed job cards");
+    const jobCards = document.querySelectorAll('.job-card');
+    
+    jobCards.forEach(card => {
+        const jobId = card.dataset.jobId;
+        const saveBtn = card.querySelector('.save-btn');
+        const icon = saveBtn?.querySelector('i');
+        
+        if (saveBtn && icon && jobId) {
+            const isSaved = userSavedJobs.has(jobId);
+            console.log(`Job ${jobId} saved status: ${isSaved}`);
+            
+            if (isSaved) {
+                icon.className = 'fas fa-bookmark';
+                saveBtn.title = 'Remove from saved';
+                card.setAttribute('data-saved', 'true');
+            } else {
+                icon.className = 'far fa-bookmark';
+                saveBtn.title = 'Save job';
+                card.setAttribute('data-saved', 'false');
+            }
+            }
+        });
+    }
 
 // Function to save a job to user's saved collection
 async function saveJob(job) {
     if (!auth.currentUser) {
         showToast('Please sign in to save jobs');
-        return;
+        return Promise.reject('Not authenticated');
     }
     
     try {
@@ -871,21 +810,30 @@ async function saveJob(job) {
             tags: job.skills || [],
             url: `../visualize/visualize.html?id=${job.id}`,
             createdAt: job.createdAt,
-            savedAt: new Date()
+            savedAt: new Date(),
+            jobId: job.id // Store the original job ID for reference
         };
         
         await setDoc(savedJobRef, jobData);
-        showToast('Job saved successfully');
+        // Add to local set of saved jobs
+        userSavedJobs.add(job.id);
+        
+        // Update saved jobs count in the menu
+        updateSavedJobsCount();
+        
+        // Don't show toast notification for successful save
+        console.log(`Job ${job.id} saved to Firebase`);
+        return Promise.resolve(job.id);
     } catch (error) {
         console.error('Error saving job:', error);
-        showToast('Failed to save job');
+        return Promise.reject(error);
     }
 }
 
 // Function to unsave a job
 async function unsaveJob(jobId) {
     if (!auth.currentUser) {
-        return;
+        return Promise.reject('Not authenticated');
     }
     
     try {
@@ -893,10 +841,26 @@ async function unsaveJob(jobId) {
         const savedJobRef = doc(db, 'users', userId, 'savedItems', jobId);
         
         await deleteDoc(savedJobRef);
-        showToast('Job removed from saved');
+        // Remove from local set of saved jobs
+        userSavedJobs.delete(jobId);
+        
+        // Update saved jobs count in the menu
+        updateSavedJobsCount();
+        
+        // Don't show toast notification for successful unsave
+        console.log(`Job ${jobId} removed from Firebase`);
+        return Promise.resolve(jobId);
     } catch (error) {
         console.error('Error removing job:', error);
-        showToast('Failed to remove job');
+        return Promise.reject(error);
+    }
+}
+
+// Function to update saved jobs count in the menu
+function updateSavedJobsCount() {
+    const savedJobsBadge = document.querySelector('.menu-sections a[href="../saved/saved.html"] .badge');
+    if (savedJobsBadge) {
+        savedJobsBadge.textContent = userSavedJobs.size;
     }
 }
 
@@ -998,3 +962,128 @@ function initializeFloatingMenu() {
         }
     });
 }
+
+// Function to load user's saved jobs
+async function loadUserSavedJobs() {
+    // Clear the set first
+    userSavedJobs.clear();
+    
+    if (!auth.currentUser) {
+        console.log("No user logged in, saved jobs set cleared");
+        return;
+    }
+    
+    try {
+        const userId = auth.currentUser.uid;
+        console.log(`Loading saved jobs for user ${userId}...`);
+        
+        const savedItemsQuery = query(collection(db, 'users', userId, 'savedItems'));
+        const querySnapshot = await getDocs(savedItemsQuery);
+        
+        querySnapshot.forEach(doc => {
+            const jobData = doc.data();
+            // Add to set if it's a job
+            if (jobData.type === 'job' && jobData.jobId) {
+                userSavedJobs.add(jobData.jobId);
+                console.log(`Added saved job with ID: ${jobData.jobId}`);
+            } else {
+                // For backwards compatibility with existing data
+                userSavedJobs.add(doc.id);
+                console.log(`Added saved job with doc ID: ${doc.id}`);
+            }
+        });
+        
+        console.log(`Loaded ${userSavedJobs.size} saved jobs for user`);
+        
+        // Update the saved jobs count in the menu
+        const savedJobsBadge = document.querySelector('.menu-sections a[href="../saved/saved.html"] .badge');
+        if (savedJobsBadge) {
+            savedJobsBadge.textContent = userSavedJobs.size;
+        }
+    } catch (error) {
+        console.error('Error loading saved jobs:', error);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("DOM loaded, initializing page...");
+    
+    // Initialize floating menu first
+    initializeFloatingMenu();
+    
+    // Initialize search and filters
+    handleSearch();
+    handleFilters();
+    updateSearchInputs();
+    
+    // Load jobs with URL parameters
+    const params = getUrlParameters();
+    loadJobs(params.q);
+
+    // Theme Toggle
+    const themeToggle = document.getElementById('theme-toggle');
+    const themeIcon = themeToggle.querySelector('i');
+
+    // User Menu Toggle
+    const userMenuBtn = document.getElementById('user-menu-btn');
+    const userDropdown = document.getElementById('user-dropdown');
+
+    // Initialize theme and user menu
+    initTheme();
+    initUserMenu();
+
+    function initUserMenu() {
+        // Toggle dropdown when user menu button is clicked
+        if (userMenuBtn && userDropdown) {
+            userMenuBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                userDropdown.classList.toggle('show');
+            });
+
+            // Close dropdown when clicking outside
+            document.addEventListener('click', (e) => {
+                if (userDropdown.classList.contains('show') && 
+                    !userMenuBtn.contains(e.target) && 
+                    !userDropdown.contains(e.target)) {
+                    userDropdown.classList.remove('show');
+                }
+            });
+        }
+    }
+
+    function initTheme() {
+        // Check for saved theme preference and apply it
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            document.documentElement.classList.add('dark-mode');
+            document.body.classList.add('dark-mode');
+            if (themeIcon) themeIcon.className = 'fas fa-sun';
+        } else {
+            document.documentElement.classList.remove('dark-mode');
+            document.body.classList.remove('dark-mode');
+            if (themeIcon) themeIcon.className = 'fas fa-moon';
+        }
+    }
+
+    function toggleTheme() {
+        document.documentElement.classList.toggle('dark-mode');
+        document.body.classList.toggle('dark-mode');
+        
+        // Save theme preference to localStorage
+        if (document.documentElement.classList.contains('dark-mode')) {
+            localStorage.setItem('theme', 'dark');
+            if (themeIcon) themeIcon.className = 'fas fa-sun';
+        } else {
+            localStorage.setItem('theme', 'light');
+            if (themeIcon) themeIcon.className = 'fas fa-moon';
+        }
+    }
+
+    // Add theme toggle event listener
+    if (themeToggle) {
+        themeToggle.addEventListener('click', toggleTheme);
+    }
+
+    // Rest of existing initialization code...
+});

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Messages</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="../../Assets/navbar/nav.css">
+    <link rel="stylesheet" href="chats.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation Bar -->
+    <nav>
+        <div class="nav-container">
+            <div class="logo">
+                <span class="logo-icon">JN</span>
+                <span class="logo-text">Job Navigator</span>
+            </div>
+            
+            <div class="nav-right">
+                <button id="theme-toggle" aria-label="Toggle dark mode">
+                    <i class="fas fa-moon"></i>
+                </button>
+                
+                <div class="user-menu">
+                    <button id="user-menu-btn" class="user-btn user-avatar" aria-label="User menu" type="button">
+                        <img id="avatar-image" alt="Profile picture" style="display: none;">
+                        <div class="avatar-initials" id="avatar-initials"></div>
+                    </button>
+                    <div class="dropdown-menu" id="user-dropdown">
+                        <div class="dropdown-header">
+                            <div class="user-avatar">
+                                <img id="avatar-image-dropdown" alt="Profile picture" style="display: none;">
+                                <div class="avatar-initials" id="avatar-initials-dropdown"></div>
+                            </div>
+                            <div class="user-info">
+                                <span id="user-name">Guest User</span>
+                                <span id="user-email">guest@example.com</span>
+                            </div>
+                        </div>
+                        
+                        <div class="menu-sections">
+                            <a href="../saved/saved.html">
+                                <i class="fas fa-heart"></i>
+                                Saved Jobs
+                                <span class="badge">4</span>
+                            </a>
+                            <a href="../applications/applications.html">
+                                <i class="fas fa-briefcase"></i>
+                                Applications
+                                <span class="badge">2</span>
+                            </a>
+                            <a href="../notifications/notifications.html">
+                                <i class="fas fa-bell"></i>
+                                Notifications
+                                <span class="badge active">3</span>
+                            </a>
+                            <div class="menu-divider"></div>
+                            <a href="../profile/profile.html">
+                                <i class="fas fa-user"></i>
+                                My Profile
+                            </a>
+                            <a href="../profile/resume.html">
+                                <i class="fas fa-file-alt"></i>
+                                My Resume
+                            </a>
+                            <a href="../settings/settings.html">
+                                <i class="fas fa-cog"></i>
+                                Settings
+                            </a>
+                            <div class="menu-divider"></div>
+                            <a href="#" id="logout-link" class="logout-link">
+                                <i class="fas fa-sign-out-alt"></i>
+                                Sign Out
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main>
+        <div class="chat-container">
+            <!-- Friends/Contacts List -->
+            <div class="friends-list" id="friends-list">
+                <div class="search-container">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="Search contacts...">
+                    </div>
+                </div>
+                
+                <div class="contacts-header">
+                    <h2>Chats</h2>
+                    <button class="new-chat-btn">
+                        <i class="fas fa-plus"></i>
+                    </button>
+                </div>
+
+                <div class="contacts-list">
+                    <!-- Contacts will be loaded dynamically from Firebase -->
+                </div>
+            </div>
+
+            <!-- Messages Section -->
+            <div class="messages-section" id="messages-section">
+                <!-- Chat Header -->
+                <div class="chat-header">
+                    <div class="chat-contact-info">
+                        <button class="back-btn" id="back-btn">
+                            <i class="fas fa-arrow-left"></i>
+                        </button>
+                        <div class="contact-avatar">
+                            <img src="" alt="">
+                            <span class="status-indicator"></span>
+                        </div>
+                        <div class="contact-details">
+                            <h3></h3>
+                            <p></p>
+                        </div>
+                    </div>
+                    <div class="chat-actions">
+                        <button class="chat-action-btn">
+                            <i class="fas fa-phone"></i>
+                        </button>
+                        <button class="chat-action-btn">
+                            <i class="fas fa-video"></i>
+                        </button>
+                        <button class="chat-action-btn">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Messages Container -->
+                <div class="messages-container">
+                    <!-- Messages will be loaded dynamically -->
+                </div>
+
+                <!-- Message Input -->
+                <div class="message-input-container">
+                    <input type="file" id="image-upload" accept="image/*" style="display: none;">
+                    <button class="input-action-btn" id="image-upload-btn">
+                        <i class="fas fa-image"></i>
+                    </button>
+                    <div class="message-input">
+                        <input type="text" placeholder="Type a message...">
+                    </div>
+                    <button class="input-action-btn send-btn">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <div class="bottom-nav">
+        <a href="../home/home.html" class="bottom-nav-item">
+            <i class="fas fa-home"></i>
+            <span>Home</span>
+        </a>
+        <a href="../jobs/jobs.html" class="bottom-nav-item">
+            <i class="fas fa-briefcase"></i>
+            <span>Jobs</span>
+        </a>
+        
+        <!-- Center Add Post Button -->
+        <a href="../posts/posts.html" class="bottom-nav-item bottom-nav-add">
+            <div class="nav-add-button">
+                <i class="fas fa-plus"></i>
+            </div>
+            <span>Add</span>
+        </a>
+        
+        <a href="../notifications/notifications.html" class="bottom-nav-item">
+            <i class="fas fa-bell"></i>
+            <span>Alerts</span>
+        </a>
+        <a href="chats.html" class="bottom-nav-item active">
+            <i class="fas fa-comments"></i>
+            <span>Chats</span>
+        </a>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+    
+    <script>
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCb-WQn8hxetYE2wWMQ37y7vRAKl0hFbkI",
+            authDomain: "jobnav-799f0.firebaseapp.com",
+            databaseURL: "https://jobnav-799f0-default-rtdb.firebaseio.com",
+            projectId: "jobnav-799f0",
+            storageBucket: "jobnav-799f0.firebasestorage.app",
+            messagingSenderId: "908819629942",
+            appId: "1:908819629942:web:e569e324a0959efaef1c57",
+            measurementId: "G-58CZK5KRN4"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        window.auth = firebase.auth();
+        window.db = firebase.firestore();
+        window.rtdb = firebase.database();
+    </script>
+
+    <!-- JavaScript -->
+    <script src="chats.js"></script>
+    <script src="chats_firebase.js"></script>
+
+    <!-- Users List Modal -->
+    <div class="modal-overlay" id="usersListModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>New Conversation</h3>
+                <button class="modal-close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-search">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="user-search-input" placeholder="Search users...">
+                    </div>
+                </div>
+                <div class="users-list" id="users-list">
+                    <!-- Users will be loaded here dynamically -->
+                    <div class="loading-spinner">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Loading users...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Preview Modal -->
+    <div class="modal-overlay" id="imagePreviewModal">
+        <div class="modal-content image-preview-modal">
+            <div class="modal-header">
+                <h3>Send Image</h3>
+                <button class="modal-close" id="closePreviewBtn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="image-preview-container">
+                    <img id="imagePreview" src="" alt="Preview">
+                </div>
+                <div class="image-preview-actions">
+                    <button class="btn btn-secondary" id="cancelImageBtn">Cancel</button>
+                    <button class="btn btn-primary" id="sendImageBtn">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 

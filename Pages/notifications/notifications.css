@@ -953,7 +953,6 @@ main {
     justify-content: space-around;
     align-items: center;
     height: 65px; /* Ensure consistent height */
-    border-radius: 20px 20px 0 0;
 }
 
 .dark-mode .bottom-nav {
@@ -982,13 +981,12 @@ main {
 }
 
 .bottom-nav-item i {
-    font-size: 1.25rem;
-    margin-bottom: 0.25rem;
+    font-size: 1.5rem;
+    margin-bottom: 0;
 }
 
 .bottom-nav-item span {
-    font-size: 0.7rem;
-    font-weight: 500;
+    display: none;
 }
 
 .bottom-nav-item.active {
@@ -1036,10 +1034,10 @@ main {
 }
 
 .nav-add-button {
-    width: 65px;
-    height: 65px;
+    width: 55px;
+    height: 55px;
     background: var(--primary-blue);
-    border-radius: 50%;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1062,5 +1060,5 @@ main {
 }
 
 .bottom-nav-add span {
-    margin-top: -10px;
+    display: none;
 } 

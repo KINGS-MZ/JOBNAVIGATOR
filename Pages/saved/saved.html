@@ -45,12 +45,12 @@
                         </div>
                         
                         <div class="menu-sections">
-                            <a href="../saved/saved.html">
+                            <a href="saved.html" class="active">
                                 <i class="fas fa-heart"></i>
-                                Saved Posts
-                                <span class="badge">4</span>
+                                Saved Jobs
+                                <span class="badge">0</span>
                             </a>
-                            <a href="../jobs/Applications.html">
+                            <a href="../applications/applications.html">
                                 <i class="fas fa-briefcase"></i>
                                 Applications
                                 <span class="badge">2</span>
@@ -65,7 +65,7 @@
                                 <i class="fas fa-user"></i>
                                 My Profile
                             </a>
-                            <a href="../jobs/Resume.html">
+                            <a href="../profile/resume.html">
                                 <i class="fas fa-file-alt"></i>
                                 My Resume
                             </a>
@@ -90,14 +90,6 @@
         <div class="content-wrapper">
             <!-- Header Section -->
             <section class="header-section">
-                <div class="navigation-controls">
-                    <button id="back-btn" class="nav-btn" onclick="history.back()">
-                        <i class="fas fa-arrow-left"></i>
-                    </button>
-                    <a href="../home/home.html" class="nav-btn" title="Go to home">
-                        <i class="fas fa-home"></i>
-                    </a>
-                </div>
                 <h1 class="page-title">Saved Posts</h1>
                 <p class="page-description">Posts you've saved for later</p>
                 
@@ -114,14 +106,7 @@
             
             <!-- Loading Container -->
             <div class="loading-container">
-                <dotlottie-player 
-                    src="https://lottie.host/6f65cb19-68f4-4012-80f9-66ea8e94f084/lQ66W9skG5.lottie" 
-                    background="transparent" 
-                    speed="1" 
-                    style="width: 200px; height: 200px" 
-                    loop 
-                    autoplay>
-                </dotlottie-player>
+                <div class="spinner"></div>
                 <p>Loading saved posts...</p>
             </div>
             
@@ -154,11 +139,7 @@
         </div>
     </footer>
 
-    <!-- Lottie Player -->
-    <script src="https://unpkg.com/@lottiefiles/lottie-player@1.7.1/dist/lottie-player.js"></script>
-    <script src="https://unpkg.com/@dotlottie/player-component@2.7.12/dist/dotlottie-player.mjs" type="module"></script>
-    
-    <!-- Main JavaScript -->
+    <!-- Scripts -->
     <script type="module" src="saved.js"></script>
 </body>
 </html> 

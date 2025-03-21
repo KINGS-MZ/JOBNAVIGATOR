@@ -1,21 +1,15 @@
 import { 
-    auth,
-    db,
-    collection,
-    getDocs,
-    query,
-    where,
-    doc,
-    getDoc,
-    setDoc,
-    updateDoc
-} from '../../Firebase/firebase-config.js';
-import { 
     onAuthStateChanged,
     signOut
 } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Get profile ID from URL if present
+    const urlParams = new URLSearchParams(window.location.search);
+    const profileId = urlParams.get('id');
+    let isOwnProfile = true;
+    let currentUser = null;
+    
     // Theme Toggle Functionality
     const themeToggle = document.getElementById('theme-toggle');
     const userMenuBtn = document.getElementById('user-menu-btn');
@@ -63,45 +57,70 @@ document.addEventListener('DOMContentLoaded', () => {
     const maxRetries = 3;
     
     function refreshUserData(user, initialUserData) {
-        if (retryCount >= maxRetries) return;
-        
-        setTimeout(async () => {
+        // Set up an interval to refresh user data every minute
+        const refreshInterval = setInterval(async () => {
             try {
                 // Get latest user document from Firestore
-                const latestUserDoc = await getDoc(doc(db, "users", user.uid));
-                if (latestUserDoc.exists()) {
+                const latestUserDoc = await window.db.collection("users").doc(user.uid).get();
+                if (latestUserDoc.exists) {
                     const latestUserData = latestUserDoc.data();
                     
-                    // Check if data has changed
-                    const initialName = initialUserData.name || initialUserData.displayName;
-                    const latestName = latestUserData.name || latestUserData.displayName;
+                    // Only update UI if user data has changed
+                    const storedDataHash = JSON.stringify(initialUserData);
+                    const newDataHash = JSON.stringify(latestUserData);
                     
-                    if (initialName !== latestName || !initialName) {
-                        console.log("User data updated, refreshing UI");
+                    if (storedDataHash !== newDataHash) {
+                        // Update UI with new user data
                         updateUIForAuthenticatedUser(user, latestUserData);
+                        
+                        // Update the stored data reference
+                        initialUserData = latestUserData;
                     }
                 }
-                
-                retryCount++;
-                refreshUserData(user, initialUserData);
             } catch (error) {
                 console.error("Error refreshing user data:", error);
-                retryCount++;
-                refreshUserData(user, initialUserData);
             }
-        }, 3000); // Check every 3 seconds
+        }, 60000); // Refresh every minute
+        
+        // Store the interval ID for cleanup
+        window.refreshIntervalId = refreshInterval;
+        
+        // Clean up interval when user logs out or navigates away
+        window.addEventListener('beforeunload', () => {
+            if (window.refreshIntervalId) {
+                clearInterval(window.refreshIntervalId);
+            }
+        });
     }
 
     // Handle Firebase authentication state
-    onAuthStateChanged(auth, async (user) => {
+    onAuthStateChanged(window.auth, async (user) => {
         if (user) {
+            // Store current user
+            currentUser = user;
+            
+            // Check if viewing own profile or another user's profile
+            if (profileId && profileId !== user.uid) {
+                isOwnProfile = false;
+                document.body.classList.add('other-profile');
+                
+                // Load the other user's profile
+                await loadOtherUserProfile(profileId);
+                
+                // Set up follow button functionality
+                setupFollowButton(profileId, user.uid);
+            } else {
+                // Viewing own profile
+                isOwnProfile = true;
+                document.body.classList.add('own-profile');
+                
             // User is signed in
             try {
                 // Get user document from Firestore
-                const userDoc = await getDoc(doc(db, "users", user.uid));
+                    const userDoc = await window.db.collection("users").doc(user.uid).get();
                 let userData = {};
                 
-                if (userDoc.exists()) {
+                    if (userDoc.exists) {
                     // Update UI with user data from Firestore
                     userData = userDoc.data();
                     
@@ -116,7 +135,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     // Create a new user document
                     try {
-                        await setDoc(doc(db, "users", user.uid), {
+                            await window.db.collection("users").doc(user.uid).set({
                             name: user.displayName || "",
                             displayName: user.displayName || "",
                             email: user.email || "",
@@ -133,6 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 console.error("Error fetching user data:", error);
                 updateUIForAuthenticatedUser(user, {});
+                }
             }
         } else {
             // User is not signed in, redirect to login page
@@ -168,12 +188,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update menu sections with correct links for authenticated users
         if (menuSections) {
             menuSections.innerHTML = `
-                <a href="SavedJobs.html">
+                <a href="../saved/saved.html">
                     <i class="fas fa-heart"></i>
                     Saved Jobs
                     <span class="badge">4</span>
                 </a>
-                <a href="Applications.html">
+                <a href="../applications/applications.html">
                     <i class="fas fa-briefcase"></i>
                     Applications
                     <span class="badge">2</span>
@@ -208,7 +228,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (logoutLink) {
                 logoutLink.addEventListener('click', (event) => {
                     event.preventDefault();
-                    signOut(auth).then(() => {
+                    signOut(window.auth).then(() => {
                         window.location.href = '../login/login.html';
                     }).catch((error) => {
                         console.error('Error signing out:', error);
@@ -434,15 +454,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add click handlers to all edit buttons
     document.querySelectorAll('.edit-section').forEach(button => {
-        button.addEventListener('click', function() {
-            const section = this.closest('.profile-section');
-            const sectionTitle = section.querySelector('h2').textContent.toLowerCase();
-            const modalId = section.classList.contains('stats-section') ? 'statsModal' : sectionTitle + 'Modal';
+        button.addEventListener('click', async (e) => {
+            const section = e.currentTarget.closest('.profile-section');
+            const sectionHeading = section.querySelector('h2').textContent.trim();
             
-            // Open the corresponding modal
-            openModal(modalId);
-            
-            // Additional initialization happens in specific modal handlers
+            if (sectionHeading === 'About') {
+                openModal('aboutModal');
+                
+                // Get the current about text
+                try {
+                    const userDoc = await window.db.collection("users").doc(currentUser.uid).get();
+                    if (userDoc.exists) {
+                        const userData = userDoc.data();
+                        document.getElementById('about').value = userData.about || '';
+                    }
+                } catch (error) {
+                    console.error("Error fetching about data:", error);
+                }
+            } else if (sectionHeading === 'Skills') {
+                openModal('skillsModal');
+            } else if (sectionHeading === 'Education') {
+                openModal('educationModal');
+            } else if (sectionHeading === 'Experience') {
+                openModal('experienceModal');
+            }
         });
     });
 
@@ -466,574 +501,183 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
-    // Initialize About modal with user data
-    const aboutModal = document.getElementById('aboutModal');
-    if (aboutModal) {
-        const aboutTextarea = aboutModal.querySelector('#about');
-        const aboutSaveBtn = aboutModal.querySelector('.btn-save');
-        
-        // Find the About section edit button
-        const aboutSections = document.querySelectorAll('.profile-section');
-        let aboutEditButton;
-        
-        aboutSections.forEach(section => {
-            const heading = section.querySelector('h2');
-            if (heading && heading.textContent.trim() === 'About') {
-                aboutEditButton = section.querySelector('.edit-section');
-            }
-        });
-        
-        // When the About section edit button is clicked, load current about text
-        aboutEditButton?.addEventListener('click', async function() {
-            try {
-                const user = auth.currentUser;
-                if (user) {
-                    const userDoc = await getDoc(doc(db, "users", user.uid));
-                    if (userDoc.exists() && userDoc.data().about) {
-                        aboutTextarea.value = userDoc.data().about;
-                    } else {
-                        aboutTextarea.value = '';
-                    }
-                }
-            } catch (error) {
-                console.error("Error loading about data:", error);
-            }
-        });
-        
-        // Update About section when save button is clicked
-        aboutSaveBtn?.addEventListener('click', async function() {
-            const aboutText = aboutTextarea.value.trim();
-            const user = auth.currentUser;
-            
-            if (user) {
-                try {
-                    // Update the about field in Firestore
-                    await updateDoc(doc(db, "users", user.uid), {
+    // Save about data
+    document.querySelectorAll('.modal-overlay').forEach(modal => {
+        const saveBtn = modal.querySelector('.btn-save');
+        if (saveBtn) {
+            saveBtn.addEventListener('click', async () => {
+                const modalId = modal.id;
+                
+                if (modalId === 'aboutModal') {
+                    const aboutText = document.getElementById('about').value.trim();
+                    
+                    try {
+                        // Save to Firestore
+                        await window.db.collection("users").doc(currentUser.uid).update({
                         about: aboutText
                     });
                     
-                    // Update the UI
-                    const aboutSection = document.querySelector('.profile-section .section-content p');
-                    const placeholderText = "Tell recruiters about your professional background and skills.";
-                    
+                        // Update UI
+                        const aboutSection = document.querySelector('.profile-section:first-of-type .section-content');
                     if (aboutSection) {
                         if (aboutText) {
-                            aboutSection.textContent = aboutText;
+                                aboutSection.innerHTML = `<p>${aboutText}</p>`;
                             aboutSection.classList.remove('placeholder-text');
                         } else {
-                            aboutSection.textContent = placeholderText;
-                            aboutSection.classList.add('placeholder-text');
+                                aboutSection.innerHTML = `<p class="placeholder-text">Tell recruiters about your professional background and skills.</p>`;
                         }
                     }
                     
-                    console.log("About section updated successfully");
+                        closeModal(modalId);
                 } catch (error) {
-                    console.error("Error updating about section:", error);
-                }
-            }
-            
-            // Close the modal
-            closeModal('aboutModal');
-        });
-    }
-
-    // Initialize Experience modal with user data
-    const experienceModal = document.getElementById('experienceModal');
-    if (experienceModal) {
-        const jobTitleInput = experienceModal.querySelector('#jobTitle');
-        const companyInput = experienceModal.querySelector('#company');
-        const locationInput = experienceModal.querySelector('#location');
-        const startDateInput = experienceModal.querySelector('#startDate');
-        const endDateInput = experienceModal.querySelector('#endDate');
-        const descriptionInput = experienceModal.querySelector('#description');
-        const skillsInput = experienceModal.querySelector('#skills');
-        const experienceSaveBtn = experienceModal.querySelector('.btn-save');
-        
-        // Add focus/blur events to better highlight the date format
-        startDateInput.addEventListener('focus', function() {
-            this.setAttribute('title', 'Select month and year (e.g., January 2023)');
-        });
-        
-        endDateInput.addEventListener('focus', function() {
-            this.setAttribute('title', 'Select month and year (e.g., January 2023) or leave empty for current position');
-        });
-        
-        // Find the Experience section edit button
-        const experienceSections = document.querySelectorAll('.profile-section');
-        let experienceAddButton;
-        
-        experienceSections.forEach(section => {
-            const heading = section.querySelector('h2');
-            if (heading && heading.textContent.trim() === 'Experience') {
-                experienceAddButton = section.querySelector('.edit-section');
-            }
-        });
-        
-        // Reset form when Add Experience button is clicked
-        experienceAddButton?.addEventListener('click', () => {
-            // Clear form fields
-            jobTitleInput.value = '';
-            companyInput.value = '';
-            locationInput.value = '';
-            startDateInput.value = '';
-            endDateInput.value = '';
-            descriptionInput.value = '';
-            skillsInput.value = '';
-        });
-        
-        // Save new experience when save button is clicked
-        experienceSaveBtn?.addEventListener('click', async function() {
-            const user = auth.currentUser;
-            
-            if (!user) return;
-            
+                        console.error("Error saving about data:", error);
+                        alert("Failed to save changes. Please try again.");
+                    }
+                } else if (modalId === 'experienceModal') {
+                    // Handle save experience
+                    const jobTitle = document.getElementById('jobTitle').value.trim();
+                    const company = document.getElementById('company').value.trim();
+                    const location = document.getElementById('location').value.trim();
+                    const startDate = document.getElementById('startDate').value;
+                    const endDate = document.getElementById('endDate').value;
+                    const description = document.getElementById('description').value.trim();
+                    const skills = document.getElementById('skills').value.trim();
+                    
+                    if (!jobTitle || !company) {
+                        alert("Job title and company are required.");
+                        return;
+                    }
+                    
+                    try {
+                        // Get existing experiences
+                        const userDoc = await window.db.collection("users").doc(currentUser.uid).get();
+                        let experiences = [];
+                        
+                        if (userDoc.exists) {
+                            const userData = userDoc.data();
+                            experiences = userData.experiences || [];
+                        }
+                        
+                        // Add new experience
             const newExperience = {
-                jobTitle: jobTitleInput.value.trim(),
-                company: companyInput.value.trim(),
-                location: locationInput.value.trim(),
-                startDate: startDateInput.value,
-                endDate: endDateInput.value,
-                description: descriptionInput.value.trim(),
-                skills: skillsInput.value.split(',').map(skill => skill.trim()).filter(skill => skill !== '')
-            };
-            
-            // Validate required fields
-            if (!newExperience.jobTitle || !newExperience.company || !newExperience.startDate) {
-                alert('Please fill in the required fields: Job Title, Company, and Start Date');
-                return;
-            }
-            
-            try {
-                // Get current user data
-                const userDoc = await getDoc(doc(db, "users", user.uid));
-                
-                if (userDoc.exists()) {
-                    const userData = userDoc.data();
-                    
-                    // Get existing experiences or create empty array
-                    const experiences = userData.experiences || [];
-                    
-                    // Add the new experience
-                    experiences.push({
-                        ...newExperience,
-                        id: Date.now().toString(), // Create a unique ID
-                        createdAt: new Date()
-                    });
-                    
-                    // Update user document with new experiences array
-                    await updateDoc(doc(db, "users", user.uid), {
-                        experiences: experiences
-                    });
-                    
-                    // Update UI with new experience
+                            id: Date.now().toString(),
+                            jobTitle,
+                            company,
+                            location,
+                            startDate,
+                            endDate,
+                            description,
+                            skills: skills.split(',').map(s => s.trim()).filter(s => s)
+                        };
+                        
+                        experiences.push(newExperience);
+                        
+                        // Save to Firestore
+                        await window.db.collection("users").doc(currentUser.uid).update({
+                            experiences
+                        });
+                        
+                        // Update UI
                     updateExperienceUI(experiences);
-                    
-                    console.log("Experience added successfully");
-                } else {
-                    console.error("User document not found");
-                }
+                        closeModal(modalId);
+                        
+                        // Clear form
+                        document.getElementById('jobTitle').value = '';
+                        document.getElementById('company').value = '';
+                        document.getElementById('location').value = '';
+                        document.getElementById('startDate').value = '';
+                        document.getElementById('endDate').value = '';
+                        document.getElementById('description').value = '';
+                        document.getElementById('skills').value = '';
             } catch (error) {
-                console.error("Error adding experience:", error);
-            }
-            
-            // Close the modal
-            closeModal('experienceModal');
-        });
-    }
-
-    // Initialize Education modal with user data
-    const educationModal = document.getElementById('educationModal');
-    if (educationModal) {
-        const degreeInput = educationModal.querySelector('#degree');
-        const schoolInput = educationModal.querySelector('#school');
-        const eduStartDateInput = educationModal.querySelector('#eduStartDate');
-        const eduEndDateInput = educationModal.querySelector('#eduEndDate');
-        const fieldOfStudyInput = educationModal.querySelector('#fieldOfStudy');
-        const educationSaveBtn = educationModal.querySelector('.btn-save');
-        
-        // Add focus/blur events to better highlight the date format
-        eduStartDateInput.addEventListener('focus', function() {
-            this.setAttribute('title', 'Select month and year when you started (e.g., September 2018)');
-        });
-        
-        eduEndDateInput.addEventListener('focus', function() {
-            this.setAttribute('title', 'Select month and year when you finished (e.g., June 2022) or leave empty if still studying');
-        });
-        
-        // Find the Education section edit button
-        const educationSections = document.querySelectorAll('.profile-section');
-        let educationAddButton;
-        
-        educationSections.forEach(section => {
-            const heading = section.querySelector('h2');
-            if (heading && heading.textContent.trim() === 'Education') {
-                educationAddButton = section.querySelector('.edit-section');
-            }
-        });
-        
-        // Reset form when Add Education button is clicked
-        educationAddButton?.addEventListener('click', () => {
-            // Clear form fields
-            degreeInput.value = '';
-            schoolInput.value = '';
-            eduStartDateInput.value = '';
-            eduEndDateInput.value = '';
-            fieldOfStudyInput.value = '';
-            
-            // Reset file upload if it exists
-            const fileUpload = educationModal.querySelector('.file-upload');
-            if (fileUpload) {
-                const text = fileUpload.querySelector('.file-upload-text');
-                if (text) text.textContent = 'Drag and drop your diploma here';
-            }
-        });
-        
-        // Save new education when save button is clicked
-        educationSaveBtn?.addEventListener('click', async function() {
-            const user = auth.currentUser;
-            
-            if (!user) return;
-            
-            const newEducation = {
-                degree: degreeInput.value.trim(),
-                school: schoolInput.value.trim(),
-                startDate: eduStartDateInput.value,
-                endDate: eduEndDateInput.value,
-                fieldOfStudy: fieldOfStudyInput.value.trim()
-            };
-            
-            // Validate required fields
-            if (!newEducation.degree || !newEducation.school) {
-                alert('Please fill in the required fields: Degree and School');
+                        console.error("Error saving experience:", error);
+                        alert("Failed to save experience. Please try again.");
+                    }
+                } else if (modalId === 'educationModal') {
+                    // Handle save education
+                    const degree = document.getElementById('degree').value.trim();
+                    const school = document.getElementById('school').value.trim();
+                    const startDate = document.getElementById('eduStartDate').value;
+                    const endDate = document.getElementById('eduEndDate').value;
+                    const fieldOfStudy = document.getElementById('fieldOfStudy').value.trim();
+                    
+                    if (!degree || !school) {
+                        alert("Degree and school are required.");
                 return;
             }
             
             try {
-                // Get current user data
-                const userDoc = await getDoc(doc(db, "users", user.uid));
+                        // Get existing education entries
+                        const userDoc = await window.db.collection("users").doc(currentUser.uid).get();
+                        let education = [];
                 
-                if (userDoc.exists()) {
+                        if (userDoc.exists) {
                     const userData = userDoc.data();
-                    
-                    // Get existing education or create empty array
-                    const education = userData.education || [];
-                    
-                    // Add the new education
-                    education.push({
-                        ...newEducation,
-                        id: Date.now().toString(), // Create a unique ID
-                        createdAt: new Date()
-                    });
-                    
-                    // Update user document with new education array
-                    await updateDoc(doc(db, "users", user.uid), {
-                        education: education
-                    });
-                    
-                    // Update UI with new education
-                    updateEducationUI(education);
-                    
-                    console.log("Education added successfully");
-                } else {
-                    console.error("User document not found");
-                }
-            } catch (error) {
-                console.error("Error adding education:", error);
-            }
-            
-            // Close the modal
-            closeModal('educationModal');
-        });
-    }
-
-    // Function to update Experience UI
-    function updateExperienceUI(experiences) {
-        // Find the Experience section container
-        const experienceSections = document.querySelectorAll('.profile-section');
-        let experienceContainer;
-        
-        experienceSections.forEach(section => {
-            const heading = section.querySelector('h2');
-            if (heading && heading.textContent.trim() === 'Experience') {
-                experienceContainer = section.querySelector('.section-content');
-            }
-        });
-        
-        if (!experienceContainer) return;
-        
-        // Clear current experiences
-        experienceContainer.innerHTML = '';
-        
-        // If no experiences, show empty state
-        if (!experiences || experiences.length === 0) {
-            experienceContainer.innerHTML = `
-                <div class="empty-state">
-                    <p class="placeholder-text">Your professional experience will appear here. Showcase your career journey by adding your past and current positions.</p>
-                    <p class="placeholder-action">Click "Add Experience" to highlight your professional achievements.</p>
-                </div>
-            `;
-            return;
-        }
-        
-        // Add experiences in reverse chronological order (newest first)
-        experiences
-            .sort((a, b) => new Date(b.startDate) - new Date(a.startDate))
-            .forEach(exp => {
-                // Format dates for display
-                const startDate = exp.startDate ? new Date(exp.startDate + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : '';
-                const endDate = exp.endDate ? new Date(exp.endDate + '-01').toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Present';
-                const duration = startDate && (endDate || 'Present') ? `${startDate} - ${endDate}` : '';
-                
-                // Create experience item
-                const expItem = document.createElement('div');
-                expItem.className = 'experience-item';
-                expItem.innerHTML = `
-                    <div class="company-logo">
-                        <i class="fas fa-building"></i>
-                    </div>
-                    <div class="experience-details">
-                        <div class="experience-header">
-                            <h3>${exp.jobTitle}</h3>
-                            <button class="btn-delete-item" data-id="${exp.id}" aria-label="Delete experience">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                        </div>
-                        <p class="company">${exp.company}</p>
-                        <p class="duration">${duration}</p>
-                        <p class="location">${exp.location || ''}</p>
-                        ${exp.description ? `<ul class="responsibilities">
-                            ${exp.description.split('\n').map(item => `<li>${item}</li>`).join('')}
-                        </ul>` : ''}
-                        ${exp.skills && exp.skills.length > 0 ? `
-                            <div class="tech-stack">
-                                ${exp.skills.map(skill => `<span class="tech-tag">${skill}</span>`).join('')}
-                            </div>
-                        ` : ''}
-                    </div>
-                `;
-                
-                experienceContainer.appendChild(expItem);
-                
-                // Add delete event listener
-                const deleteBtn = expItem.querySelector('.btn-delete-item');
-                deleteBtn?.addEventListener('click', async function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    const experienceId = this.dataset.id;
-                    if (!experienceId) return;
-                    
-                    if (confirm('Are you sure you want to delete this experience?')) {
-                        const user = auth.currentUser;
-                        if (!user) return;
+                            education = userData.education || [];
+                        }
                         
-                        try {
-                            // Get current user data
-                            const userDoc = await getDoc(doc(db, "users", user.uid));
-                            
-                            if (userDoc.exists()) {
-                                const userData = userDoc.data();
-                                const experiences = userData.experiences || [];
-                                
-                                // Filter out the deleted experience
-                                const updatedExperiences = experiences.filter(exp => exp.id !== experienceId);
-                                
-                                // Update user document
-                                await updateDoc(doc(db, "users", user.uid), {
-                                    experiences: updatedExperiences
+                        // Add new education
+                        const newEducation = {
+                            id: Date.now().toString(),
+                            degree,
+                            school,
+                            startDate,
+                            endDate,
+                            fieldOfStudy
+                        };
+                        
+                        education.push(newEducation);
+                        
+                        // Save to Firestore
+                        await window.db.collection("users").doc(currentUser.uid).update({
+                            education
                                 });
                                 
                                 // Update UI
-                                updateExperienceUI(updatedExperiences);
-                                
-                                console.log("Experience deleted successfully");
-                            }
-                        } catch (error) {
-                            console.error("Error deleting experience:", error);
-                        }
-                    }
-                });
-            });
-    }
-
-    // Function to update Education UI
-    function updateEducationUI(education) {
-        // Find the Education section container
-        const educationSections = document.querySelectorAll('.profile-section');
-        let educationContainer;
-        
-        educationSections.forEach(section => {
-            const heading = section.querySelector('h2');
-            if (heading && heading.textContent.trim() === 'Education') {
-                educationContainer = section.querySelector('.section-content');
-            }
-        });
-        
-        if (!educationContainer) return;
-        
-        // Clear current education
-        educationContainer.innerHTML = '';
-        
-        // If no education, show empty state
-        if (!education || education.length === 0) {
-            educationContainer.innerHTML = `
-                <div class="empty-state">
-                    <p class="placeholder-text">Your educational background will appear here. Showcase your degrees, certifications, and academic achievements.</p>
-                    <p class="placeholder-action">Click "Add Education" to highlight your educational qualifications.</p>
-                </div>
-            `;
-            return;
-        }
-        
-        // Add education in reverse chronological order (newest first)
-        education
-            .sort((a, b) => {
-                // Sort by end date first (most recent first)
-                if (a.endDate && b.endDate) {
-                    return new Date(b.endDate) - new Date(a.endDate);
-                }
-                // If end dates aren't available, sort by start date
-                return new Date(b.startDate || 0) - new Date(a.startDate || 0);
-            })
-            .forEach(edu => {
-                // Format dates for display
-                let duration = '';
-                if (edu.startDate && edu.endDate) {
-                    const startYear = new Date(edu.startDate + '-01').getFullYear();
-                    const endYear = new Date(edu.endDate + '-01').getFullYear();
-                    duration = `${startYear} - ${endYear}`;
-                } else if (edu.startDate) {
-                    const startYear = new Date(edu.startDate + '-01').getFullYear();
-                    duration = `${startYear} - Present`;
-                }
-                
-                // Create education item
-                const eduItem = document.createElement('div');
-                eduItem.className = 'education-item';
-                eduItem.innerHTML = `
-                    <div class="school-logo">
-                        <i class="fas fa-university"></i>
-                    </div>
-                    <div class="education-details">
-                        <div class="education-header">
-                            <h3>${edu.degree}</h3>
-                            <button class="btn-delete-item" data-id="${edu.id}" aria-label="Delete education">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                        </div>
-                        <p class="school">${edu.school}</p>
-                        <p class="duration">${duration}</p>
-                        ${edu.fieldOfStudy ? `<p class="description">Specialized in ${edu.fieldOfStudy}</p>` : ''}
-                    </div>
-                `;
-                
-                educationContainer.appendChild(eduItem);
-                
-                // Add delete event listener
-                const deleteBtn = eduItem.querySelector('.btn-delete-item');
-                deleteBtn?.addEventListener('click', async function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                    const educationId = this.dataset.id;
-                    if (!educationId) return;
-                    
-                    if (confirm('Are you sure you want to delete this education entry?')) {
-                        const user = auth.currentUser;
-                        if (!user) return;
+                        updateEducationUI(education);
+                        closeModal(modalId);
                         
-                        try {
-                            // Get current user data
-                            const userDoc = await getDoc(doc(db, "users", user.uid));
-                            
-                            if (userDoc.exists()) {
-                                const userData = userDoc.data();
-                                const education = userData.education || [];
-                                
-                                // Filter out the deleted education
-                                const updatedEducation = education.filter(edu => edu.id !== educationId);
-                                
-                                // Update user document
-                                await updateDoc(doc(db, "users", user.uid), {
-                                    education: updatedEducation
+                        // Clear form
+                        document.getElementById('degree').value = '';
+                        document.getElementById('school').value = '';
+                        document.getElementById('eduStartDate').value = '';
+                        document.getElementById('eduEndDate').value = '';
+                        document.getElementById('fieldOfStudy').value = '';
+                        } catch (error) {
+                        console.error("Error saving education:", error);
+                        alert("Failed to save education. Please try again.");
+                    }
+                } else if (modalId === 'skillsModal') {
+                    // Get all skills from previews
+                    const skillCategories = {};
+                    document.querySelectorAll('.skills-preview .skill-category').forEach(category => {
+                        const categoryName = category.dataset.category;
+                        const skills = [];
+                        category.querySelectorAll('.skill-item').forEach(item => {
+                            skills.push(item.dataset.skill);
+                        });
+                        
+                        if (skills.length > 0) {
+                            skillCategories[categoryName] = skills;
+                        }
+                    });
+                    
+                    try {
+                        // Save to Firestore
+                        await window.db.collection("users").doc(currentUser.uid).update({
+                            skills: skillCategories
                                 });
                                 
                                 // Update UI
-                                updateEducationUI(updatedEducation);
-                                
-                                console.log("Education deleted successfully");
-                            }
+                        updateSkillsDisplay();
+                        closeModal(modalId);
                         } catch (error) {
-                            console.error("Error deleting education:", error);
-                        }
+                        console.error("Error saving skills:", error);
+                        alert("Failed to save skills. Please try again.");
                     }
-                });
+                }
             });
-    }
-
-    // File upload functionality
-    const fileUpload = document.getElementById('diplomaUpload');
-    if (fileUpload) {
-        const fileInput = fileUpload.querySelector('input[type="file"]');
-
-        // Handle drag and drop
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            fileUpload.addEventListener(eventName, preventDefaults, false);
-        });
-
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
         }
-
-        ['dragenter', 'dragover'].forEach(eventName => {
-            fileUpload.addEventListener(eventName, highlight, false);
-        });
-
-        ['dragleave', 'drop'].forEach(eventName => {
-            fileUpload.addEventListener(eventName, unhighlight, false);
-        });
-
-        function highlight(e) {
-            fileUpload.classList.add('dragover');
-        }
-
-        function unhighlight(e) {
-            fileUpload.classList.remove('dragover');
-        }
-
-        fileUpload.addEventListener('drop', handleDrop, false);
-        fileUpload.addEventListener('click', () => fileInput.click());
-
-        function handleDrop(e) {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            handleFiles(files);
-        }
-
-        fileInput.addEventListener('change', function(e) {
-            handleFiles(this.files);
-        });
-
-        function handleFiles(files) {
-            const file = files[0];
-            if (file) {
-                // Here you would typically upload the file to your server
-                // For now, we'll just update the text to show the file name
-                const text = fileUpload.querySelector('.file-upload-text');
-                text.textContent = `Selected: ${file.name}`;
-            }
-        }
-    }
-
-    // Save handlers (you'll need to implement the actual save functionality)
-    document.querySelectorAll('.btn-save').forEach(button => {
-        button.addEventListener('click', function() {
-            const modal = this.closest('.modal-overlay');
-            // Here you would typically save the data
-            // For now, we'll just close the modal
-            closeModal(modal.id);
-        });
     });
 
     // Skills management
@@ -1266,9 +910,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // When the Skills section edit button is clicked, load skills data from Firestore
         skillsEditButton?.addEventListener('click', async function() {
             try {
-                const user = auth.currentUser;
+                const user = window.auth.currentUser;
                 if (user) {
-                    const userDoc = await getDoc(doc(db, "users", user.uid));
+                    const userDoc = await window.db.collection("users").doc(user.uid).get();
                     if (userDoc.exists() && userDoc.data().skills) {
                         // Initialize skills data from Firestore
                         skillsData.clear();
@@ -1285,7 +929,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Save skills when save button is clicked
         saveSkillsBtn?.addEventListener('click', async function() {
-            const user = auth.currentUser;
+            const user = window.auth.currentUser;
             
             if (!user) return;
             
@@ -1297,7 +941,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
                 
                 // Update the skills field in Firestore
-                await updateDoc(doc(db, "users", user.uid), {
+                await window.db.collection("users").doc(user.uid).update({
                     skills: skillsForFirestore
                 });
                 
@@ -1371,6 +1015,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Avatar upload functionality
     function setupAvatarUpload(user) {
         const editAvatarBtn = document.querySelector('.edit-avatar');
+        const profileAvatarImage = document.getElementById('profile-avatar-image');
+        
         if (!editAvatarBtn) return;
         
         // Create a hidden file input
@@ -1380,61 +1026,56 @@ document.addEventListener('DOMContentLoaded', () => {
         fileInput.style.display = 'none';
         document.body.appendChild(fileInput);
         
-        // When edit avatar button is clicked, trigger file selection
+        // Add click event to edit avatar button
         editAvatarBtn.addEventListener('click', () => {
             fileInput.click();
         });
         
-        // When a file is selected, upload it
+        // Handle file selection
         fileInput.addEventListener('change', async (e) => {
-            if (!e.target.files || !e.target.files[0]) return;
-            
             const file = e.target.files[0];
+            if (!file) return;
             
-            // Validate file type and size
-            if (!file.type.match('image.*')) {
-                alert('Please select an image file');
-                return;
-            }
-            
-            if (file.size > 2 * 1024 * 1024) { // 2MB
-                alert('Image size should be less than 2MB');
-                return;
-            }
-            
+            try {
             // Show loading state
             editAvatarBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             editAvatarBtn.disabled = true;
             
-            try {
-                // Upload to ImageBB
+                // Upload the image to ImageBB (or another service)
                 const imageUrl = await uploadImageToImageBB(file);
                 
                 if (imageUrl) {
-                    // Save URL to Firestore
-                    await updateDoc(doc(db, "users", user.uid), {
+                    // Update user profile with new avatar URL
+                    await window.db.collection("users").doc(user.uid).update({
                         photoURL: imageUrl
                     });
                     
-                    // Update UI with new image
-                    const avatarImages = document.querySelectorAll('.avatar-image');
-                    avatarImages.forEach(img => {
-                        img.src = imageUrl;
-                        img.style.display = 'block';
-                    });
+                    // Update UI
+                    profileAvatarImage.src = imageUrl;
+                    profileAvatarImage.style.display = 'block';
+                    document.getElementById('profile-avatar-initials').style.display = 'none';
                     
-                    const avatarInitials = document.querySelectorAll('.avatar-initials');
-                    avatarInitials.forEach(el => {
-                        el.style.display = 'none';
-                    });
+                    // Update avatar in navbar
+                    const avatarImage = document.getElementById('avatar-image');
+                    const avatarImageDropdown = document.getElementById('avatar-image-dropdown');
                     
-                    console.log('Avatar updated successfully');
+                    if (avatarImage) {
+                        avatarImage.src = imageUrl;
+                        avatarImage.style.display = 'block';
+                        document.getElementById('avatar-initials').style.display = 'none';
+                    }
+                    
+                    if (avatarImageDropdown) {
+                        avatarImageDropdown.src = imageUrl;
+                        avatarImageDropdown.style.display = 'block';
+                        document.getElementById('avatar-initials-dropdown').style.display = 'none';
+                    }
                 }
             } catch (error) {
-                console.error('Error uploading avatar:', error);
-                alert('Failed to upload image. Please try again.');
+                console.error("Error updating avatar:", error);
+                alert("Failed to update avatar. Please try again.");
             } finally {
-                // Reset button state
+                // Reset button
                 editAvatarBtn.innerHTML = '<i class="fas fa-camera"></i>';
                 editAvatarBtn.disabled = false;
             }
@@ -1469,6 +1110,240 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error('Error uploading to ImageBB:', error);
             throw error;
+        }
+    }
+
+    // Load other user's profile
+    async function loadOtherUserProfile(userId) {
+        try {
+            // Get user document from Firestore
+            const userDoc = await window.db.collection("users").doc(userId).get();
+            
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                
+                // Update UI with the other user's data
+                updateProfileForOtherUser(userData, userId);
+            } else {
+                // User not found
+                showProfileNotFoundMessage();
+            }
+        } catch (error) {
+            console.error("Error loading other user's profile:", error);
+            showProfileNotFoundMessage();
+        }
+    }
+    
+    // Update profile UI for another user
+    function updateProfileForOtherUser(userData, userId) {
+        const profileName = document.querySelector('.profile-details h1');
+        const headline = document.querySelector('.headline');
+        const location = document.querySelector('.location');
+        const profileAvatarInitials = document.getElementById('profile-avatar-initials');
+        const profileAvatarImage = document.getElementById('profile-avatar-image');
+        
+        // Update profile name
+        if (profileName) {
+            profileName.textContent = userData.name || userData.fullName || userData.displayName || 'User';
+        }
+        
+        // Update professional headline
+        if (headline) {
+            headline.textContent = userData.headline || 'Professional headline not set';
+            if (!userData.headline) {
+                headline.classList.add('placeholder-text');
+            } else {
+                headline.classList.remove('placeholder-text');
+            }
+        }
+        
+        // Update location
+        if (location) {
+            const locationIcon = location.querySelector('i');
+            const locationText = document.createTextNode(userData.location || 'Location not specified');
+            
+            // Clear existing content except for the icon
+            while (location.lastChild) {
+                location.removeChild(location.lastChild);
+            }
+            
+            location.appendChild(locationIcon);
+            location.appendChild(locationText);
+            
+            if (!userData.location) {
+                location.classList.add('placeholder-text');
+            } else {
+                location.classList.remove('placeholder-text');
+            }
+        }
+        
+        // Update avatar
+        if (userData.photoURL) {
+            // User has a profile photo, show image and hide initials
+            if (profileAvatarImage) {
+                profileAvatarImage.src = userData.photoURL;
+                profileAvatarImage.style.display = 'block';
+            }
+            
+            if (profileAvatarInitials) {
+                profileAvatarInitials.style.display = 'none';
+            }
+        } else {
+            // No profile photo, show initials instead
+            if (profileAvatarImage) {
+                profileAvatarImage.style.display = 'none';
+            }
+            
+            if (profileAvatarInitials) {
+                const displayName = userData.name || userData.fullName || userData.displayName || 'User';
+                const initials = displayName
+                    .split(' ')
+                    .map(name => name[0])
+                    .join('')
+                    .toUpperCase();
+                
+                profileAvatarInitials.style.display = 'flex';
+                profileAvatarInitials.textContent = initials || 'JN';
+            }
+        }
+        
+        // Update about section and other profile sections
+        updateProfileWithUserData(userData);
+    }
+    
+    // Show profile not found message
+    function showProfileNotFoundMessage() {
+        const profileContent = document.querySelector('.profile-grid');
+        const profileHeader = document.querySelector('.profile-header');
+        
+        if (profileContent) {
+            profileContent.innerHTML = `
+                <div class="error-message">
+                    <h2>Profile Not Found</h2>
+                    <p>The user profile you're looking for doesn't exist or has been removed.</p>
+                    <a href="../home/home.html" class="btn-primary">
+                        <i class="fas fa-home"></i>
+                        Return to Home
+                    </a>
+                </div>
+            `;
+        }
+        
+        if (profileHeader) {
+            const profileDetails = profileHeader.querySelector('.profile-details');
+            if (profileDetails) {
+                profileDetails.querySelector('h1').textContent = 'User Not Found';
+                profileDetails.querySelector('.headline').textContent = '';
+                profileDetails.querySelector('.location').textContent = '';
+                
+                // Hide action buttons
+                const actionButtons = profileDetails.querySelector('.profile-actions');
+                if (actionButtons) {
+                    actionButtons.style.display = 'none';
+                }
+            }
+        }
+    }
+    
+    // Set up follow button functionality
+    async function setupFollowButton(profileId, currentUserId) {
+        const followButton = document.getElementById('follow-button');
+        const messageButton = document.getElementById('message-button');
+        
+        // Set up message button functionality
+        if (messageButton) {
+            messageButton.addEventListener('click', () => {
+                // Navigate to the chats page with the user ID
+                window.location.href = `../chats/chats.html?contact=${profileId}`;
+            });
+        }
+        
+        if (!followButton) return;
+        
+        try {
+            // Check if already following
+            const currentUserDoc = await window.db.collection("users").doc(currentUserId).get();
+            
+            if (currentUserDoc.exists) {
+                const userData = currentUserDoc.data();
+                const following = userData.following || [];
+                
+                if (following.includes(profileId)) {
+                    // Already following this user
+                    followButton.classList.add('following');
+                }
+            }
+            
+            // Add follow/unfollow functionality
+            followButton.addEventListener('click', async () => {
+                try {
+                    const isFollowing = followButton.classList.contains('following');
+                    
+                    if (isFollowing) {
+                        // Unfollow user
+                        await window.db.collection("users").doc(currentUserId).update({
+                            following: firebase.firestore.FieldValue.arrayRemove(profileId)
+                        });
+                        
+                        // Update the user's followers list
+                        await window.db.collection("users").doc(profileId).update({
+                            followers: firebase.firestore.FieldValue.arrayRemove(currentUserId)
+                        });
+                        
+                        followButton.classList.remove('following');
+                    } else {
+                        // Follow user
+                        await window.db.collection("users").doc(currentUserId).update({
+                            following: firebase.firestore.FieldValue.arrayUnion(profileId)
+                        });
+                        
+                        // Update the user's followers list
+                        await window.db.collection("users").doc(profileId).update({
+                            followers: firebase.firestore.FieldValue.arrayUnion(currentUserId)
+                        });
+                        
+                        followButton.classList.add('following');
+                        
+                        // Send a notification to the user being followed
+                        await sendFollowNotification(profileId, currentUserId);
+                    }
+                } catch (error) {
+                    console.error("Error updating follow status:", error);
+                    alert("There was an error updating your follow status. Please try again.");
+                }
+            });
+        } catch (error) {
+            console.error("Error setting up follow button:", error);
+        }
+    }
+    
+    // Send a notification to the user being followed
+    async function sendFollowNotification(recipientId, senderId) {
+        try {
+            // Get sender's information
+            const senderDoc = await window.db.collection("users").doc(senderId).get();
+            if (!senderDoc.exists) return;
+            
+            const senderData = senderDoc.data();
+            const senderName = senderData.name || senderData.fullName || senderData.displayName || 'A user';
+            
+            // Create notification
+            const notification = {
+                type: 'follow',
+                senderId: senderId,
+                senderName: senderName,
+                senderPhoto: senderData.photoURL || null,
+                message: `${senderName} started following you`,
+                read: false,
+                createdAt: new Date()
+            };
+            
+            // Add notification to collection
+            await window.db.collection("users").doc(recipientId).collection("notifications").add(notification);
+            
+            console.log("Follow notification sent successfully");
+        } catch (error) {
+            console.error("Error sending follow notification:", error);
         }
     }
 });

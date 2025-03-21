@@ -9,7 +9,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 </head>
-<body>
+<body class="settings-page">
     <!-- Navbar -->
     <nav>
         <div class="nav-container">
@@ -43,12 +43,12 @@
                         </div>
                         
                         <div class="menu-sections">
-                            <a href="../../home/SavedJobs.html">
+                            <a href="../saved/saved.html">
                                 <i class="fas fa-heart"></i>
                                 Saved Jobs
                                 <span class="badge">4</span>
                             </a>
-                            <a href="../../home/Applications.html">
+                            <a href="../applications/applications.html">
                                 <i class="fas fa-briefcase"></i>
                                 Applications
                                 <span class="badge">2</span>
@@ -85,7 +85,17 @@
 
     <!-- Settings Content -->
     <main class="settings-container">
-        <h1 class="settings-title">Settings</h1>
+        <div class="page-header">
+            <div class="nav-buttons">
+                <a href="javascript:history.back()" class="nav-btn back-btn">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <a href="../home/home.html" class="nav-btn home-btn">
+                    <i class="fas fa-home"></i>
+                </a>
+            </div>
+            <h1 class="settings-title">Settings</h1>
+        </div>
         
         <!-- Account Settings -->
         <section class="settings-section">
@@ -301,30 +311,6 @@
             </div>
         </section>
     </main>
-
-    <!-- Bottom Navigation Bar -->
-    <div class="bottom-nav">
-        <a href="../home/home.html" class="bottom-nav-item">
-            <i class="fas fa-home"></i>
-            <span>Home</span>
-        </a>
-        <a href="../jobs/jobs.html" class="bottom-nav-item">
-            <i class="fas fa-briefcase"></i>
-            <span>Jobs</span>
-        </a>
-        <a href="../saved/saved.html" class="bottom-nav-item">
-            <i class="fas fa-heart"></i>
-            <span>Saved</span>
-        </a>
-        <a href="../notifications/notifications.html" class="bottom-nav-item">
-            <i class="fas fa-bell"></i>
-            <span>Alerts</span>
-        </a>
-        <a href="../profile/profile.html" class="bottom-nav-item">
-            <i class="fas fa-user"></i>
-            <span>Profile</span>
-        </a>
-    </div>
 
     <!-- Footer -->
     <footer class="footer">

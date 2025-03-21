@@ -14,6 +14,11 @@ import {
     onAuthStateChanged,
     signInAnonymously
 } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
+import { 
+    db, 
+    doc, 
+    setDoc 
+} from '../../Firebase/firebase-config.js';
 
 // Check if user is already logged in
 onAuthStateChanged(auth, (user) => {
@@ -226,6 +231,22 @@ document.addEventListener('DOMContentLoaded', function() {
             await updateProfile(userCredential.user, {
                 displayName: `${firstName} ${lastName}`
             });
+            
+            // Create user document in Firestore with name info
+            try {
+                await setDoc(doc(db, 'users', userCredential.user.uid), {
+                    fullName: `${firstName} ${lastName}`,
+                    name: `${firstName} ${lastName}`,
+                    email: email,
+                    createdAt: new Date(),
+                    status: 'online',
+                    uid: userCredential.user.uid
+                });
+            } catch (firestoreError) {
+                console.error('Error creating user document:', firestoreError);
+                // Continue even if Firestore creation fails
+            }
+            
             // Redirect to home page on success
             window.location.href = '/Pages/home/home.html';
             return; // Stop execution here
