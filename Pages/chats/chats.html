@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Theme loader script - must be first to prevent flickering -->
+    <script src="/Assets/theme-loader.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat Messages</title>
@@ -132,12 +134,6 @@
                     </div>
                     <div class="chat-actions">
                         <button class="chat-action-btn">
-                            <i class="fas fa-phone"></i>
-                        </button>
-                        <button class="chat-action-btn">
-                            <i class="fas fa-video"></i>
-                        </button>
-                        <button class="chat-action-btn">
                             <i class="fas fa-ellipsis-v"></i>
                         </button>
                     </div>
@@ -154,6 +150,9 @@
                     <button class="input-action-btn" id="image-upload-btn">
                         <i class="fas fa-image"></i>
                     </button>
+                    <button class="input-action-btn" id="emoji-btn">
+                        <i class="far fa-smile"></i>
+                    </button>
                     <div class="message-input">
                         <input type="text" placeholder="Type a message...">
                     </div>
@@ -164,6 +163,27 @@
             </div>
         </div>
     </main>
+
+    <!-- Emoji Picker -->
+    <div class="emoji-picker" id="emoji-picker">
+        <div class="emoji-picker-header">
+            <span class="emoji-picker-title">Emojis</span>
+            <button class="modal-close" id="close-emoji-picker">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="emoji-categories">
+            <div class="emoji-category active" data-category="smileys">😀</div>
+            <div class="emoji-category" data-category="animals">🐶</div>
+            <div class="emoji-category" data-category="food">🍎</div>
+            <div class="emoji-category" data-category="activities">⚽</div>
+            <div class="emoji-category" data-category="travel">🚗</div>
+            <div class="emoji-category" data-category="objects">💡</div>
+        </div>
+        <div class="emoji-list" id="emoji-list">
+            <!-- Emojis will be added here via JavaScript -->
+        </div>
+    </div>
 
     <!-- Bottom Navigation Bar -->
     <div class="bottom-nav">
@@ -184,9 +204,9 @@
             <span>Add</span>
         </a>
         
-        <a href="../notifications/notifications.html" class="bottom-nav-item">
-            <i class="fas fa-bell"></i>
-            <span>Alerts</span>
+        <a href="../users/users.html" class="bottom-nav-item">
+            <i class="fas fa-users"></i>
+            <span>Users</span>
         </a>
         <a href="chats.html" class="bottom-nav-item active">
             <i class="fas fa-comments"></i>

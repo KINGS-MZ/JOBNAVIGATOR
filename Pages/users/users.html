@@ -5,13 +5,12 @@
     <script src="/Assets/theme-loader.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Job Navigator - Saved Posts</title>
+    <title>Users | Job Navigator</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <!-- CSS Files -->
     <link rel="stylesheet" href="../../Assets/navbar/nav.css">
-    <link rel="stylesheet" href="saved.css">
+    <link rel="stylesheet" href="users.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <!-- Navigation Bar -->
@@ -24,7 +23,8 @@
             
             <div class="nav-right">
                 <button id="theme-toggle" aria-label="Toggle dark mode">
-                    <i class="fas fa-moon"></i>
+                    <i class="fas fa-moon" id="moon-icon"></i>
+                    <i class="fas fa-sun" id="sun-icon" style="display: none;"></i>
                 </button>
                 
                 <div class="user-menu">
@@ -60,18 +60,22 @@
                             <a href="../saved/saved.html">
                                 <i class="fas fa-heart"></i>
                                 Saved Jobs
-                                <span class="badge">4</span>
+                                <span class="badge">0</span>
                             </a>
                             <a href="../notifications/notifications.html">
                                 <i class="fas fa-bell"></i>
                                 Notifications
-                                <span class="badge active">3</span>
+                                <span class="badge active">0</span>
                             </a>
                             <a href="../chats/chats.html">
                                 <i class="fas fa-comments"></i>
                                 Chats
                             </a>
                             <div class="menu-divider"></div>
+                            <a href="../users/users.html" class="active">
+                                <i class="fas fa-users"></i>
+                                Users
+                            </a>
                             <a href="../profile/profile.html">
                                 <i class="fas fa-user"></i>
                                 My Profile
@@ -94,59 +98,71 @@
 
     <!-- Main Content -->
     <main>
-        <div class="content-wrapper">
-            <!-- Header Section -->
-            <section class="header-section">
-                <h1 class="page-title">Saved Posts</h1>
-                <p class="page-description">Posts you've saved for later</p>
-                
-                <div class="search-container">
-                    <div class="search-box">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="post-search" placeholder="Search saved posts">
-                    </div>
-                    <button class="search-btn" type="button">
-                        <i class="fas fa-search"></i>
-                    </button>
-                </div>
-            </section>
-            
-            <!-- Loading Container -->
-            <div class="loading-container">
-                <div class="spinner"></div>
-                <p>Loading saved posts...</p>
+        <div class="search-container">
+            <div class="search-box">
+                <i class="fas fa-search"></i>
+                <input type="text" id="user-search" placeholder="Search users...">
             </div>
-            
-            <!-- Empty State -->
-            <div class="empty-state" style="display: none;">
-                <div class="empty-illustration">
-                    <i class="fas fa-bookmark"></i>
-                </div>
-                <h2>No saved posts yet</h2>
-                <p>When you save posts, they'll appear here for easy access</p>
-                <a href="../jobs/jobs.html" class="btn-primary">Explore Posts</a>
+        </div>
+
+        <div class="users-header">
+            <h2>Users</h2>
+            <div class="filter-container">
+                <button class="filter-btn" id="all-users-btn" data-filter="all">All</button>
+                <button class="filter-btn" id="following-btn" data-filter="following">Following</button>
+                <button class="filter-btn" id="followers-btn" data-filter="followers">Followers</button>
             </div>
-            
-            <!-- Posts Container -->
-            <div class="posts-container">
-                <!-- Posts will be loaded dynamically -->
+        </div>
+
+        <div class="users-list" id="users-list">
+            <!-- Loading skeleton -->
+            <div class="skeleton-user"></div>
+            <div class="skeleton-user"></div>
+            <div class="skeleton-user"></div>
+            <div class="skeleton-user"></div>
+            <!-- Users will be loaded here dynamically -->
+        </div>
+
+        <div class="empty-state" id="empty-state" style="display: none;">
+            <div class="empty-icon">
+                <i class="fas fa-users"></i>
             </div>
+            <h3>No users found</h3>
+            <p>Try adjusting your search criteria</p>
         </div>
     </main>
 
-    <!-- Footer -->
-    <footer>
-        <div class="footer-content">
-            <p class="love-message">
-                Made with <i class="fas fa-heart"></i> by IMAD EL KHAIDER
-            </p>
-            <p class="copyright">
-                © 2024 Job Navigator. All rights reserved.
-            </p>
-        </div>
-    </footer>
+    <!-- Bottom Navigation Bar -->
+    <div class="bottom-nav">
+        <a href="../home/home.html" class="bottom-nav-item">
+            <i class="fas fa-home"></i>
+        </a>
+        <a href="../jobs/jobs.html" class="bottom-nav-item">
+            <i class="fas fa-briefcase"></i>
+        </a>
+        
+        <!-- Center Add Post Button -->
+        <a href="../posts/posts.html" class="bottom-nav-item bottom-nav-add">
+            <div class="nav-add-button">
+                <i class="fas fa-plus"></i>
+            </div>
+        </a>
+        
+        <a href="../users/users.html" class="bottom-nav-item active">
+            <i class="fas fa-users"></i>
+        </a>
+        <a href="../chats/chats.html" class="bottom-nav-item">
+            <i class="fas fa-comments"></i>
+        </a>
+    </div>
 
-    <!-- Scripts -->
-    <script type="module" src="saved.js"></script>
+    <!-- Loading Spinner -->
+    <div class="loading-spinner" id="loading-spinner" style="display: none;">
+        <i class="fas fa-circle-notch fa-spin"></i>
+    </div>
+
+    <!-- JavaScript -->
+    <script src="/Assets/navbar/nav.js" type="module"></script>
+    <script src="users.js" type="module"></script>
 </body>
 </html> 

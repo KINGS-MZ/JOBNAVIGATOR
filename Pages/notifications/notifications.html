@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Theme loader script - must be first to prevent flickering -->
+    <script src="/Assets/theme-loader.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Notifications | Job Navigator</title>
@@ -96,13 +98,24 @@
                 <p class="header-subtitle">Stay updated with your job search and applications</p>
             </div>
             <div class="notifications-actions">
-                <button class="action-btn" title="Mark all as read">
+                <button class="action-btn reload-notifications" title="Reload notifications">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <button class="action-btn mark-all-read" title="Mark all as read">
                     <i class="fas fa-check-double"></i>
                 </button>
                 <button class="action-btn" title="Clear all notifications">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>
+        </div>
+
+        <!-- Auth Status - Will show when authentication is still loading -->
+        <div id="auth-status-banner" style="padding: 10px; margin: 0 20px 20px; background-color: #f8f9fa; border-radius: 8px; display: none;">
+            <p style="margin: 0; text-align: center;">
+                <i class="fas fa-spinner fa-spin" style="margin-right: 8px;"></i>
+                Checking authentication status...
+            </p>
         </div>
 
         <div class="notifications-content">
@@ -140,13 +153,9 @@
                             <i class="fas fa-filter"></i>
                             Filter Notifications
                         </button>
-                        <button class="filter-btn">
-                            <i class="fas fa-download"></i>
-                            Export Notifications
-                        </button>
-                        <button class="filter-btn">
-                            <i class="fas fa-cog"></i>
-                            Notification Preferences
+                        <button class="filter-btn show-rejected-toggle" id="show-rejected-toggle">
+                            <i class="fas fa-eye"></i>
+                            Show Rejected
                         </button>
                     </div>
                 </div>
@@ -173,9 +182,9 @@
             <span>Add</span>
         </a>
         
-        <a href="../notifications/notifications.html" class="bottom-nav-item active">
-            <i class="fas fa-bell"></i>
-            <span>Alerts</span>
+        <a href="../users/users.html" class="bottom-nav-item active">
+            <i class="fas fa-users"></i>
+            <span>Users</span>
         </a>
         <a href="../chats/chats.html" class="bottom-nav-item">
             <i class="fas fa-comments"></i>
@@ -183,26 +192,6 @@
         </a>
     </div>
     
-    <div class="floating-menu">
-        <button class="menu-btn">
-            <i class="fas fa-bars"></i>
-        </button>
-        <div class="menu-items">
-            <a href="../home/home.html" class="menu-item home-btn">
-                <i class="fas fa-home"></i>
-            </a>
-            <a href="../jobs/jobs.html" class="menu-item jobs-btn">
-                <i class="fas fa-briefcase"></i>
-            </a>
-            <a href="../posts/posts.html" class="menu-item posts-btn">
-                <i class="fas fa-plus-circle"></i>
-            </a>
-            <a href="../settings/settings.html" class="menu-item settings-btn">
-                <i class="fas fa-cog"></i>
-            </a>
-        </div>
-    </div>
-
     <!-- Footer -->
     <footer class="footer">
         <div class="footer-content">
@@ -240,29 +229,6 @@
     </script>
     <!-- Main JavaScript -->
     <script src="notifications.js"></script>
-    
-    <!-- Script to manage navigation display based on screen size -->
-    <script>
-        function updateNavigation() {
-            const bottomNav = document.querySelector('.bottom-nav');
-            const floatingMenu = document.querySelector('.floating-menu');
-            
-            if (window.innerWidth <= 768) {
-                // Mobile view: show bottom nav, hide floating menu
-                if (bottomNav) bottomNav.style.display = 'flex';
-                if (floatingMenu) floatingMenu.style.display = 'none';
-            } else {
-                // Desktop view: hide bottom nav, show floating menu
-                if (bottomNav) bottomNav.style.display = 'none';
-                if (floatingMenu) floatingMenu.style.display = 'flex';
-            }
-        }
-        
-        // Run on initial load
-        document.addEventListener('DOMContentLoaded', updateNavigation);
-        
-        // Check on resize
-        window.addEventListener('resize', updateNavigation);
-    </script>
+    <script src="../debug.js"></script>
 </body>
 </html> 

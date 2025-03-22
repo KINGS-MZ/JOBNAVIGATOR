@@ -65,6 +65,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Get the display name from available fields
         const displayName = userData?.name || userData?.fullName || user?.displayName || 'User';
         
+        // Get user id from either id or uid
+        const userId = userData?.id || userData?.uid || user?.uid || '';
+        
         // Get user initials
         const initials = displayName
             .split(' ')
@@ -72,9 +75,9 @@ document.addEventListener('DOMContentLoaded', () => {
             .join('')
             .toUpperCase();
             
-        if (user.photoURL || userData?.photoURL) {
+        if (user?.photoURL || userData?.photoURL) {
             // Use actual profile photo if available
-            const photoURL = userData?.photoURL || user.photoURL;
+            const photoURL = userData?.photoURL || user?.photoURL;
             if (avatarImg) {
                 avatarImg.src = photoURL;
                 avatarImg.style.display = 'block';
@@ -84,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } else {
             // Use default avatar instead of initials
-            const defaultAvatar = getDefaultAvatar(user.uid || userData?.id, displayName);
+            const defaultAvatar = getDefaultAvatar(userId, displayName);
             if (avatarImg) {
                 avatarImg.src = defaultAvatar;
                 avatarImg.style.display = 'block';
@@ -189,6 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Open modal when clicking new chat button
         newChatBtn.addEventListener('click', () => {
             openModal();
+            // Only fetch users when button is clicked
             fetchAndDisplayUsers();
         });
         
@@ -204,38 +208,37 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
         
-        // Handle search input
-        searchInput.addEventListener('input', () => {
-            const query = searchInput.value.toLowerCase().trim();
-            filterUsers(query);
+        // Filter users when typing in search
+        searchInput.addEventListener('input', (e) => {
+            filterUsers(e.target.value);
         });
     }
     
-    // Open the users list modal
+    // Function to open the users list modal
     function openModal() {
         const modal = document.getElementById('usersListModal');
         modal.classList.add('active');
-        document.body.style.overflow = 'hidden';
+        document.body.classList.add('modal-open');
+        
+        // Clear any previous search input
+        const searchInput = document.getElementById('user-search-input');
+        if (searchInput) {
+            searchInput.value = '';
+            searchInput.focus();
+        }
     }
     
-    // Close the users list modal
+    // Function to close the modal
     function closeModal() {
         const modal = document.getElementById('usersListModal');
         modal.classList.remove('active');
-        document.body.style.overflow = '';
+        document.body.classList.remove('modal-open');
         
-        // Clear search input
-        const searchInput = document.getElementById('user-search-input');
-        searchInput.value = '';
-        
-        // Clear users list
+        // Clear the users list to save memory and avoid stale data
         const usersList = document.getElementById('users-list');
-        usersList.innerHTML = `
-            <div class="loading-spinner">
-                <i class="fas fa-spinner fa-spin"></i>
-                <p>Loading users...</p>
-            </div>
-        `;
+        if (usersList) {
+            usersList.innerHTML = '';
+        }
     }
     
     // Fetch users from Firestore and display them
@@ -243,41 +246,171 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!currentUser) return;
         
         const usersList = document.getElementById('users-list');
+        usersList.innerHTML = `
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Loading users...</p>
+            </div>
+        `;
         
         try {
-            // Fetch all users except current user
-            const usersSnapshot = await firebase.firestore().collection('users').get();
+            // Get the current user's document to access following and followers
+            const currentUserDoc = await firebase.firestore().collection('users').doc(currentUser.uid).get();
+            const currentUserData = currentUserDoc.exists ? currentUserDoc.data() : {};
+            
+            // Get users the current user is following
+            const followingList = currentUserData.following || [];
+            
+            // Get users who are following the current user
+            const followersList = currentUserData.followers || [];
+            
+            // First get all chats where the current user is a participant
+            const chatsSnapshot = await firebase.firestore().collection('chats')
+                .where('participants', 'array-contains', currentUser.uid)
+                .get();
+            
+            // Extract the IDs of users the current user has chatted with
+            const chatParticipantIds = new Set();
+            
+            chatsSnapshot.forEach(doc => {
+                const chatData = doc.data();
+                // Add all participants except the current user
+                chatData.participants.forEach(participantId => {
+                    if (participantId !== currentUser.uid) {
+                        chatParticipantIds.add(participantId);
+                    }
+                });
+            });
+
+            // Combine users from all three sources
+            const relevantUserIds = new Set([
+                ...chatParticipantIds,
+                ...followingList,
+                ...followersList
+            ]);
+            
+            // If we have no users to display, show empty state
+            if (relevantUserIds.size === 0) {
+                usersList.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-user-friends"></i>
+                        <p>No connections found</p>
+                        <p class="subtext">No active connections. Please visit the Users page to connect with colleagues or respond to pending connection requests.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Fetch details for these users
             const users = [];
             
-            usersSnapshot.forEach(doc => {
-                if (doc.id !== currentUser.uid) {
-                    users.push({
-                        id: doc.id,
-                        ...doc.data()
-                    });
+            // Use Promise.all to fetch user details in parallel
+            const userPromises = Array.from(relevantUserIds).map(async (userId) => {
+                try {
+                    const userDoc = await firebase.firestore().collection('users').doc(userId).get();
+                    if (userDoc.exists) {
+                        const userData = userDoc.data();
+                        // Add relationship info to the user data
+                        return {
+                            ...userData,
+                            id: userId,
+                            isFollowing: followingList.includes(userId),
+                            isFollower: followersList.includes(userId),
+                            hasChat: chatParticipantIds.has(userId)
+                        };
+                    }
+                    return null;
+                } catch (error) {
+                    console.error(`Error fetching user ${userId}:`, error);
+                    return null;
                 }
             });
             
-            // Display users
+            const userResults = await Promise.all(userPromises);
+            userResults.forEach(userData => {
+                if (userData) {
+                    users.push(userData);
+                }
+            });
+            
+            // Clear the loading spinner
+            usersList.innerHTML = '';
+            
             if (users.length === 0) {
                 usersList.innerHTML = `
-                    <div class="no-results">
-                        <i class="fas fa-users-slash"></i>
-                        <p>No other users found.</p>
+                    <div class="empty-state">
+                        <i class="fas fa-user-friends"></i>
+                        <p>No users found</p>
                     </div>
                 `;
-            } else {
-                usersList.innerHTML = '';
-                users.forEach(user => {
-                    usersList.appendChild(createUserElement(user));
-                });
+                return;
             }
+            
+            // Sort users: first show users with mutual connections, then following, then followers, then others
+            users.sort((a, b) => {
+                // First prioritize users with existing chats
+                if (a.hasChat && !b.hasChat) return -1;
+                if (!a.hasChat && b.hasChat) return 1;
+                
+                // Then prioritize mutual connections (both following and followers)
+                const aMutual = a.isFollowing && a.isFollower;
+                const bMutual = b.isFollowing && b.isFollower;
+                if (aMutual && !bMutual) return -1;
+                if (!aMutual && bMutual) return 1;
+                
+                // Then prioritize users the current user is following
+                if (a.isFollowing && !b.isFollowing) return -1;
+                if (!a.isFollowing && b.isFollowing) return 1;
+                
+                // Then prioritize users who are following the current user
+                if (a.isFollower && !b.isFollower) return -1;
+                if (!a.isFollower && b.isFollower) return 1;
+                
+                // Alphabetical by name as final sorting
+                const aName = a.name || a.fullName || a.displayName || '';
+                const bName = b.name || b.fullName || b.displayName || '';
+                return aName.localeCompare(bName);
+            });
+            
+            // Add section headers
+            let currentSection = null;
+            const sections = [];
+            
+            users.forEach(user => {
+                let section;
+                
+                if (user.hasChat) {
+                    section = "Recent Chats";
+                } else if (user.isFollowing && user.isFollower) {
+                    section = "Mutual Connections";
+                } else if (user.isFollowing) {
+                    section = "People You Follow";
+                } else if (user.isFollower) {
+                    section = "People Following You";
+                } else {
+                    section = "Other Users";
+                }
+                
+                if (section !== currentSection) {
+                    currentSection = section;
+                    sections.push(section);
+                    
+                    const sectionHeader = document.createElement('div');
+                    sectionHeader.className = 'user-section-header';
+                    sectionHeader.textContent = section;
+                    usersList.appendChild(sectionHeader);
+                }
+                
+                const userElement = createUserElement(user);
+                usersList.appendChild(userElement);
+            });
         } catch (error) {
-            console.error('Error fetching users:', error);
+            console.error("Error fetching users:", error);
             usersList.innerHTML = `
-                <div class="no-results">
+                <div class="empty-state error">
                     <i class="fas fa-exclamation-circle"></i>
-                    <p>Failed to load users. Please try again.</p>
+                    <p>Error loading users</p>
+                    <p class="subtext">Please try again later</p>
                 </div>
             `;
         }
@@ -286,12 +419,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // Create a user element for the list
     function createUserElement(user) {
         const userName = user.name || user.fullName || user.displayName || 'User';
+        const userId = user.id || user.uid || ''; // Handle both id and uid
+        
         const userElement = document.createElement('div');
         userElement.className = 'user-item';
-        userElement.dataset.userId = user.id;
+        userElement.dataset.userId = userId;
         
         // Use getDefaultAvatar for a consistent avatar
-        const avatarUrl = user.photoURL || getDefaultAvatar(user.id, userName);
+        const avatarUrl = user.photoURL || getDefaultAvatar(userId, userName);
+        
+        // Create relationship indicators
+        let relationshipLabel = '';
+        
+        if (user.hasChat) {
+            relationshipLabel = `<span class="relationship-badge chat">Chat</span>`;
+        } else if (user.isFollowing && user.isFollower) {
+            relationshipLabel = `<span class="relationship-badge mutual">Mutual</span>`;
+        } else if (user.isFollowing) {
+            relationshipLabel = `<span class="relationship-badge following">Following</span>`;
+        } else if (user.isFollower) {
+            relationshipLabel = `<span class="relationship-badge follower">Follower</span>`;
+        }
         
         userElement.innerHTML = `
             <div class="user-avatar">
@@ -299,7 +447,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span class="status-indicator ${user.status || 'offline'}"></span>
             </div>
             <div class="user-details">
-                <h3>${userName}</h3>
+                <div class="user-name-row">
+                    <h3>${userName}</h3>
+                    ${relationshipLabel}
+                </div>
                 <p>${user.email || ''}</p>
             </div>
         `;
@@ -347,137 +498,205 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // Initiate chat with selected user
+    // Handle clicking on a user to start a chat
     async function initiateChat(otherUser) {
-        if (!currentUser) {
-            console.error('No current user found. Please login.');
-            showToast('Please login to start a chat.', 'error');
+        if (!otherUser) {
+            console.error("No user data provided to initiateChat");
             return;
         }
         
+        const otherUserId = otherUser.id || otherUser.uid;
+        if (!otherUserId) {
+            console.error("User has no ID:", otherUser);
+            return;
+        }
+        
+        console.log(`Initiating chat with user: ${otherUserId}`, otherUser);
+        
         try {
-            // Close the modal
+            // Close the modal first to improve perceived performance
             closeModal();
             
-            // Ensure the current user has full information
-            if (!currentUser.displayName && !otherUser.name && !otherUser.fullName) {
-                showToast('Please update your profile information in settings before starting a chat.', 'error');
-                return;
-            }
-
-            // Check if chat already exists between these users
+            // Check if there's an existing chat with this user
             const chatsRef = firebase.firestore().collection('chats');
-            const q1 = await chatsRef
-                .where('participants', 'array-contains', currentUser.uid)
-                .get();
             
+            const q1 = await chatsRef
+                .where('participants', 'array-contains', currentUserID)
+                .get();
+                
             let existingChatId = null;
             
             q1.forEach(doc => {
                 const chatData = doc.data();
-                if (chatData.participants.includes(otherUser.id)) {
+                if (chatData.participants.includes(otherUserId)) {
                     existingChatId = doc.id;
                 }
             });
             
             if (existingChatId) {
-                // Chat already exists, load it
-                // Get the other user's name for the chat header
-                const otherUserName = otherUser.name || otherUser.fullName || otherUser.displayName || 'User';
+                console.log("Chat already exists, loading existing chat");
+                // Clean up any empty state UI first
+                const contactsList = document.querySelector('.contacts-list');
+                if (contactsList.querySelector('.empty-contacts-state')) {
+                    contactsList.innerHTML = '';
+                }
+                
+                // Get contact info to load the chat
                 const contact = {
-                    id: otherUser.id,
-                    name: otherUserName,
-                    photoURL: otherUser.photoURL,
-                    status: 'online' // Assume online for simplicity
+                    id: otherUserId,
+                    name: otherUser.name || otherUser.fullName || otherUser.displayName || 'User',
+                    photoURL: otherUser.photoURL || null,
+                    status: otherUser.status || 'offline'
                 };
                 
+                // Load the existing chat
                 loadChat(existingChatId, contact);
                 
-                // Show messages section on mobile devices
+                // Show messages section on mobile
                 if (window.innerWidth <= 768) {
                     showMessages();
                 }
             } else {
-                // Create a new chat with retry mechanism
+                // Create new chat
                 await createNewChat(otherUser);
+                
+                // Refresh contacts list to show the new chat
+                await loadUserChats(currentUserID);
             }
         } catch (error) {
             console.error("Error initiating chat:", error);
-            
-            // If this is a permissions error, handle it specially
-            if (error.code === 'permission-denied') {
-                showToast('Permission error. Please wait a moment and try again.', 'error');
-                
-                // Store the user info in localStorage for retry after refresh
-                localStorage.setItem('pendingChatUser', JSON.stringify({
-                    id: otherUser.id,
-                    name: otherUser.name || otherUser.fullName || otherUser.displayName || 'User',
-                    photoURL: otherUser.photoURL
-                }));
-            } else {
-                showToast('Error starting chat. Please try again or update your profile in settings.', 'error');
-            }
+            showToast('Error starting chat. Please try again or update your profile in settings.', 'error');
         }
     }
     
     // Helper function to create a new chat with better error handling
     async function createNewChat(otherUser) {
-        // Create a new chat document
+        if (!otherUser) {
+            console.error("Invalid user data provided to createNewChat", otherUser);
+            showToast('Error: Invalid user data. Please try again.', 'error');
+            return;
+        }
+
+        // Check for id or uid property
+        const otherUserId = otherUser.id || otherUser.uid;
+        
+        if (!otherUserId) {
+            console.error("User has no id or uid:", otherUser);
+            showToast('Error: User has no ID. Please try again.', 'error');
+            return;
+        }
+
+        // Before creating a new chat, check if chat already exists
+        const existingChatQuery = await firebase.firestore().collection('chats')
+            .where('participants', 'array-contains', currentUserID)
+            .get();
+            
+        let existingChatId = null;
+        
+        existingChatQuery.forEach(doc => {
+            const chatData = doc.data();
+            if (chatData.participants.includes(otherUserId)) {
+                existingChatId = doc.id;
+            }
+        });
+        
+        // If chat already exists, just load it instead of creating a duplicate
+        if (existingChatId) {
+            console.log("Chat already exists, loading existing chat:", existingChatId);
+            
+            // Get the contact info for the other user
+            const otherUserDoc = await firebase.firestore().collection('users').doc(otherUserId).get();
+            const otherUserData = otherUserDoc.exists ? otherUserDoc.data() : {};
+            
+            const contact = {
+                id: otherUserId,
+                name: otherUserData.name || otherUserData.fullName || otherUser.displayName || 'User',
+                photoURL: otherUserData.photoURL || otherUser.photoURL || null,
+                status: otherUserData.status || 'offline'
+            };
+            
+            // Load the existing chat
+            loadChat(existingChatId, contact);
+            
+            // Show messages section on mobile devices
+            if (window.innerWidth <= 768) {
+                showMessages();
+            }
+            
+            return;
+        }
+
+        // Get current user info from Firestore for consistency
+        const currentUserDoc = await firebase.firestore().collection('users').doc(currentUserID).get();
+        const currentUserData = currentUserDoc.exists ? currentUserDoc.data() : {};
+        
+        const currentUserName = currentUserData.name || currentUserData.fullName || currentUser.displayName || 'User';
+        const currentUserPhoto = currentUserData.photoURL || currentUser.photoURL || null;
+        
+        // Ensure otherUser has all required properties
+        const otherUserName = otherUser.name || otherUser.fullName || otherUser.displayName || 'User';
+        const otherUserPhoto = otherUser.photoURL || null;
+        
+        // Create a new chat document with validated data
         const newChat = {
-            participants: [currentUserID, otherUser.id],
+            participants: [currentUserID, otherUserId],
             created: firebase.firestore.FieldValue.serverTimestamp(),
-            lastMessage: null,
-            lastMessageTime: null
+            lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+            lastMessage: {
+                text: "",
+                sender: "",
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            },
+            lastMessageTime: firebase.firestore.FieldValue.serverTimestamp()
         };
         
-        // Try to create the chat document first
-        const chatRef = await firebase.firestore().collection('chats').add(newChat);
+        console.log("Creating new chat with data:", newChat);
         
         try {
+            // Try to create the chat document first
+            const chatRef = await firebase.firestore().collection('chats').add(newChat);
+            console.log("Created new chat with ID:", chatRef.id);
+            
             // Add this chat to current user's chats collection
             await firebase.firestore().collection('users').doc(currentUserID)
                 .collection('chats').doc(chatRef.id).set({
                     chatId: chatRef.id,
-                    with: otherUser.id,
-                    withName: otherUser.name || otherUser.fullName || otherUser.displayName || 'User',
-                    withPhoto: otherUser.photoURL || null,
+                    with: otherUserId,
+                    withName: otherUserName,
+                    withPhoto: otherUserPhoto,
                     lastRead: firebase.firestore.FieldValue.serverTimestamp()
                 });
-        } catch (error) {
-            console.error("Error adding chat to current user:", error);
-            // Continue despite error
-        }
         
-        try {
-            // Add this chat to other user's chats collection
-            await firebase.firestore().collection('users').doc(otherUser.id)
+            console.log("Added chat reference to current user's chats collection");
+                
+            // Also add to the other user's chats collection for consistency
+            await firebase.firestore().collection('users').doc(otherUserId)
                 .collection('chats').doc(chatRef.id).set({
                     chatId: chatRef.id,
                     with: currentUserID,
-                    withName: currentUser.displayName || 'User',
-                    withPhoto: currentUser.photoURL || null,
+                    withName: currentUserName,
+                    withPhoto: currentUserPhoto,
                     lastRead: firebase.firestore.FieldValue.serverTimestamp()
                 });
+                
+            // Get the other user's name for the chat header
+            const contact = {
+                id: otherUserId,
+                name: otherUserName,
+                photoURL: otherUserPhoto,
+                status: 'online' // Assume online for simplicity
+            };
+            
+            // Load the chat regardless of potential errors above
+            loadChat(chatRef.id, contact);
+            
+            // Show messages section on mobile devices
+            if (window.innerWidth <= 768) {
+                showMessages();
+            }
         } catch (error) {
-            console.error("Error adding chat to other user:", error);
-            // Continue despite error - permissions might be an issue for writing to other user's collection
-        }
-        
-        // Get the other user's name for the chat header
-        const otherUserName = otherUser.name || otherUser.fullName || otherUser.displayName || 'User';
-        const contact = {
-            id: otherUser.id,
-            name: otherUserName,
-            photoURL: otherUser.photoURL,
-            status: 'online' // Assume online for simplicity
-        };
-        
-        // Load the chat regardless of potential errors above
-        loadChat(chatRef.id, contact);
-        
-        // Show messages section on mobile devices
-        if (window.innerWidth <= 768) {
-            showMessages();
+            console.error("Error creating new chat:", error);
+            showToast('Error creating chat. Please try again.', 'error');
         }
     }
     
@@ -507,139 +726,255 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Load user's chats from Firebase
     async function loadUserChats(userId) {
-        try {
-            // Initialize our tracking set if not already done
-            if (!window.processedChatIds) {
-                window.processedChatIds = new Set();
-            } else {
-                // Clear the set for a fresh load
-                window.processedChatIds.clear();
-            }
-            
-            // Fetch user's chats from Firestore
-            const chatsSnapshot = await firebase.firestore()
-                .collection('chats')
-                .where('participants', 'array-contains', userId)
-                .get();
-            
-            // Clear existing contacts
-            const contactsList = document.querySelector('.contacts-list');
-            contactsList.innerHTML = '';
-            
-            if (chatsSnapshot.empty) {
-                // No chats found, show empty state
-                showEmptyChatsState(contactsList);
-                return;
-            }
-            
-            // Process each chat
-            const chats = [];
-            for (const doc of chatsSnapshot.docs) {
-                const chatId = doc.id;
-                
-                // Add this chat ID to our tracking set
-                window.processedChatIds.add(chatId);
-                
-                const chatData = doc.data();
-                const otherUserId = chatData.participants.find(id => id !== userId);
-                
-                // Get the other user's info
-                const otherUserDoc = await firebase.firestore().collection('users').doc(otherUserId).get();
-                const otherUserData = otherUserDoc.data();
-                
-                // Get unread message count
-                let unreadCount = 0;
-                try {
-                    const unreadMessagesQuery = await firebase.firestore()
-                        .collection('chats')
-                        .doc(doc.id)
-                        .collection('messages')
-                        .where('senderId', '==', otherUserId)
-                        .where('read', '==', false)
-                        .get();
-                    
-                    unreadCount = unreadMessagesQuery.size;
-                } catch (error) {
-                    console.error('Error getting unread count:', error);
-                }
-                
-                // Get the last message
-                const lastMessageQuery = await firebase.firestore()
-                    .collection('chats')
-                    .doc(doc.id)
-                    .collection('messages')
-                    .orderBy('timestamp', 'desc')
-                    .limit(1)
-                    .get();
-                
-                let lastMessage = {
-                    text: 'No messages yet',
-                    timestamp: new Date()
-                };
-                
-                if (!lastMessageQuery.empty) {
-                    const messageData = lastMessageQuery.docs[0].data();
-                    lastMessage = {
-                        text: messageData.text,
-                        timestamp: messageData.timestamp?.toDate() || new Date(),
-                        senderId: messageData.senderId,
-                        read: messageData.read
-                    };
-                }
-                
-                chats.push({
-                    id: doc.id,
-                    otherUser: {
-                        id: otherUserId,
-                        name: otherUserData?.fullName || otherUserData?.name || otherUserData?.displayName || 'User',
-                        photoURL: otherUserData?.photoURL || null,
-                        status: otherUserData?.status || 'offline'
-                    },
-                    lastMessage,
-                    unreadCount
-                });
-            }
-            
-            // Sort chats by last message time
-            chats.sort((a, b) => b.lastMessage.timestamp - a.lastMessage.timestamp);
-            
-            // Create HTML for each chat, ensuring no duplicates
-            chats.forEach((chat, index) => {
-                // Double-check we don't already have this chat in the DOM
-                const existingChat = document.querySelector(`.contact-item[data-chat-id="${chat.id}"]`);
-                if (!existingChat) {
-                    const contactItem = createContactElement(chat, userId);
-                    contactsList.appendChild(contactItem);
-                    
-                    // Add click handler
-                    contactItem.addEventListener('click', () => {
-                        // Remove active class from all contacts
-                        document.querySelectorAll('.contact-item').forEach(item => item.classList.remove('active'));
-                        // Add active class to clicked contact
-                        contactItem.classList.add('active');
-                        
-                        // Load the chat
-                        loadChat(chat.id, chat.otherUser);
-                        
-                        // On mobile, show the messages section
-                        if (window.innerWidth <= 768) {
-                            showMessages();
-                        }
-                    });
-                }
-            });
-            
-            // Show empty message state since no chat is selected by default
-            showEmptyMessagesState();
-            
-            // Set up real-time listeners for preview updates
-            setupChatPreviewListeners(userId);
-            
-        } catch (error) {
-            console.error('Error loading chats:', error);
-            const contactsList = document.querySelector('.contacts-list');
-            showEmptyChatsState(contactsList);
+        if (!userId) {
+            console.error("No user ID provided to loadUserChats");
+            return Promise.resolve();
         }
+        
+        console.log(`Loading chats for user: ${userId}`);
+        
+        const contactsList = document.querySelector('.contacts-list');
+        if (!contactsList) {
+            console.error("Could not find contacts list element");
+            return Promise.resolve();
+        }
+        
+        // Show loading state
+        contactsList.innerHTML = `
+            <div class="loading-chats">
+                <div class="skeleton-contact"></div>
+                <div class="skeleton-contact"></div>
+                <div class="skeleton-contact"></div>
+            </div>
+        `;
+        
+        return new Promise((resolve, reject) => {
+            try {
+                // Clean up previous listener if it exists
+                if (window.chatsListener) {
+                    window.chatsListener();
+                    window.chatsListener = null;
+                }
+                
+                // Set up real-time listener for chat updates
+                window.chatsListener = firebase.firestore().collection('chats')
+                    .where('participants', 'array-contains', userId)
+                    .orderBy('lastUpdated', 'desc')
+                    .limit(10) // Limit to recent 10 chats for faster loading
+                    .onSnapshot(async (snapshot) => {
+                        // Clear loading skeleton on first load
+                        if (contactsList.querySelector('.loading-chats')) {
+                            contactsList.innerHTML = '';
+                        }
+                        
+                        console.log(`Real-time update: ${snapshot.docs.length} chats`);
+                        
+                        if (snapshot.empty) {
+                            showEmptyChatsState(contactsList);
+                            resolve(); // Resolve the promise here for empty chats
+                            return;
+                        }
+                        
+                        // Create a map of current chat elements
+                        const currentChatElements = {};
+                        document.querySelectorAll('.contact-item').forEach(el => {
+                            const chatId = el.getAttribute('data-chat-id');
+                            if (chatId) {
+                                currentChatElements[chatId] = el;
+                            }
+                        });
+                        
+                        try {
+                            // Process each chat
+                            for (const doc of snapshot.docs) {
+                                try {
+                                    const chatData = doc.data();
+                                    const chatId = doc.id;
+                                    
+                                    // Get the other participant (not current user)
+                                    const otherUserId = chatData.participants.find(id => id !== userId);
+                                    if (!otherUserId) {
+                                        console.error("Could not find other user ID in participants", chatData.participants);
+                                        continue;
+                                    }
+                                    
+                                    // Get basic user data
+                                    const otherUserDoc = await firebase.firestore().collection('users').doc(otherUserId).get();
+                                    const otherUser = otherUserDoc.exists ? otherUserDoc.data() : { id: otherUserId, name: 'User' };
+                                    
+                                    // Get last message for preview
+                                    const lastMessageQuery = await firebase.firestore()
+                                        .collection('chats')
+                                        .doc(chatId)
+                                        .collection('messages')
+                                        .orderBy('timestamp', 'desc')
+                                        .limit(1)
+                                        .get();
+                                    
+                                    let lastMessage = null;
+                                    if (!lastMessageQuery.empty) {
+                                        const messageData = lastMessageQuery.docs[0].data();
+                                        lastMessage = {
+                                            text: messageData.text || 'No message content',
+                                            timestamp: messageData.timestamp?.toDate() || new Date(),
+                                            senderId: messageData.senderId || '',
+                                            read: messageData.read || false
+                                        };
+                                    }
+                                    
+                                    // Get unread count
+                                    const unreadQuery = await firebase.firestore()
+                                        .collection('chats')
+                                        .doc(chatId)
+                                        .collection('messages')
+                                        .where('senderId', '==', otherUserId)
+                                        .where('read', '==', false)
+                                        .get();
+                                        
+                                    const unreadCount = unreadQuery.size || 0;
+                                    
+                                    // Create the chat preview object
+                                    const chatPreview = {
+                                        id: chatId,
+                                        otherUser: {
+                                            id: otherUserId,
+                                            name: otherUser.fullName || otherUser.name || otherUser.displayName || 'User',
+                                            photoURL: otherUser.photoURL || null,
+                                            status: otherUser.status || 'offline'
+                                        },
+                                        lastMessage: lastMessage,
+                                        unreadCount: unreadCount
+                                    };
+                                    
+                                    // Check if we already have an element for this chat
+                                    if (currentChatElements[chatId]) {
+                                        // Update existing element
+                                        updateChatPreview(currentChatElements[chatId], chatPreview, userId);
+                                        delete currentChatElements[chatId]; // Remove from map so we don't delete it later
+                                    } else {
+                                        // Create new element
+                                        const contactElement = createContactElement(chatPreview, userId);
+                                        if (contactElement) {
+                                            contactsList.appendChild(contactElement);
+                                        }
+                                    }
+                                } catch (error) {
+                                    console.error("Error processing individual chat:", error);
+                                }
+                            }
+                            
+                            // Remove any elements that weren't updated (they're not in the new data)
+                            Object.values(currentChatElements).forEach(element => {
+                                element.remove();
+                            });
+                            
+                            // Sort the chat elements by timestamp (newest first)
+                            sortChatElements(contactsList);
+                            
+                            // Make sure all contacts have click handlers
+                            addContactClickHandlers();
+                            
+                            // If no chats were displayed, show empty state
+                            if (contactsList.children.length === 0) {
+                                showEmptyChatsState(contactsList);
+                            }
+                            
+                            // Resolve the promise after first load
+                            resolve();
+                        } catch (error) {
+                            console.error("Error processing chats:", error);
+                            reject(error);
+                        }
+                    }, error => {
+                        console.error("Error loading chats:", error);
+                        contactsList.innerHTML = `<p class="error">Error loading chats: ${error.message}</p>`;
+                        reject(error);
+                    });
+            } catch (error) {
+                console.error("Error in loadUserChats:", error);
+                contactsList.innerHTML = `<p class="error">Error loading chats: ${error.message}</p>`;
+                reject(error);
+            }
+        });
+    }
+    
+    // New function to update existing chat preview
+    function updateChatPreview(element, chatPreview, currentUserId) {
+        // Update timestamp for sorting
+        if (chatPreview.lastMessage?.timestamp) {
+            element.setAttribute('data-timestamp', chatPreview.lastMessage.timestamp.getTime());
+        }
+        
+        // Update name
+        const nameEl = element.querySelector('.contact-name');
+        if (nameEl) nameEl.textContent = chatPreview.otherUser.name;
+        
+        // Update status indicator
+        const statusEl = element.querySelector('.status-indicator');
+        if (statusEl) {
+            statusEl.className = 'status-indicator';
+            statusEl.classList.add(chatPreview.otherUser.status || 'offline');
+        }
+        
+        // Update avatar
+        const avatarEl = element.querySelector('.contact-avatar img');
+        if (avatarEl) {
+            avatarEl.src = chatPreview.otherUser.photoURL || 
+                           getDefaultAvatar(chatPreview.otherUser.id, chatPreview.otherUser.name);
+        }
+        
+        // Update message preview text
+        const previewEl = element.querySelector('.contact-preview-text');
+        if (previewEl && chatPreview.lastMessage) {
+            let messageText = chatPreview.lastMessage.text || '';
+            
+            // Format message preview
+            if (chatPreview.lastMessage.senderId === currentUserId) {
+                messageText = `You: ${messageText}`;
+            }
+            
+            if (messageText.startsWith('IMG:')) {
+                previewEl.innerHTML = '<i class="fas fa-image"></i> Photo';
+            } else {
+                previewEl.textContent = messageText.length > 40 
+                    ? messageText.substring(0, 40) + '...' 
+                    : messageText;
+            }
+        }
+        
+        // Update time
+        const timeEl = element.querySelector('.contact-time');
+        if (timeEl && chatPreview.lastMessage?.timestamp) {
+            timeEl.textContent = formatMessageTime(chatPreview.lastMessage.timestamp);
+        }
+        
+        // Update unread badge
+        const badgeEl = element.querySelector('.unread-badge');
+        if (badgeEl) {
+            if (chatPreview.unreadCount > 0) {
+                badgeEl.textContent = chatPreview.unreadCount > 99 ? '99+' : chatPreview.unreadCount;
+                badgeEl.style.display = 'flex';
+            } else {
+                badgeEl.style.display = 'none';
+            }
+        }
+    }
+    
+    // New function to sort chat elements by timestamp
+    function sortChatElements(container) {
+        const elements = Array.from(container.querySelectorAll('.contact-item'));
+        
+        // Sort by timestamp (newest first)
+        elements.sort((a, b) => {
+            const timeA = parseInt(a.getAttribute('data-timestamp') || '0');
+            const timeB = parseInt(b.getAttribute('data-timestamp') || '0');
+            return timeB - timeA;
+        });
+        
+        // Reorder elements in the DOM
+        elements.forEach(element => {
+            container.appendChild(element);
+        });
     }
     
     // Function to show empty chats state
@@ -665,21 +1000,65 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Function to create a contact element
     function createContactElement(chat, currentUserId) {
+        try {
         // Check if chat object is valid
-        if (!chat || !chat.otherUser) {
-            console.error("Invalid chat object provided to createContactElement");
-            return;
-        }
-        
-        // Format timestamp
-        const timestamp = chat.lastMessage && chat.lastMessage.timestamp 
-            ? formatTimestamp(chat.lastMessage.timestamp) 
-            : '';
+            if (!chat) {
+                console.error("No chat object provided to createContactElement");
+                return null;
+            }
+            
+            if (!chat.id) {
+                console.error("Chat object missing ID", chat);
+                return null;
+            }
+            
+            if (!chat.otherUser) {
+                console.error("Chat object missing otherUser", chat);
+                return null;
+            }
+            
+            // Check if this chat element already exists to prevent duplicates
+            const existingElement = document.querySelector(`.contact-item[data-chat-id="${chat.id}"]`);
+            if (existingElement) {
+                return null; // Skip creation if already exists
+            }
+            
+            // Create contact element
+            const contactItem = document.createElement('div');
+            contactItem.className = 'contact-item';
+            contactItem.dataset.chatId = chat.id;
+            contactItem.dataset.userId = chat.otherUser.id;
+            contactItem.dataset.status = chat.otherUser.status || 'offline';
+            
+            // Set timestamp for sorting (important for real-time updates)
+            if (chat.lastMessage && chat.lastMessage.timestamp) {
+                contactItem.dataset.timestamp = chat.lastMessage.timestamp.getTime();
+            } else {
+                // Default to current time if no message timestamp
+                contactItem.dataset.timestamp = Date.now();
+            }
+            
+            // Get avatar source
+            const userName = chat.otherUser.name || 'User';
+            const avatarSrc = chat.otherUser.photoURL || getDefaultAvatar(chat.otherUser.id, userName);
+            
+            // Format timestamp if available
+            let timestamp = '';
+            if (chat.lastMessage && chat.lastMessage.timestamp) {
+                try {
+                    timestamp = formatTimestamp(chat.lastMessage.timestamp);
+                } catch (e) {
+                    console.warn("Error formatting timestamp", e);
+                    timestamp = '';
+                }
+            }
         
         // For message preview text
-        let previewText = chat.lastMessage?.text || 'No messages yet';
+            let previewText = 'No messages yet';
+            if (chat.lastMessage && chat.lastMessage.text) {
+                previewText = chat.lastMessage.text;
         
-        // Handle image messages in preview
+                // Handle image messages
         if (previewText.includes('<img')) {
             previewText = '📷 Image';
         } else if (previewText.length > 30) {
@@ -688,295 +1067,422 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Add "You: " prefix for messages sent by current user
-        if (chat.lastMessage && chat.lastMessage.senderId === currentUserId) {
+                if (chat.lastMessage.senderId === currentUserId) {
             previewText = 'You: ' + previewText;
-        }
-        
-        // Create contact element
-        const contactItem = document.createElement('div');
-        contactItem.className = 'contact-item';
-        contactItem.dataset.chatId = chat.id;
-        
-        // Get default avatar if no photo URL
-        const avatarSrc = chat.otherUser.photoURL || getDefaultAvatar(chat.otherUser.id, chat.otherUser.name);
+                }
+            }
         
         // Determine if we should show the unread count
-        // Only show for messages from the other user that aren't read
-        const shouldShowUnread = chat.unreadCount > 0;
+            const shouldShowUnread = chat.unreadCount && chat.unreadCount > 0;
+            const unreadBadge = shouldShowUnread ? 
+                `<span class="unread-count">${chat.unreadCount}</span>` : '';
         
+            // Set HTML content
         contactItem.innerHTML = `
             <div class="contact-avatar">
-                <img src="${avatarSrc}" alt="${chat.otherUser.name}">
-                <span class="status-indicator ${chat.otherUser.status}"></span>
+                    <img src="${avatarSrc}" alt="${userName}">
+                    <span class="status-indicator ${chat.otherUser.status || 'offline'}"></span>
             </div>
             <div class="contact-info">
                 <div class="contact-name-time">
-                    <h3 class="contact-name">${chat.otherUser.name}</h3>
+                        <h3 class="contact-name">${userName}</h3>
                     <span class="contact-time">${timestamp}</span>
                 </div>
                 <div class="contact-preview">
                     <p>${previewText}</p>
-                    ${shouldShowUnread ? `<span class="unread-count">${chat.unreadCount}</span>` : ''}
+                        ${unreadBadge}
                 </div>
             </div>
         `;
         
+            console.log("Contact element created for chat:", chat.id);
         return contactItem;
+        } catch (error) {
+            console.error("Error creating contact element:", error);
+            return null;
+        }
     }
     
     // Load a chat from Firebase
     function loadChat(chatId, contact) {
-        // Check if chatId and contact are valid
-        if (!chatId || !contact) {
-            console.error("Invalid chatId or contact provided to loadChat");
-            return;
-        }
+        if (!chatId || !currentUserID) return;
         
+        // Store the current chat ID for validation later
+        const requestedChatId = chatId;
+        
+        // Update current chat ID and contact
         currentChatId = chatId;
         currentContact = contact;
         
-        // Update chat header with contact info
-        const header = document.querySelector('.chat-header');
-        header.querySelector('.contact-details h3').textContent = contact.name;
-        header.querySelector('.contact-details p').textContent = contact.status || 'Offline';
+        // Remove any existing event listeners to prevent memory leaks
+        cleanupChatListeners();
         
-        const contactAvatar = header.querySelector('.contact-avatar img');
-        const avatarSrc = contact.photoURL || getDefaultAvatar(contact.id, contact.name);
-        contactAvatar.src = avatarSrc;
-        contactAvatar.style.display = 'block';
-        
-        const statusIndicator = header.querySelector('.status-indicator');
-        statusIndicator.className = 'status-indicator';
-        statusIndicator.classList.add(contact.status || 'offline');
-        
-        // Clear messages container
+        // Show loading state
         const messagesContainer = document.querySelector('.messages-container');
-        messagesContainer.innerHTML = '';
+        messagesContainer.innerHTML = `
+            <div class="messages-loading">
+                <div class="loading-spinner">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </div>
+                <p>Loading messages...</p>
+            </div>
+        `;
         
-        // Add a chat date
-        const dateDiv = document.createElement('div');
-        dateDiv.className = 'chat-date';
-        dateDiv.textContent = 'Today';
-        messagesContainer.appendChild(dateDiv);
+        // Update chat header with contact info
+        updateChatHeader(contact);
         
-        // Track message IDs to prevent duplicates
-        window.loadedMessageIds = new Set();
+        // Show the messages section (especially important on mobile)
+        showMessages();
         
-        // Make sure the empty state is hidden
-        messagesContainer.classList.remove('empty-state');
+        // Mark messages as read
+        markMessagesAsRead(chatId, currentUserID);
         
-        // Clean up existing listeners before setting up new ones
+        // Get the message input
+        const messageInput = document.querySelector('.message-input input');
+        if (messageInput) {
+            messageInput.value = ''; // Clear input when switching chats
+            messageInput.focus();
+        }
+        
+        // Now lazily load the messages
+        loadChatMessages(chatId, requestedChatId);
+    }
+    
+    // Clean up any existing listeners before loading a new chat
+    function cleanupChatListeners() {
+        // Clean up scroll listeners
+        const messagesContainer = document.querySelector('.messages-container');
+        if (messagesContainer) {
+            // Create a new clone to remove all event listeners
+            const newContainer = messagesContainer.cloneNode(true);
+            messagesContainer.parentNode.replaceChild(newContainer, messagesContainer);
+        }
+        
+        // Clear any other real-time listeners that might be active
+        if (window.currentMessageListener) {
+            window.currentMessageListener();
+            window.currentMessageListener = null;
+        }
+        
+        if (window.currentTypingListener) {
+            window.currentTypingListener();
+            window.currentTypingListener = null;
+        }
+    }
+    
+    // Add a global set to track message IDs that have been rendered
+    window.renderedMessageIds = new Set();
+
+    // New function to check if a message is already rendered
+    function isMessageRendered(messageId) {
+        return window.renderedMessageIds.has(messageId);
+    }
+
+    // Modified loadChatMessages function to reset tracking when loading a new chat
+    async function loadChatMessages(chatId, requestedChatId) {
+        if (!chatId) return;
+        
+        // Clear the message tracking set when loading a new chat
+        window.renderedMessageIds.clear();
+        
+        const messagesContainer = document.querySelector('.messages-container');
+        
+        try {
+            // Load limited number of most recent messages first
+            const messagesSnapshot = await firebase.firestore()
+            .collection('chats')
+            .doc(chatId)
+            .collection('messages')
+                .orderBy('timestamp', 'desc') // Descending to get most recent
+                .limit(20) // Start with just 20 messages
+                .get();
+            
+            // Validate that we're still on the same chat
+            // This prevents race conditions when switching chats quickly
+            if (currentChatId !== requestedChatId) {
+                console.log("Chat changed while loading messages, aborting");
+                return;
+            }
+            
+            // Clear the container before adding new messages
+            messagesContainer.innerHTML = '';
+            
+            // If no messages, show empty state
+            if (messagesSnapshot.empty) {
+                messagesContainer.innerHTML = `
+                    <div class="empty-messages">
+                        <div class="empty-icon">
+                            <i class="fas fa-comments"></i>
+                        </div>
+                        <p>No messages yet</p>
+                        <p class="empty-subtitle">Start the conversation!</p>
+                    </div>
+                `;
+                
+                // Set up real-time listener for the first message
+                setupFirstMessageListener(chatId, requestedChatId);
+                return;
+            }
+            
+            const messages = [];
+            messagesSnapshot.forEach(doc => {
+                messages.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+                // Track this message as rendered
+                window.renderedMessageIds.add(doc.id);
+            });
+            
+            // Display messages in correct order (oldest first)
+            messages.reverse().forEach(message => {
+                const messageElement = addMessageToUI(message.id, message, currentUserID, true);
+                if (messageElement) {
+                    messagesContainer.appendChild(messageElement);
+                }
+            });
+            
+            // Scroll to bottom
+            scrollToBottom();
+            
+            // Set up scroll listener for loading more messages when needed
+            setupScrollListener(chatId, messagesSnapshot.docs[0], requestedChatId);
+            
+            // Set up real-time listener for new messages
+            setupNewMessageListener(chatId, requestedChatId);
+            
+        } catch (error) {
+            console.error("Error loading messages:", error);
+            
+            // Only update the UI if we're still on the same chat
+            if (currentChatId === requestedChatId) {
+                messagesContainer.innerHTML = `<p class="error">Error loading messages. Please try again.</p>`;
+            }
+        }
+    }
+    
+    // Modified setupFirstMessageListener to check for duplicates
+    function setupFirstMessageListener(chatId, requestedChatId) {
+        // Clean up any existing listener
         if (window.currentMessageListener) {
             window.currentMessageListener();
         }
         
-        // Set up typing indicator for this chat
-        setupTypingIndicator(chatId, contact);
-        
-        // Set up real-time listener for messages
-        const messagesRef = firebase.firestore()
+        // Set up a real-time listener for new messages
+        window.currentMessageListener = firebase.firestore()
             .collection('chats')
             .doc(chatId)
             .collection('messages')
-            .orderBy('timestamp', 'asc');
-        
-        // Display loading indicator while messages are being loaded
-        const loadingIndicator = document.createElement('div');
-        loadingIndicator.className = 'messages-loading';
-        loadingIndicator.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i></div>';
-        messagesContainer.appendChild(loadingIndicator);
-        
-        // Store the unsubscribe function to clean up later
-        window.currentMessageListener = messagesRef.onSnapshot(snapshot => {
-            // Remove loading indicator once we get data
-            const loadingIndicator = messagesContainer.querySelector('.messages-loading');
-            if (loadingIndicator) {
-                loadingIndicator.remove();
-            }
-            
-            // Keep track if we need to scroll after processing
-            let shouldScrollToBottom = true;
-            
-            // Get visible height before we add messages
-            const initialScrollHeight = messagesContainer.scrollHeight;
-            
-            // Process new messages
-            snapshot.docChanges().forEach(change => {
-                if (change.type === 'added') {
-                    const messageId = change.doc.id;
+            .orderBy('timestamp', 'desc')
+            .limit(1)
+            .onSnapshot(snapshot => {
+                // Check if we're still on the same chat
+                if (currentChatId !== requestedChatId) {
+                    // If not, clean up and return
+                    if (window.currentMessageListener) {
+                        window.currentMessageListener();
+                        window.currentMessageListener = null;
+                    }
+                    return;
+                }
+                
+                // If there's a new message, reload the entire chat
+                if (!snapshot.empty) {
+                    // Get the message document
+                    const doc = snapshot.docs[0];
+                    const messageId = doc.id;
                     
-                    // Only add the message if it hasn't been added before
-                    // Use window.loadedMessageIds to check for temp IDs too
-                    if (!window.loadedMessageIds.has(messageId)) {
-                        window.loadedMessageIds.add(messageId);
-                        const message = change.doc.data();
-                        
-                        // Check if this is a message we sent and is still displayed as a temp message
-                        if (message.senderId === currentUserID) {
-                            // Look for temp messages that might match this one
-                            const tempMessages = document.querySelectorAll('.message.sent');
-                            let tempFound = false;
-                            
-                            for (const tempMsg of tempMessages) {
-                                const tempId = tempMsg.id.replace('message-', '');
-                                // If it's a temp message
-                                if (tempId.startsWith('temp-')) {
-                                    // Get the text content
-                                    const textElement = tempMsg.querySelector('p');
-                                    if (textElement && textElement.textContent === message.text) {
-                                        // This is probably the same message, replace the ID
-                                        tempMsg.id = `message-${messageId}`;
-                                        
-                                        // Update the status icon to "sent"
-                                        const statusElement = tempMsg.querySelector('.message-status');
-                                        if (statusElement) {
-                                            statusElement.innerHTML = '<i class="fas fa-check"></i>';
-                                            statusElement.setAttribute('data-status', 'sent');
-                                        }
-                                        
-                                        // Remove the temp ID from our records
-                                        window.loadedMessageIds.delete(tempId);
-                                        window.loadedMessageIds.add(messageId);
-                                        
-                                        tempFound = true;
-                                        break;
-                                    }
-                                }
-                            }
-                            
-                            // If no temp message was found, add it normally
-                            if (!tempFound) {
-                                // Don't auto-scroll if user is scrolled up
-                                if (!isUserAtBottom()) {
-                                    shouldScrollToBottom = false;
-                                }
-                                addMessageToUI(messageId, message, currentUserID);
-                            }
-                        } else {
-                            // Not our message, add normally
-                            // Don't auto-scroll if user is scrolled up
-                            if (!isUserAtBottom()) {
-                                shouldScrollToBottom = false;
-                            }
-                            addMessageToUI(messageId, message, currentUserID);
-                            
-                            // Update the contact preview for messages from others
-                            if (message.senderId !== currentUserID) {
-                                updateContactPreview(chatId, message.text);
-                            }
-                        }
+                    // Skip if already rendered
+                    if (isMessageRendered(messageId)) {
+                        return;
                     }
-                }
-                else if (change.type === 'modified') {
-                    // Update an existing message (for edits or status changes)
-                    const messageId = change.doc.id;
-                    const message = change.doc.data();
-                    updateMessageInUI(messageId, message);
-                }
-                else if (change.type === 'removed') {
-                    // Remove the message from UI
-                    const messageId = change.doc.id;
-                    const messageElement = document.getElementById(`message-${messageId}`);
+                    
+                    // Clear the empty state and load the message
+                    const messagesContainer = document.querySelector('.messages-container');
+                    messagesContainer.innerHTML = '';
+                    
+                    const message = {
+                        id: messageId,
+                        ...doc.data()
+                    };
+                    
+                    // Track this message as rendered
+                    window.renderedMessageIds.add(messageId);
+                    
+                    const messageElement = addMessageToUI(message.id, message, currentUserID, true);
                     if (messageElement) {
-                        // Add fade-out animation before removing
-                        messageElement.classList.add('fade-out');
-                        setTimeout(() => {
-                            messageElement.remove();
-                            window.loadedMessageIds.delete(messageId);
-                        }, 300);
+                        messagesContainer.appendChild(messageElement);
                     }
-                }
-            });
-            
-            // If this is the initial load or the user was at the bottom, scroll to bottom
-            if (shouldScrollToBottom || snapshot.docChanges().length === snapshot.size) {
-                // Ensure we scroll after the DOM updates
-                setTimeout(() => {
+                    
+                    // Scroll to bottom
                     scrollToBottom();
-                }, 0);
-            }
-            
-            // Mark messages as read if user is looking at this chat
-            if (currentChatId === chatId) {
-                markMessagesAsRead(chatId, currentUserID);
-            }
-            
-            // Update unread badge on contact list
-            const contactItem = document.querySelector(`.contact-item[data-chat-id="${chatId}"]`);
-            if (contactItem && contactItem.classList.contains('active')) {
-                // Update UI to remove unread count
-                const unreadBadge = contactItem.querySelector('.unread-count');
-                if (unreadBadge) {
-                    unreadBadge.remove();
+                    
+                    // Switch to regular message listener since we now have messages
+                    setupNewMessageListener(chatId, requestedChatId);
+                }
+            }, error => {
+                console.error("Error listening for first message:", error);
+            });
+    }
+    
+    // Modified setupNewMessageListener to check for duplicates
+    function setupNewMessageListener(chatId, requestedChatId) {
+        // Clean up any existing listener
+        if (window.currentMessageListener) {
+            window.currentMessageListener();
+        }
+        
+        // Get the timestamp of the most recent message to use as a starting point
+        const mostRecentElement = document.querySelector('.message:last-child');
+        let startAfterTimestamp = new Date(0); // Default to epoch start
+        
+        if (mostRecentElement) {
+            const timeElement = mostRecentElement.querySelector('.message-time');
+            if (timeElement) {
+                try {
+                    // Try to parse the displayed time, fallback to now if it fails
+                    startAfterTimestamp = new Date();
+                } catch (e) {
+                    console.warn("Could not parse time from UI, using current time");
                 }
             }
+        }
+        
+        // Set up a real-time listener for new messages
+        window.currentMessageListener = firebase.firestore()
+            .collection('chats')
+            .doc(chatId)
+            .collection('messages')
+            .where('timestamp', '>', startAfterTimestamp)
+            .orderBy('timestamp')
+            .onSnapshot(snapshot => {
+                // Check if we're still on the same chat
+                if (currentChatId !== requestedChatId) {
+                    // If not, clean up and return
+                    if (window.currentMessageListener) {
+                        window.currentMessageListener();
+                        window.currentMessageListener = null;
+                    }
+                    return;
+                }
+                
+                // Process new messages
+                snapshot.docChanges().forEach(change => {
+                    if (change.type === 'added') {
+                        const messageId = change.doc.id;
+                        
+                        // Skip if already rendered
+                        if (isMessageRendered(messageId)) {
+                            return;
+                        }
+                        
+                        const message = {
+                            id: messageId,
+                            ...change.doc.data()
+                        };
+                        
+                        // Track this message as rendered
+                        window.renderedMessageIds.add(messageId);
+                        
+                        // Remove empty state if it exists
+                        const emptyState = document.querySelector('.empty-messages');
+                        if (emptyState) {
+                            emptyState.remove();
+                        }
+                        
+                        // Add the new message to the UI
+                        addMessageToUI(message.id, message, currentUserID);
+                        scrollToBottom();
+                    }
+                });
         }, error => {
-            console.error("Error loading messages:", error);
-            // Show error UI
-            messagesContainer.innerHTML = `
-                <div class="error-message">
-                    <i class="fas fa-exclamation-circle"></i>
-                    <p>Failed to load messages. Please try again.</p>
-                </div>
-            `;
-        });
-        
-        // Update message input placeholder
-        messageInput.placeholder = `Message ${contact.name}...`;
-        
-        // Update the contact status display real-time
-        updateCurrentContactStatus(contact.status === 'online');
+                console.error("Error listening for new messages:", error);
+            });
     }
     
-    // Update existing message in the UI (for edits or status changes)
-    function updateMessageInUI(messageId, message) {
-        const messageElement = document.getElementById(`message-${messageId}`);
-        if (!messageElement) return;
+    // Setup infinite scroll for messages (modified to include requestedChatId validation)
+    function setupScrollListener(chatId, firstVisibleDoc, requestedChatId) {
+        const messagesContainer = document.querySelector('.messages-container');
+        let loadingMore = false;
+        let noMoreMessages = false;
         
-        // Update message text if edited
-        const messageParagraph = messageElement.querySelector('p');
-        if (messageParagraph && message.text) {
-            messageParagraph.innerHTML = message.text;
-        }
-        
-        // Update edited status if needed
-        if (message.edited) {
-            const messageInfo = messageElement.querySelector('.message-info');
-            let editedSpan = messageElement.querySelector('.message-edited');
-            
-            if (!editedSpan && messageInfo) {
-                editedSpan = document.createElement('span');
-                editedSpan.className = 'message-edited';
-                editedSpan.textContent = 'Edited';
-                messageInfo.appendChild(editedSpan);
+        messagesContainer.addEventListener('scroll', async () => {
+            // Validate that we're still on the same chat
+            if (currentChatId !== requestedChatId) {
+                return;
             }
-        }
-        
-        // Update read status if applicable
-        if (message.read && message.senderId === currentUserID) {
-            let readIndicator = messageElement.querySelector('.read-indicator');
             
-            if (!readIndicator) {
-                const messageInfo = messageElement.querySelector('.message-info');
-                if (messageInfo) {
-                    readIndicator = document.createElement('span');
-                    readIndicator.className = 'read-indicator';
-                    readIndicator.innerHTML = '<i class="fas fa-check-double"></i>';
-                    messageInfo.appendChild(readIndicator);
+            // If we're near the top and not already loading and have more to load
+            if (messagesContainer.scrollTop < 100 && !loadingMore && !noMoreMessages) {
+                loadingMore = true;
+                
+                try {
+                    // Add loading indicator at the top
+                    const loadingIndicator = document.createElement('div');
+                    loadingIndicator.className = 'loading-more-messages';
+                    loadingIndicator.innerHTML = `<i class="fas fa-spinner fa-spin"></i>`;
+                    messagesContainer.prepend(loadingIndicator);
+                    
+                    // Get the current scroll height to maintain position later
+                    const scrollHeight = messagesContainer.scrollHeight;
+                    
+                    // Load more messages
+                    const moreMessagesSnapshot = await firebase.firestore()
+                        .collection('chats')
+                        .doc(chatId)
+                        .collection('messages')
+                        .orderBy('timestamp', 'desc')
+                        .startAfter(firstVisibleDoc)
+                        .limit(10)
+                        .get();
+                    
+                    // Remove loading indicator
+                    loadingIndicator.remove();
+                    
+                    // Validate again that we're still on the same chat
+                    if (currentChatId !== requestedChatId) {
+                        loadingMore = false;
+                        return;
+                    }
+                    
+                    if (moreMessagesSnapshot.empty) {
+                        noMoreMessages = true;
+                        return;
+                    }
+                    
+                    const moreMessages = [];
+                    moreMessagesSnapshot.forEach(doc => {
+                        moreMessages.push({
+                            id: doc.id,
+                            ...doc.data()
+                        });
+                    });
+                    
+                    // Update the first visible doc reference for next pagination
+                    firstVisibleDoc = moreMessagesSnapshot.docs[moreMessagesSnapshot.docs.length - 1];
+                    
+                    // Add messages to the top in reverse order
+                    moreMessages.forEach(message => {
+                        const messageElement = addMessageToUI(message.id, message, currentUserID, true);
+                        if (messageElement) {
+                            messagesContainer.prepend(messageElement);
+                        }
+                    });
+                    
+                    // Maintain scroll position
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight - scrollHeight;
+                    
+                } catch (error) {
+                    console.error("Error loading more messages:", error);
+                } finally {
+                    loadingMore = false;
                 }
             }
-        }
+        });
     }
     
-    // Check if user is at the bottom of the messages container
-    function isUserAtBottom() {
-        const container = messagesContainer;
-        const tolerance = 100; // pixels from bottom to consider as "at bottom"
-        return container.scrollHeight - container.scrollTop - container.clientHeight < tolerance;
-    }
-    
-    // Add a message to the UI
-    function addMessageToUI(messageId, message, currentUserId) {
+    // Modified addMessageToUI to support prepending for history loading
+    function addMessageToUI(messageId, message, currentUserId, returnElementOnly = false) {
         const isSentByCurrentUser = message.senderId === currentUserId;
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${isSentByCurrentUser ? 'sent' : 'received'}`;
@@ -1038,8 +1544,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const messagesContainer = document.querySelector('.messages-container');
         if (!messagesContainer) return;
         
+        // Function to check if user is at bottom of messages container
+        function isUserAtBottom() {
+            if (!messagesContainer) return true;
+            const tolerance = 100; // pixels from bottom to consider as "at bottom"
+            return messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight < tolerance;
+        }
+        
         // Save current scroll position and check if user was at bottom
         const wasAtBottom = isUserAtBottom();
+        
         
         messagesContainer.appendChild(messageDiv);
         
@@ -1105,6 +1619,11 @@ document.addEventListener('DOMContentLoaded', () => {
         // If user was at bottom before adding message, scroll to bottom
         if (wasAtBottom || isSentByCurrentUser) {
             scrollToBottom();
+        }
+        
+        // For infinite scroll, return the element instead of appending directly
+        if (returnElementOnly) {
+            return messageDiv;
         }
     }
     
@@ -1258,6 +1777,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 messageElement.querySelector('.message-content').style.opacity = '0.5';
             }
             
+            // Delete the message from Firestore
             await firebase.firestore()
                 .collection('chats')
                 .doc(currentChatId)
@@ -1266,6 +1786,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 .delete();
             
             console.log('Message deleted successfully');
+            
+            // Remove the message from the UI immediately
+            if (messageElement) {
+                messageElement.remove();
+            }
             
             // Update last message in chat if needed
             const lastMessagesQuery = await firebase.firestore()
@@ -1298,6 +1823,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         lastMessageSender: null
                     });
             }
+            
+            // Show success toast
+            showToast('Message deleted successfully', 'success');
+            
         } catch (error) {
             console.error('Error deleting message:', error);
             
@@ -1368,6 +1897,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Commit the batch
                 await batch.commit();
                 
+                // Update the chat document to trigger real-time updates
+                try {
+                    await firebase.firestore()
+                        .collection('chats')
+                        .doc(chatId)
+                        .update({
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                } catch (err) {
+                    console.warn("Error updating chat lastUpdated:", err);
+                    // Non-critical error, can continue
+                }
+                
                 // Update the UI to show messages as read
                 unreadMessagesQuery.docs.forEach(doc => {
                     const messageId = doc.id;
@@ -1417,6 +1959,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Commit the batch
                     await batch.commit();
                     
+                    // Update the chat document to trigger real-time updates
+                    try {
+                        await firebase.firestore()
+                            .collection('chats')
+                            .doc(chatId)
+                            .update({
+                                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                    } catch (err) {
+                        console.warn("Error updating chat lastUpdated:", err);
+                        // Non-critical error, can continue
+                    }
+                    
                     // Update the UI to show messages as read
                     unreadDocs.forEach(doc => {
                         const messageId = doc.id;
@@ -1438,6 +1993,28 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
+    // Update the chat document when sending a message
+    async function updateChatWithNewMessage(chatId, text) {
+        if (!chatId) return;
+        
+        try {
+            await firebase.firestore()
+                .collection('chats')
+                .doc(chatId)
+                .update({
+                    lastMessage: text,
+                    lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
+                    lastMessageSender: currentUserID,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp() // Add this line
+                });
+            
+            console.log(`Updated chat ${chatId} with new message`);
+        } catch (error) {
+            console.error('Error updating chat with new message:', error);
+            throw error;
+        }
+    }
+    
     // Send a message or save edit
     async function sendMessage(text) {
         if (!text.trim()) return;
@@ -1451,6 +2028,9 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Otherwise send a new message
         if (!currentChatId) return;
+        
+        // Store the chat ID we're sending to for verification later
+        const targetChatId = currentChatId;
         
         // Generate a temporary ID for this message
         const tempId = 'temp-' + Date.now();
@@ -1479,6 +2059,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 status: 'sending' // Add a status for UI feedback
             };
             
+            // Remove empty state if it exists (for first message in a chat)
+            const emptyState = document.querySelector('.empty-messages');
+            if (emptyState) {
+                emptyState.remove();
+            }
+            
             // Add message to UI immediately with temporary ID
             addMessageToUI(tempId, messageObj, currentUserID);
             scrollToBottom();
@@ -1502,6 +2088,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     edited: false
                 });
             
+            console.log(`Message sent with ID: ${messageRef.id}`);
+            
+            // Verify we're still in the same chat
+            if (currentChatId !== targetChatId) {
+                console.log("Chat changed while sending message, not updating UI");
+                return;
+            }
+            
+            // Track this message as rendered to prevent duplicates from real-time listeners
+            window.renderedMessageIds.add(messageRef.id);
+            
             // Update the temporary message with the real ID and status
             const tempElement = document.getElementById(`message-${tempId}`);
             if (tempElement) {
@@ -1523,17 +2120,21 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             // Update last message in chat document
-            await firebase.firestore()
-                .collection('chats')
-                .doc(currentChatId)
-                .update({
-                    lastMessage: text,
-                    lastMessageTime: firebase.firestore.FieldValue.serverTimestamp(),
-                    lastMessageSender: currentUserID
-                });
+            await updateChatWithNewMessage(currentChatId, text);
+            
+            // After sending message, refresh chat list to show updated preview
+            // We no longer need this with real-time updates
+            // setTimeout(() => {
+            //     loadUserChats(currentUserID);
+            // }, 500);
             
         } catch (error) {
             console.error('Error sending message:', error);
+            
+            // Only update UI if still in same chat
+            if (currentChatId !== targetChatId) {
+                return;
+            }
             
             // Show error in the UI for the temporary message
             const tempElement = document.getElementById(`message-${tempId}`);
@@ -1556,8 +2157,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 }
             }
-            
-            showToast('Failed to send message', 'error');
         }
     }
     
@@ -1680,56 +2279,56 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Add click handlers to the existing contacts in the HTML
     function addContactClickHandlers() {
-        const existingContacts = document.querySelectorAll('.contact-item');
+        const contacts = document.querySelectorAll('.contact-item');
         
-        existingContacts.forEach(contact => {
-            contact.addEventListener('click', function() {
-                // Remove active class from all contacts
-                existingContacts.forEach(item => item.classList.remove('active'));
-                // Add active class to clicked contact
-                this.classList.add('active');
+        contacts.forEach(contactItem => {
+            // Skip if we already added a handler (check for data attribute)
+            if (contactItem.dataset.hasClickHandler === 'true') return;
+            
+            // Mark as having a handler to avoid duplicates
+            contactItem.dataset.hasClickHandler = 'true';
+            
+            contactItem.addEventListener('click', () => {
+                // Get chat ID and contact info from data attributes
+                const chatId = contactItem.dataset.chatId;
+                if (!chatId) return;
                 
-                // Get contact ID
-                const contactId = this.getAttribute('data-contact');
+                // Get contact details
+                const contactName = contactItem.querySelector('.contact-name').textContent;
+                const contactStatus = contactItem.dataset.status || 'offline';
+                const contactId = contactItem.dataset.userId;
+                let contactPhoto = null;
                 
-                // If this is a real contact (not a demo contact)
-                if (contactId && !contactId.startsWith('demo')) {
-                    // Find the chat for this contact
-                    firebase.firestore().collection('chats').doc(contactId).get()
-                        .then(doc => {
-                            if (doc.exists) {
-                                const chatData = doc.data();
-                                const otherUserId = chatData.participants.find(id => id !== currentUserID);
-                                
-                                // Get the other user's info
-                                firebase.firestore().collection('users').doc(otherUserId).get()
-                                    .then(userDoc => {
-                                        if (userDoc.exists) {
-                                            const userData = userDoc.data();
+                // Try to get photo from image if it exists
+                const avatarImg = contactItem.querySelector('.contact-avatar img');
+                if (avatarImg && avatarImg.src) {
+                    contactPhoto = avatarImg.src;
+                }
                                             
                                             // Create contact object
                                             const contact = {
-                                                id: otherUserId,
-                                                name: userData.fullName || userData.name || userData.displayName || 'User',
-                                                photoURL: userData.photoURL || null,
-                                                status: userData.status || 'offline'
-                                            };
-                                            
-                                            // Load the chat
-                                            loadChat(contactId, contact);
-                                            
-                                            // On mobile, show the messages section
-                                            if (window.innerWidth <= 768) {
-                                                showMessages();
-                                            }
-                                        }
-                                    });
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error getting contact info:', error);
-                        });
+                    id: contactId,
+                    name: contactName,
+                    status: contactStatus,
+                    photoURL: contactPhoto
+                };
+                
+                // Remove active class from all contacts
+                document.querySelectorAll('.contact-item').forEach(item => 
+                    item.classList.remove('active')
+                );
+                
+                // Add active class to clicked contact
+                contactItem.classList.add('active');
+                
+                // Remove unread badge when clicking on contact
+                const unreadBadge = contactItem.querySelector('.unread-count');
+                if (unreadBadge) {
+                    unreadBadge.remove();
                 }
+                
+                // Load the chat
+                loadChat(chatId, contact);
             });
         });
     }
@@ -2184,178 +2783,163 @@ service cloud.firestore {
 
     // Function to initialize the chat UI
     function initializeChatsUI() {
-        // Set up new chat button
+        if (!currentUserID) return;
+        
+        // Set up the new chat button
         setupNewChatButton();
         
-        // Check for pending chat requests from previous page load
-        checkPendingChatRequests();
+        // Check for URL parameters to load a specific chat
+        const urlParams = new URLSearchParams(window.location.search);
+        const chatId = urlParams.get('chatId');
+        const contactId = urlParams.get('contact');
+        const showMessages = urlParams.get('showMessages');
         
-        // Setup real-time listeners for user's chats
-        if (currentUserID) {
-            // Set up Firestore permissions
-            setupFirebasePermissions(currentUserID);
-            
-            // Set up presence tracking
-            setupPresenceTracking(currentUserID);
-            
-            // First, load initial chats
-            loadUserChats(currentUserID);
-            
-            // Then set up a real-time listener for new chats
-            setupNewChatListener(currentUserID);
-        }
-    }
-
-    // Function to listen for new chats added to the user's chats
-    function setupNewChatListener(userId) {
-        // Clean up previous listener if it exists
-        if (window.newChatListener) {
-            window.newChatListener();
-        }
+        // Check if this is a direct navigation or page reload
+        const isDirectNavigation = sessionStorage.getItem('directNavigation') === 'true';
         
-        // Create a Set to track chat IDs we've already seen
-        if (!window.processedChatIds) {
-            window.processedChatIds = new Set();
-        }
-        
-        // Add all existing chat IDs to our tracking set
-        document.querySelectorAll('.contact-item[data-chat-id]').forEach(item => {
-            const chatId = item.dataset.chatId;
-            if (chatId) {
-                window.processedChatIds.add(chatId);
+        // Load chat previews only (lazy load messages)
+        loadUserChats(currentUserID).then(async () => {
+            // Set up chat preview listeners after chats are loaded
+            setupChatPreviewListeners(currentUserID);
+            
+            // Process URL parameters only if this is a direct navigation
+            if (isDirectNavigation) {
+                try {
+                    if (chatId) {
+                        // Direct navigation with chatId parameter
+                        console.log("Direct navigation with chatId parameter:", chatId);
+                        await loadSpecificChat(chatId, showMessages);
+                    } else if (contactId) {
+                        // Direct navigation with contactId parameter
+                        console.log("Direct navigation with contact parameter:", contactId);
+                        await handleContactNavigation(contactId);
+                    }
+                } catch (error) {
+                    console.error("Error processing URL parameters:", error);
+                } finally {
+                    // Clear the directNavigation flag regardless of success or failure
+                    sessionStorage.removeItem('directNavigation');
+                    
+                    // Clean up URL parameters (to prevent reload issues)
+                    if (history.pushState) {
+                        const newUrl = window.location.pathname;
+                        window.history.pushState({ path: newUrl }, '', newUrl);
+                    }
+                }
+            } else if (chatId || contactId) {
+                // This is a page reload with parameters, clean up the URL
+                if (history.pushState) {
+                    const newUrl = window.location.pathname;
+                    window.history.pushState({ path: newUrl }, '', newUrl);
+                }
             }
         });
         
-        // Listen for changes to the chats collection where this user is a participant
-        window.newChatListener = firebase.firestore()
-            .collection('chats')
-            .where('participants', 'array-contains', userId)
-            .onSnapshot(async (snapshot) => {
-                // We only want to process new chats here
-                const newChats = [];
-                
-                snapshot.docChanges().forEach(change => {
-                    // Only handle newly added chats
-                    if (change.type === 'added') {
-                        const chatId = change.doc.id;
-                        const chatData = change.doc.data();
-                        
-                        // Check if this chat already exists in our tracking set
-                        if (!window.processedChatIds.has(chatId)) {
-                            // Also double-check the DOM to be sure
-                            const existingChat = document.querySelector(`.contact-item[data-chat-id="${chatId}"]`);
-                            if (!existingChat) {
-                                window.processedChatIds.add(chatId); // Add to our tracking set
-                                newChats.push({
-                                    id: chatId,
-                                    data: chatData
-                                });
-                            }
-                        }
-                    }
-                });
-                
-                // If we found new chats, process them
-                if (newChats.length > 0) {
-                    processNewChats(newChats, userId);
-                }
-            }, error => {
-                console.error('Error listening for new chats:', error);
-            });
+        // ... rest of existing code ...
     }
-
-    // Function to process new chats and add them to the UI
-    async function processNewChats(newChats, currentUserId) {
-        const contactsList = document.querySelector('.contacts-list');
-        if (!contactsList) return;
+    
+    // Helper function to load a specific chat by ID
+    async function loadSpecificChat(chatId, showMessages) {
+        if (!chatId || !currentUserID) return;
         
-        // Remove empty state if it exists
-        const emptyState = contactsList.querySelector('.empty-contacts-state');
-        if (emptyState) {
-            emptyState.remove();
-        }
+        // First check if the chat exists and the current user is a participant
+        const chatDoc = await firebase.firestore().collection('chats').doc(chatId).get();
         
-        // Process each new chat
-        for (const chat of newChats) {
-            try {
-                const chatData = chat.data;
-                const otherUserId = chatData.participants.find(id => id !== currentUserId);
+        if (chatDoc.exists) {
+            const chatData = chatDoc.data();
+            
+            // Ensure current user is a participant
+            if (chatData.participants.includes(currentUserID)) {
+                // Find the other participant
+                const otherUserId = chatData.participants.find(id => id !== currentUserID);
                 
-                // Get the other user's info
-                const otherUserDoc = await firebase.firestore().collection('users').doc(otherUserId).get();
-                let otherUserData = otherUserDoc.exists ? otherUserDoc.data() : { name: 'User' };
-                
-                // Get the last message (might be empty for new chats)
-                const lastMessageQuery = await firebase.firestore()
-                    .collection('chats')
-                    .doc(chat.id)
-                    .collection('messages')
-                    .orderBy('timestamp', 'desc')
-                    .limit(1)
-                    .get();
-                
-                let lastMessage = {
-                    text: 'No messages yet',
-                    timestamp: new Date()
-                };
-                
-                if (!lastMessageQuery.empty) {
-                    const messageData = lastMessageQuery.docs[0].data();
-                    lastMessage = {
-                        text: messageData.text,
-                        timestamp: messageData.timestamp?.toDate() || new Date(),
-                        senderId: messageData.senderId,
-                        read: messageData.read
-                    };
-                }
-                
-                // Create chat object
-                const chatObj = {
-                    id: chat.id,
-                    otherUser: {
-                        id: otherUserId,
-                        name: otherUserData?.fullName || otherUserData?.name || otherUserData?.displayName || 'User',
-                        photoURL: otherUserData?.photoURL || null,
-                        status: otherUserData?.status || 'offline'
-                    },
-                    lastMessage,
-                    unreadCount: 0 // Start with 0 unread, will be updated by listener
-                };
-                
-                // Create and add the contact element to the list
-                const contactItem = createContactElement(chatObj, currentUserId);
-                
-                // If this is the first chat, insert at the beginning
-                if (contactsList.children.length === 0) {
-                    contactsList.appendChild(contactItem);
-                } else {
-                    // Otherwise, insert at the top (most recent)
-                    contactsList.insertBefore(contactItem, contactsList.firstChild);
-                }
-                
-                // Add click handler
-                contactItem.addEventListener('click', () => {
-                    // Remove active class from all contacts
-                    document.querySelectorAll('.contact-item').forEach(item => item.classList.remove('active'));
-                    // Add active class to clicked contact
-                    contactItem.classList.add('active');
+                if (otherUserId) {
+                    // Get the other user's data
+                    const otherUserDoc = await firebase.firestore().collection('users').doc(otherUserId).get();
                     
-                    // Load the chat
-                    loadChat(chatObj.id, chatObj.otherUser);
-                    
-                    // On mobile, show the messages section
-                    if (window.innerWidth <= 768) {
-                        showMessages();
+                    if (otherUserDoc.exists) {
+                        const otherUserData = otherUserDoc.data();
+                        
+                        // Create contact object
+                        const contact = {
+                            id: otherUserId,
+                            name: otherUserData.name || otherUserData.fullName || 'User',
+                            photoURL: otherUserData.photoURL || null,
+                            status: otherUserData.status || 'offline'
+                        };
+                        
+                        // Load the chat
+                        loadChat(chatId, contact);
+                        
+                        // If showMessages parameter is true, show the messages section on mobile
+                        if (showMessages === 'true' && window.innerWidth <= 768) {
+                            showMessages();
+                        }
+                        
+                        // Add active class to the corresponding contact item
+                        const contactItems = document.querySelectorAll('.contact-item');
+                        contactItems.forEach(item => {
+                            if (item.dataset.chatId === chatId) {
+                                item.classList.add('active');
+                            } else {
+                                item.classList.remove('active');
+                            }
+                        });
                     }
-                });
-            } catch (error) {
-                console.error('Error processing new chat:', error, chat);
+                }
             }
         }
-        
-        // Update the chat preview listeners to include the new chats
-        setupChatPreviewListeners(currentUserId);
     }
+    
+    // Helper function to handle navigation from a contact ID
+    async function handleContactNavigation(contactId) {
+        if (!contactId || !currentUserID) return;
+        
+        try {
+            // Get the contact user data
+            const contactUserDoc = await firebase.firestore().collection('users').doc(contactId).get();
+            
+            if (!contactUserDoc.exists) {
+                console.error("Contact user not found:", contactId);
+                return;
+            }
+            
+            const contactUserData = contactUserDoc.data();
+            
+            // Check if a chat already exists with this user
+            const chatsRef = firebase.firestore().collection('chats');
+            const q1 = await chatsRef
+                .where('participants', 'array-contains', currentUserID)
+                .get();
+            
+            let existingChatId = null;
+            
+            q1.forEach(doc => {
+                const chatData = doc.data();
+                if (chatData.participants.includes(contactId)) {
+                    existingChatId = doc.id;
+                }
+            });
+            
+            if (existingChatId) {
+                // Chat exists, load it
+                await loadSpecificChat(existingChatId, 'true');
+            } else {
+                // No existing chat, create one
+                const otherUser = {
+                    id: contactId,
+                    name: contactUserData.name || contactUserData.fullName || 'User',
+                    photoURL: contactUserData.photoURL || null
+                };
+                
+                await createNewChat(otherUser);
+            }
+        } catch (error) {
+            console.error("Error handling contact navigation:", error);
+        }
+    }
+
+    // ... existing code ...
 
     // Check for any pending chat requests and retry them
     async function checkPendingChatRequests() {
@@ -2423,375 +3007,247 @@ service cloud.firestore {
 
     // Set up typing indicator
     function setupTypingIndicator(chatId, contact) {
-        // Only setup if we have a valid chat ID and contact
         if (!chatId || !contact) return;
         
-        const typingRef = firebase.firestore()
+        // Clean up previous listener
+        if (window.typingListener) {
+            window.typingListener();
+        }
+        
+        // Listen for typing status changes
+        window.typingListener = firebase.firestore()
             .collection('chats')
             .doc(chatId)
-            .collection('typing');
-        
-        // Listen for typing status updates
-        if (window.typingIndicatorListener) {
-            window.typingIndicatorListener();
-        }
-        
-        window.typingIndicatorListener = typingRef.onSnapshot(snapshot => {
-            snapshot.docChanges().forEach(change => {
-                if (change.type === 'added' || change.type === 'modified') {
+            .collection('typing')
+            .onSnapshot(snapshot => {
+                let isOtherUserTyping = false;
+                
+                snapshot.docChanges().forEach(change => {
                     const typingData = change.doc.data();
                     
-                    // If the other user is typing
-                    if (typingData.userId === contact.id && typingData.isTyping) {
-                        showTypingIndicator(contact.name);
-                    } else if (typingData.userId === contact.id && !typingData.isTyping) {
-                        hideTypingIndicator();
+                    // Only care about the other user's typing status
+                    if (typingData.userId !== currentUserID) {
+                        isOtherUserTyping = typingData.isTyping;
+                        
+                        // Update typing indicator in chat header
+                        updateHeaderTypingStatus(isOtherUserTyping);
+                        
+                        // Update typing indicator in contact list
+                        updateContactTypingStatus(contact.name, isOtherUserTyping);
                     }
-                }
+                });
                 
-                if (change.type === 'removed' && change.doc.id === contact.id) {
-                    hideTypingIndicator();
+                // If no typing data, ensure typing indicators are removed
+                if (snapshot.empty) {
+                    updateHeaderTypingStatus(false);
+                    updateContactTypingStatus(contact.name, false);
                 }
+            }, error => {
+                console.error('Error monitoring typing status:', error);
             });
+    }
+
+    // Update typing status in chat header
+    function updateHeaderTypingStatus(isTyping) {
+        const header = document.querySelector('.chat-header');
+        if (!header) return;
+        
+        const statusText = header.querySelector('.contact-details p');
+        const statusIndicator = header.querySelector('.status-indicator');
+        
+        if (statusText && statusIndicator && currentContact) {
+            if (isTyping) {
+                statusText.textContent = 'Typing...';
+                statusText.classList.add('typing-text');
+                statusIndicator.classList.add('typing');
+                statusIndicator.classList.remove('online', 'offline');
+            } else {
+                const isOnline = statusIndicator.classList.contains('online');
+                statusText.textContent = isOnline ? 'Online' : 'Offline';
+                statusText.classList.remove('typing-text');
+                statusIndicator.classList.remove('typing');
+                
+                // Restore online/offline status
+                if (currentContact.status === 'online') {
+                    statusIndicator.classList.add('online');
+                } else {
+                    statusIndicator.classList.add('offline');
+                }
+            }
+        }
+    }
+
+    // Set up online status monitoring for all users
+    function setupOnlineStatusMonitoring() {
+        // Create a collection of users we're chatting with
+        const chatContacts = new Set();
+        
+        // Add all users from contact list
+        document.querySelectorAll('.contact-item').forEach(item => {
+            const userName = item.querySelector('.contact-name')?.textContent;
+            if (userName) {
+                chatContacts.add(userName);
+            }
         });
         
-        // Setup input listener to update our typing status
-        setupTypingUpdates(chatId);
-    }
-    
-    // Show typing indicator in the UI
-    function showTypingIndicator(name) {
-        // We're no longer showing the typing indicator in messages area
-        // We only update the header and contacts list
-        
-        // Update the contact's status in the chat header to show "typing..."
-        if (currentContact && currentContact.name === name) {
-            const header = document.querySelector('.chat-header');
-            const statusText = header.querySelector('.contact-details p');
-            if (statusText) {
-                statusText.textContent = 'typing...';
-                statusText.classList.add('typing-text');
-            }
+        // Set up a listener for online status changes in the users collection
+        if (window.onlineStatusListener) {
+            window.onlineStatusListener();
         }
         
-        // Also update typing status in contacts list
-        updateContactTypingStatus(name, true);
+        window.onlineStatusListener = firebase.firestore()
+            .collection('users')
+            .onSnapshot(snapshot => {
+                snapshot.docChanges().forEach(change => {
+                    const userData = change.doc.data();
+                    const userId = change.doc.id;
+                    const userName = userData.name || userData.fullName || userData.displayName;
+                    
+                    if (!userName) return;
+                    
+                    // Update status for this user in all places
+                    updateUserOnlineStatus(userName, userData.status === 'online');
+                    
+                    // If this is a user we're chatting with, also update the chat header
+                    if (currentContact && userId === currentContact.id) {
+                        updateCurrentContactStatus(userData.status === 'online');
+                    }
+                });
+            }, error => {
+                console.error('Error monitoring online status:', error);
+            });
     }
-    
-    // Hide typing indicator
-    function hideTypingIndicator() {
-        // We're no longer hiding the typing indicator in messages area
-        // We only update the header and contacts list
-        
-        // Reset the contact's status in the chat header
-        if (currentContact) {
-            const header = document.querySelector('.chat-header');
-            const statusText = header.querySelector('.contact-details p');
-            if (statusText) {
-                statusText.textContent = currentContact.status || 'Offline';
-                statusText.classList.remove('typing-text');
-            }
-        }
-        
-        // Also update typing status in contacts list
-        if (currentContact) {
-            updateContactTypingStatus(currentContact.name, false);
-        }
-    }
-    
-    // Update typing status in the contacts list
-    function updateContactTypingStatus(name, isTyping) {
+
+    // Update a user's online status in the contacts list
+    function updateUserOnlineStatus(userName, isOnline) {
+        // Update in contacts list
         const contactItems = document.querySelectorAll('.contact-item');
         
         contactItems.forEach(contactItem => {
             const contactName = contactItem.querySelector('.contact-name');
-            if (contactName && contactName.textContent === name) {
-                const previewText = contactItem.querySelector('.contact-preview p');
-                
-                if (previewText) {
-                    if (isTyping) {
-                        // Store the original preview text if not already saved
-                        if (!contactItem.dataset.originalPreview) {
-                            contactItem.dataset.originalPreview = previewText.textContent;
-                        }
-                        previewText.textContent = 'typing...';
-                        previewText.classList.add('typing-text');
-                    } else {
-                        // Restore original preview text if available
-                        if (contactItem.dataset.originalPreview) {
-                            previewText.textContent = contactItem.dataset.originalPreview;
-                            delete contactItem.dataset.originalPreview;
-                        }
-                        previewText.classList.remove('typing-text');
-                    }
-                }
-                
-                // Also update status indicator
+            if (contactName && contactName.textContent === userName) {
                 const statusIndicator = contactItem.querySelector('.status-indicator');
                 if (statusIndicator) {
-                    if (isTyping) {
-                        // Add typing class (will be styled with animation)
-                        statusIndicator.classList.add('typing');
-                    } else {
-                        // Remove typing class
-                        statusIndicator.classList.remove('typing');
-                    }
+                    // Remove all status classes first
+                    statusIndicator.classList.remove('online', 'offline', 'typing');
+                    
+                    // Add appropriate class
+                    statusIndicator.classList.add(isOnline ? 'online' : 'offline');
+                }
+            }
+        });
+        
+        // Also update in users list modal if open
+        const userItems = document.querySelectorAll('.user-item');
+        userItems.forEach(userItem => {
+            const userNameEl = userItem.querySelector('.user-details h3');
+            if (userNameEl && userNameEl.textContent === userName) {
+                const statusIndicator = userItem.querySelector('.status-indicator');
+                if (statusIndicator) {
+                    // Remove all status classes first
+                    statusIndicator.classList.remove('online', 'offline');
+                    
+                    // Add appropriate class
+                    statusIndicator.classList.add(isOnline ? 'online' : 'offline');
                 }
             }
         });
     }
-    
-    // Let's add a debounce function to limit how often we update typing status
-    function debounce(func, wait) {
-        let timeout;
-        return function() {
-            const context = this;
-            const args = arguments;
-            clearTimeout(timeout);
-            timeout = setTimeout(() => func.apply(context, args), wait);
-        };
+
+    // Update the current contact's status in the chat header
+    function updateCurrentContactStatus(isOnline) {
+        if (!currentContact) return;
+        
+        const header = document.querySelector('.chat-header');
+        if (!header) return;
+        
+        const statusText = header.querySelector('.contact-details p');
+        if (statusText) {
+            statusText.textContent = isOnline ? 'Online' : 'Offline';
+        }
+        
+        const statusIndicator = header.querySelector('.status-indicator');
+        if (statusIndicator) {
+            // Remove all status classes
+            statusIndicator.classList.remove('online', 'offline', 'typing');
+            
+            // Add appropriate class
+            statusIndicator.classList.add(isOnline ? 'online' : 'offline');
+        }
     }
-    
-    // Setup events to update our typing status
-    function setupTypingUpdates(chatId) {
-        if (!chatId || !currentUserID) return;
+
+    // Set up typing indicator for a specific chat
+    function setupTypingIndicator(chatId, contact) {
+        if (!chatId || !contact) return;
         
-        const messageInput = document.querySelector('.message-input input');
-        let isTyping = false;
+        // Clean up previous listener
+        if (window.typingListener) {
+            window.typingListener();
+        }
         
-        const updateTypingStatus = debounce(async (typing) => {
-            if (isTyping === typing) return; // No change
-            
-            isTyping = typing;
-            
-            try {
-                const typingRef = firebase.firestore()
-                    .collection('chats')
-                    .doc(chatId)
-                    .collection('typing')
-                    .doc(currentUserID);
+        // Listen for typing status changes
+        window.typingListener = firebase.firestore()
+            .collection('chats')
+            .doc(chatId)
+            .collection('typing')
+            .onSnapshot(snapshot => {
+                let isOtherUserTyping = false;
                 
-                await typingRef.set({
-                    userId: currentUserID,
-                    isTyping: typing,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                snapshot.docChanges().forEach(change => {
+                    const typingData = change.doc.data();
+                    
+                    // Only care about the other user's typing status
+                    if (typingData.userId !== currentUserID) {
+                        isOtherUserTyping = typingData.isTyping;
+                        
+                        // Update typing indicator in chat header
+                        updateHeaderTypingStatus(isOtherUserTyping);
+                        
+                        // Update typing indicator in contact list
+                        updateContactTypingStatus(contact.name, isOtherUserTyping);
+                    }
                 });
-            } catch (error) {
-                console.error('Error updating typing status:', error);
-                // Silently fail - typing indicator is not critical
-            }
-        }, 500);
-        
-        // Process keyup events to detect typing
-        messageInput.addEventListener('keyup', () => {
-            const isCurrentlyTyping = messageInput.value.trim().length > 0;
-            updateTypingStatus(isCurrentlyTyping);
-        });
-        
-        // When focus is lost, always set to not typing
-        messageInput.addEventListener('blur', () => {
-            updateTypingStatus(false);
-        });
-        
-        // Clear typing status when message is sent
-        const sendBtn = document.querySelector('.send-btn');
-        sendBtn.addEventListener('click', () => {
-            updateTypingStatus(false);
-        });
+                
+                // If no typing data, ensure typing indicators are removed
+                if (snapshot.empty) {
+                    updateHeaderTypingStatus(false);
+                    updateContactTypingStatus(contact.name, false);
+                }
+            }, error => {
+                console.error('Error monitoring typing status:', error);
+            });
     }
 
-    // Helper function to add CSS to the page
-    function addStyleToPage(css) {
-        const style = document.createElement('style');
-        style.textContent = css;
-        document.head.appendChild(style);
+    // Update typing status in chat header
+    function updateHeaderTypingStatus(isTyping) {
+        const header = document.querySelector('.chat-header');
+        if (!header) return;
+        
+        const statusText = header.querySelector('.contact-details p');
+        const statusIndicator = header.querySelector('.status-indicator');
+        
+        if (statusText && statusIndicator && currentContact) {
+            if (isTyping) {
+                statusText.textContent = 'Typing...';
+                statusText.classList.add('typing-text');
+                statusIndicator.classList.add('typing');
+                statusIndicator.classList.remove('online', 'offline');
+            } else {
+                const isOnline = statusIndicator.classList.contains('online');
+                statusText.textContent = isOnline ? 'Online' : 'Offline';
+                statusText.classList.remove('typing-text');
+                statusIndicator.classList.remove('typing');
+                
+                // Restore online/offline status
+                if (currentContact.status === 'online') {
+                    statusIndicator.classList.add('online');
+                } else {
+                    statusIndicator.classList.add('offline');
+                }
+            }
+        }
     }
-    
-    // Add new styles for real-time features
-    addStyleToPage(`
-        /* Typing indicator */
-        .typing-indicator {
-            display: flex;
-            align-items: center;
-            margin: 10px 15px;
-            animation: fadeIn 0.3s ease;
-            color: var(--text-secondary);
-        }
-        
-        .typing-bubble {
-            display: flex;
-            align-items: center;
-            background-color: var(--bg-secondary);
-            padding: 8px 12px;
-            border-radius: 18px;
-            margin-right: 8px;
-            height: 24px;
-        }
-        
-        .typing-dot {
-            height: 8px;
-            width: 8px;
-            border-radius: 50%;
-            background-color: var(--text-secondary);
-            margin: 0 2px;
-            animation: typingAnimation 1.5s infinite ease-in-out;
-        }
-        
-        .typing-dot:nth-child(1) { animation-delay: 0s; }
-        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
-        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
-        
-        @keyframes typingAnimation {
-            0% { transform: scale(1); opacity: 0.6; }
-            50% { transform: scale(1.2); opacity: 1; }
-            100% { transform: scale(1); opacity: 0.6; }
-        }
-        
-        /* Typing text styling */
-        .typing-text {
-            color: #2196F3 !important;
-            font-style: italic;
-        }
-        
-        /* Status indicator when typing */
-        .status-indicator.typing {
-            background-color: #2196F3 !important;
-            box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.3);
-            animation: typingPulse 1.5s infinite;
-        }
-        
-        @keyframes typingPulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.2); }
-            100% { transform: scale(1); }
-        }
-        
-        /* Message animations */
-        .message {
-            animation: messageAppear 0.3s ease;
-            transition: opacity 0.3s, transform 0.3s;
-        }
-        
-        .message.fade-out {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-        
-        @keyframes messageAppear {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        /* Read indicators */
-        .read-indicator {
-            color: #4caf50;
-            margin-left: 5px;
-            font-size: 12px;
-        }
-        
-        /* Message status indicators */
-        .message-status {
-            margin-left: 5px;
-            font-size: 12px;
-        }
-        
-        .message-status[data-status="sending"] {
-            color: #999;
-        }
-        
-        .message-status[data-status="sent"] {
-            color: #2196F3;
-        }
-        
-        .message-status[data-status="read"] {
-            color: #4CAF50;
-        }
-        
-        .message-status[data-status="error"] {
-            color: #F44336;
-        }
-        
-        /* Improve scrolling */
-        .messages-container {
-            scroll-behavior: smooth;
-        }
-        
-        /* Message appear animation */
-        .message-appear {
-            animation: messageAppear 0.3s ease;
-        }
-        
-        /* Unread count styles */
-        .unread-count {
-            background-color: #FF5252;
-            color: white;
-            font-size: 12px;
-            font-weight: bold;
-            min-width: 18px;
-            height: 18px;
-            border-radius: 9px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 0 5px;
-            margin-left: 8px;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
-            animation: pulse 1s infinite;
-        }
-        
-        @keyframes pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-    `);
 
-    // New function to update the contact preview in the contacts list
-    function updateContactPreview(chatId, messageText, isSent = false) {
-        if (!chatId || !messageText) return;
-        
-        const contactItem = document.querySelector(`.contact-item[data-chat-id="${chatId}"]`);
-        if (!contactItem) return;
-        
-        const previewText = contactItem.querySelector('.contact-preview p');
-        const timeElement = contactItem.querySelector('.contact-time');
-        
-        if (previewText) {
-            // Truncate message if it's too long
-            const maxLength = 30;
-            let previewMessage = messageText;
-            
-            // Handle image messages
-            if (messageText.includes('<img')) {
-                previewMessage = '📷 Image';
-            } else if (messageText.length > maxLength) {
-                previewMessage = messageText.substring(0, maxLength) + '...';
-            }
-            
-            // If message is from current user, add "You: " prefix
-            if (isSent) {
-                previewMessage = 'You: ' + previewMessage;
-            }
-            
-            // Update the preview text
-            previewText.textContent = previewMessage;
-            
-            // Save this as the originalPreview in case typing indicators need it
-            contactItem.dataset.originalPreview = previewMessage;
-        }
-        
-        if (timeElement) {
-            // Update the time to "now"
-            timeElement.textContent = 'now';
-        }
-        
-        // Move this contact to the top of the list if it's not already
-        const contactsList = document.querySelector('.contacts-list');
-        if (contactsList && contactsList.firstChild !== contactItem) {
-            contactsList.insertBefore(contactItem, contactsList.firstChild);
-        }
-    }
-    
     // Set up real-time listeners for preview updates
     function setupChatPreviewListeners(userId) {
         // Get all chat IDs from contact items
@@ -2835,6 +3291,54 @@ service cloud.firestore {
                     console.error('Error listening to message updates:', error);
                 });
             
+            // Listen for typing status
+            const typingListener = firebase.firestore()
+                .collection('chats')
+                .doc(chatId)
+                .collection('typing')
+                .onSnapshot(snapshot => {
+                    let isTyping = false;
+                    let typingUserId = null;
+                    
+                    snapshot.forEach(doc => {
+                        const typingData = doc.data();
+                        if (typingData.userId !== userId && typingData.isTyping) {
+                            isTyping = true;
+                            typingUserId = typingData.userId;
+                        }
+                    });
+                    
+                    if (isTyping && typingUserId) {
+                        // Find the contact item for this chat
+                        const contactItem = document.querySelector(`.contact-item[data-chat-id="${chatId}"]`);
+                        if (contactItem) {
+                            // Get the contact name
+                            const contactName = contactItem.querySelector('.contact-name')?.textContent;
+                            if (contactName) {
+                                // Update the typing indicator in the contact list
+                                updateContactTypingStatus(contactName, true);
+                            }
+                        }
+                    } else {
+                        // Find the contact item for this chat
+                        const contactItem = document.querySelector(`.contact-item[data-chat-id="${chatId}"]`);
+                        if (contactItem) {
+                            // Get the contact name
+                            const contactName = contactItem.querySelector('.contact-name')?.textContent;
+                            if (contactName) {
+                                // Remove typing indicator
+                                updateContactTypingStatus(contactName, false);
+                            }
+                        }
+                    }
+                }, error => {
+                    console.error('Error in typing listener:', error);
+                    // Don't rethrow - typing indicators are not critical
+                });
+            
+            // Store the typing listener
+            window.chatPreviewListeners.push(typingListener);
+            
             // Listen for unread messages count (with error handling for index building)
             try {
                 const unreadListener = firebase.firestore()
@@ -2865,7 +3369,7 @@ service cloud.firestore {
             window.chatPreviewListeners.push(messagesListener);
         });
     }
-    
+
     // Update chat preview with latest message
     function updateChatPreview(chatId, message, currentUserId) {
         const contactItem = document.querySelector(`.contact-item[data-chat-id="${chatId}"]`);
@@ -2902,43 +3406,75 @@ service cloud.firestore {
             timeElement.textContent = formatTimestamp(message.timestamp);
         }
         
+        // Update the timestamp for sorting
+        contactItem.dataset.timestamp = message.timestamp ? message.timestamp.getTime() : Date.now();
+        
         // Move this contact to the top of the list if it's not already
         const contactsList = document.querySelector('.contacts-list');
-        if (contactsList && contactsList.firstChild !== contactItem) {
-            contactsList.insertBefore(contactItem, contactsList.firstChild);
+        if (contactsList) {
+            // Don't just move to top - resort all contacts properly
+            sortChatElements(contactsList);
         }
     }
     
     // Update unread count badge
     function updateUnreadCount(chatId, count) {
+        if (!chatId) return;
+        
+        console.log(`Updating unread count for chat ${chatId} to ${count}`);
+        
         const contactItem = document.querySelector(`.contact-item[data-chat-id="${chatId}"]`);
-        if (!contactItem) return;
+        if (!contactItem) {
+            console.log(`Contact item not found for chat ${chatId}`);
+            return;
+        }
         
-        const unreadBadge = contactItem.querySelector('.unread-count');
         const previewContainer = contactItem.querySelector('.contact-preview');
+        let unreadBadge = contactItem.querySelector('.unread-count');
         
-        // If we already have a badge
-        if (unreadBadge) {
-            if (count > 0) {
-                // Update count
+        // Handle count > 0
+        if (count > 0) {
+            if (unreadBadge) {
+                // Update existing badge
                 unreadBadge.textContent = count;
-            } else {
-                // Remove badge if count is 0
-                unreadBadge.remove();
+                console.log(`Updated existing unread badge to ${count}`);
+            } else if (previewContainer) {
+                // Create new badge
+                unreadBadge = document.createElement('span');
+                unreadBadge.className = 'unread-count';
+                unreadBadge.textContent = count;
+                previewContainer.appendChild(unreadBadge);
+                console.log(`Created new unread badge with count ${count}`);
+            }
+            
+            // Apply a subtle animation to highlight the change
+            if (unreadBadge) {
+                unreadBadge.classList.remove('pulse');
+                // Force reflow
+                void unreadBadge.offsetWidth;
+                unreadBadge.classList.add('pulse');
             }
         } 
-        // If we need to add a badge
-        else if (count > 0 && previewContainer) {
-            const newBadge = document.createElement('span');
-            newBadge.className = 'unread-count';
-            newBadge.textContent = count;
-            previewContainer.appendChild(newBadge);
+        // Handle count = 0
+        else if (unreadBadge) {
+            // Remove the badge
+            unreadBadge.remove();
+            console.log(`Removed unread badge for chat ${chatId}`);
         }
         
         // If this is the currently open chat, mark messages as read
         if (contactItem.classList.contains('active') && currentChatId === chatId) {
+            console.log(`Marking messages as read in currently open chat ${chatId}`);
             markMessagesAsRead(chatId, currentUserID);
         }
+    }
+
+    // Function to add dynamic CSS styles
+    function addStyleToPage(css) {
+        const styleElement = document.createElement('style');
+        styleElement.textContent = css;
+        document.head.appendChild(styleElement);
+        return styleElement;
     }
 
     // Add CSS styles for proper message display in mobile view
@@ -3025,4 +3561,408 @@ service cloud.firestore {
             }
         }
     `);
+
+    // New function to update the contact preview in the contacts list
+    function updateContactPreview(chatId, messageText, isSent = false) {
+        if (!chatId || !messageText) return;
+        
+        console.log(`Updating contact preview for chat ${chatId}`);
+        
+        const contactItem = document.querySelector(`.contact-item[data-chat-id="${chatId}"]`);
+        if (!contactItem) return;
+        
+        const previewText = contactItem.querySelector('.contact-preview p');
+        const timeElement = contactItem.querySelector('.contact-time');
+        
+        if (previewText) {
+            // Truncate message if it's too long
+            const maxLength = 30;
+            let previewMessage = messageText;
+            
+            // Handle image messages
+            if (messageText.includes('<img')) {
+                previewMessage = '📷 Image';
+            } else if (messageText.length > maxLength) {
+                previewMessage = messageText.substring(0, maxLength) + '...';
+            }
+            
+            // If message is from current user, add "You: " prefix
+            if (isSent) {
+                previewMessage = 'You: ' + previewMessage;
+            }
+            
+            // Update the preview text
+            previewText.textContent = previewMessage;
+            
+            // Save this as the originalPreview in case typing indicators need it
+            contactItem.dataset.originalPreview = previewMessage;
+        }
+        
+        if (timeElement) {
+            // Update the time to "now"
+            timeElement.textContent = 'now';
+        }
+        
+        // Update the timestamp for sorting
+        contactItem.dataset.timestamp = Date.now();
+        
+        // Move this contact to the top of the list if it's not already
+        const contactsList = document.querySelector('.contacts-list');
+        if (contactsList) {
+            // Don't just move to top - resort all contacts properly
+            sortChatElements(contactsList);
+        }
+    }
+
+    // Update typing status in contacts list
+    function updateContactTypingStatus(name, isTyping) {
+        // Find all matching contacts
+        const contactItems = document.querySelectorAll('.contact-item');
+        
+        contactItems.forEach(item => {
+            const contactName = item.querySelector('.contact-name')?.textContent;
+            if (contactName === name) {
+                const previewText = item.querySelector('.contact-preview p');
+                const statusIndicator = item.querySelector('.status-indicator');
+                
+                if (previewText) {
+                    if (isTyping) {
+                        // Store original text if not already stored
+                        if (!previewText.dataset.originalText) {
+                            previewText.dataset.originalText = previewText.textContent;
+                        }
+                        previewText.textContent = 'Typing...';
+                        previewText.classList.add('typing-text');
+                    } else {
+                        // Restore original text if it exists
+                        if (previewText.dataset.originalText) {
+                            previewText.textContent = previewText.dataset.originalText;
+                            delete previewText.dataset.originalText;
+                        }
+                        previewText.classList.remove('typing-text');
+                    }
+                }
+                
+                if (statusIndicator) {
+                    if (isTyping) {
+                        // Store original status if not already stored
+                        if (!statusIndicator.dataset.originalStatus) {
+                            statusIndicator.dataset.originalStatus = 
+                                statusIndicator.classList.contains('online') ? 'online' : 'offline';
+                        }
+                        statusIndicator.classList.remove('online', 'offline');
+                        statusIndicator.classList.add('typing');
+                    } else {
+                        // Restore original status if it exists
+                        statusIndicator.classList.remove('typing');
+                        if (statusIndicator.dataset.originalStatus) {
+                            statusIndicator.classList.add(statusIndicator.dataset.originalStatus);
+                            delete statusIndicator.dataset.originalStatus;
+                        } else {
+                            // Default to offline if no stored status
+                            statusIndicator.classList.add('offline');
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // Add CSS styles for status indicators and typing animations
+    document.head.insertAdjacentHTML('beforeend', `
+    <style>
+        /* Status indicators improvements */
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            border: 2px solid var(--bg-light);
+            transition: background-color 0.3s ease;
+            box-shadow: 0 0 0 1px rgba(0,0,0,0.1);
+            z-index: 2;
+        }
+        
+        .dark-mode .status-indicator {
+            border-color: var(--bg-dark);
+        }
+        
+        
+        .status-indicator.online {
+            background-color: #2ecc71;
+        }
+        
+        .status-indicator.offline {
+            background-color: #95a5a6;
+        }
+        
+        .status-indicator.typing {
+            background-color: #3498db;
+            animation: pulse 1.5s infinite;
+        }
+        
+        /* Typing animation */
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        
+        /* Typing text in previews */
+        .contact-preview p.typing-text {
+            color: #3498db;
+            font-style: italic;
+        }
+        
+        /* Typing text in chat header */
+        .contact-details p.typing-text {
+            color: #3498db;
+            font-style: italic;
+        }
+    </style>
+    `);
+
+    // Add helper function to inject CSS for fixing message position swaps
+    function addFixedPositioningStyles() {
+        const styleEl = document.createElement('style');
+        styleEl.id = 'fixed-positioning-styles';
+        styleEl.textContent = `
+            /* Fix message positions in mobile view */
+            @media (max-width: 768px) {
+                .messages-container {
+                    display: flex !important;
+                    flex-direction: column !important;
+                    height: calc(100% - 60px) !important;
+                    width: 100% !important;
+                    padding: 1rem !important;
+                    position: relative !important;
+                    overflow-y: auto !important;
+                }
+                
+                .messages-container .message {
+                    width: 100% !important;
+                    position: relative !important;
+                    display: flex !important;
+                    flex-direction: column !important;
+                    order: unset !important;
+                }
+                
+                .messages-container .message.sent {
+                    align-self: flex-end !important;
+                    margin-left: auto !important;
+                }
+                
+                .messages-container .message.received {
+                    align-self: flex-start !important;
+                    margin-right: auto !important;
+                }
+            }
+            
+            /* Improve typing indicator appearance */
+            .typing-text {
+                color: #3498db !important;
+                font-style: italic !important;
+                animation: fade 1.5s infinite !important;
+            }
+            
+            @keyframes fade {
+                0% { opacity: 0.7; }
+                50% { opacity: 1; }
+                100% { opacity: 0.7; }
+            }
+            
+            .status-indicator.typing {
+                background-color: #3498db !important;
+                animation: pulse 1.5s infinite !important;
+            }
+            
+            @keyframes pulse {
+                0% { transform: scale(1); opacity: 1; }
+                50% { transform: scale(1.2); opacity: 0.8; }
+                100% { transform: scale(1); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(styleEl);
+    }
+
+    // Call this function after DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+        // Add the fixed positioning styles
+        addFixedPositioningStyles();
+    });
+
+    // Also add these styles immediately in case DOMContentLoaded already fired
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        addFixedPositioningStyles();
+    }
+
+    // Add updateChatHeader function
+    function updateChatHeader(contact) {
+        if (!contact) return;
+        
+        const header = document.querySelector('.chat-header');
+        header.querySelector('.contact-details h3').textContent = contact.name || 'User';
+        header.querySelector('.contact-details p').textContent = contact.status || 'Offline';
+        
+        const contactAvatar = header.querySelector('.contact-avatar img');
+        const avatarSrc = contact.photoURL || getDefaultAvatar(contact.id, contact.name);
+        contactAvatar.src = avatarSrc;
+        contactAvatar.style.display = 'block';
+        
+        const statusIndicator = header.querySelector('.status-indicator');
+        statusIndicator.className = 'status-indicator';
+        statusIndicator.classList.add(contact.status || 'offline');
+        
+        // Update message input placeholder
+        const messageInput = document.querySelector('.message-input input');
+        if (messageInput) {
+            messageInput.placeholder = `Message ${contact.name}...`;
+        }
+        
+        // Add click event to the contact avatar and contact details to redirect to profile page
+        const contactAvatarContainer = header.querySelector('.contact-avatar');
+        const contactDetails = header.querySelector('.contact-details');
+        
+        // Add pointer cursor style to indicate clickable elements
+        contactAvatarContainer.style.cursor = 'pointer';
+        contactDetails.style.cursor = 'pointer';
+        
+        // Add click event listeners to both elements
+        contactAvatarContainer.onclick = function() {
+            navigateToUserProfile(contact.id);
+        };
+        
+        contactDetails.onclick = function() {
+            navigateToUserProfile(contact.id);
+        };
+    }
+
+    // Function to navigate to user profile with the user ID parameter
+    function navigateToUserProfile(userId) {
+        if (!userId) return;
+        
+        // Redirect to the profile page with the user ID as a parameter
+        window.location.href = `../profile/profile.html?id=${userId}`;
+    }
+
+    // Function to add debugging tools to the UI
+    function addDebugTools() {
+        // Only add these in development environments
+        if (window.location.hostname !== 'localhost' && 
+            window.location.hostname !== '127.0.0.1' &&
+            !window.location.hostname.includes('5503')) {
+            return;
+        }
+        
+        console.log("Adding debug tools to UI");
+        
+        // Create debug panel
+        const debugPanel = document.createElement('div');
+        debugPanel.style.position = 'fixed';
+        debugPanel.style.bottom = '80px';
+        debugPanel.style.right = '20px';
+        debugPanel.style.zIndex = '9999';
+        debugPanel.style.background = 'rgba(0, 0, 0, 0.8)';
+        debugPanel.style.color = 'white';
+        debugPanel.style.padding = '10px';
+        debugPanel.style.borderRadius = '5px';
+        debugPanel.style.fontFamily = 'monospace';
+        debugPanel.style.fontSize = '12px';
+        debugPanel.style.maxWidth = '300px';
+        
+        // Create test chat button
+        const createTestChatBtn = document.createElement('button');
+        createTestChatBtn.innerText = 'Create Test Chat';
+        createTestChatBtn.style.padding = '8px';
+        createTestChatBtn.style.marginBottom = '8px';
+        createTestChatBtn.style.width = '100%';
+        createTestChatBtn.style.cursor = 'pointer';
+        
+        // Create refresh button
+        const refreshBtn = document.createElement('button');
+        refreshBtn.innerText = 'Refresh Chats';
+        refreshBtn.style.padding = '8px';
+        refreshBtn.style.width = '100%';
+        refreshBtn.style.cursor = 'pointer';
+        
+        // Add click handlers
+        createTestChatBtn.addEventListener('click', createTestChat);
+        refreshBtn.addEventListener('click', () => {
+            if (currentUserID) {
+                loadUserChats(currentUserID);
+            } else {
+                console.error("No current user ID available");
+            }
+        });
+        
+        // Add elements to panel
+        debugPanel.appendChild(createTestChatBtn);
+        debugPanel.appendChild(refreshBtn);
+        
+        // Add panel to body
+        document.body.appendChild(debugPanel);
+    }
+
+    // Function to create a test chat for debugging
+    async function createTestChat() {
+        if (!currentUserID) {
+            console.error("No current user ID available");
+            return;
+        }
+        
+        try {
+            console.log("Creating test chat for user:", currentUserID);
+            
+            // Create a test user if needed
+            const testUserID = "test_user_" + Date.now();
+            const testUser = {
+                id: testUserID,
+                name: "Test User",
+                status: "offline",
+                lastActive: new Date()
+            };
+            
+            // Save test user to Firestore
+            await firebase.firestore().collection('users').doc(testUserID).set(testUser);
+            
+            // Create a chat document
+            const chatData = {
+                participants: [currentUserID, testUserID],
+                lastUpdated: new Date(),
+                createdAt: new Date()
+            };
+            
+            // Save chat to Firestore
+            const chatRef = await firebase.firestore().collection('chats').add(chatData);
+            console.log("Created test chat with ID:", chatRef.id);
+            
+            // Add a test message
+            const messageData = {
+                text: "This is a test message",
+                timestamp: new Date(),
+                senderId: testUserID,
+                read: false
+            };
+            
+            // Save message to Firestore
+            await firebase.firestore().collection('chats').doc(chatRef.id)
+                .collection('messages').add(messageData);
+            
+            console.log("Test chat created successfully");
+            
+            // Refresh chat list
+            loadUserChats(currentUserID);
+            
+        } catch (error) {
+            console.error("Error creating test chat:", error);
+        }
+    }
+
+    // Call the debug tools function at the end
+    document.addEventListener('DOMContentLoaded', () => {
+        setTimeout(addDebugTools, 2000); // Add after a short delay to ensure other initialization is complete
+    });
 });

@@ -4,11 +4,43 @@ import {
 } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-    // Get profile ID from URL if present
+    // Get profile ID from URL if present (support both 'id' and 'userId' parameters)
     const urlParams = new URLSearchParams(window.location.search);
-    const profileId = urlParams.get('id');
+    const profileId = urlParams.get('id') || urlParams.get('userId');
     let isOwnProfile = true;
     let currentUser = null;
+    
+    // Setup share button functionality 
+    const shareButton = document.getElementById('share-button');
+    if (shareButton) {
+        shareButton.addEventListener('click', () => {
+            // Get current URL or construct URL for current profile
+            const profileUrl = profileId 
+                ? `${window.location.origin}${window.location.pathname}?userId=${profileId}`
+                : `${window.location.origin}${window.location.pathname}`;
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(profileUrl)
+                .then(() => {
+                    // Temporarily change icon to indicate success
+                    const originalInnerHTML = shareButton.innerHTML;
+                    shareButton.innerHTML = '<i class="fas fa-check"></i>';
+                    shareButton.style.color = '#2ecc71';
+                    shareButton.title = 'Link copied!';
+                    
+                    // Reset after 2 seconds
+                    setTimeout(() => {
+                        shareButton.innerHTML = originalInnerHTML;
+                        shareButton.style.color = '';
+                        shareButton.title = 'Share Profile';
+                    }, 2000);
+                })
+                .catch(err => {
+                    console.error('Failed to copy profile URL: ', err);
+                    alert('Failed to copy profile URL. Please try again.');
+                });
+        });
+    }
     
     // Theme Toggle Functionality
     const themeToggle = document.getElementById('theme-toggle');
@@ -335,7 +367,10 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update about section
         const aboutSection = document.querySelector('.profile-section .section-content p');
         if (aboutSection) {
-            const placeholderText = "Tell recruiters about your professional background and skills.";
+            // Different placeholder text based on whether it's own profile or another user's
+            const placeholderText = isOwnProfile 
+                ? "Tell recruiters about your professional background and skills."
+                : "About information not provided.";
             
             if (userData.about) {
                 aboutSection.textContent = userData.about;
@@ -363,10 +398,16 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Display empty state with professional message
             if (experienceContainer) {
-                experienceContainer.innerHTML = `
+                experienceContainer.innerHTML = isOwnProfile 
+                ? `
                     <div class="empty-state">
                         <p class="placeholder-text">Your professional experience will appear here. Showcase your career journey by adding your past and current positions.</p>
                         <p class="placeholder-action">Click "Add Experience" to highlight your professional achievements.</p>
+                    </div>
+                `
+                : `
+                    <div class="empty-state">
+                        <p class="placeholder-text">No experience information available.</p>
                     </div>
                 `;
             }
@@ -389,10 +430,16 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Display empty state with professional message
             if (educationContainer) {
-                educationContainer.innerHTML = `
+                educationContainer.innerHTML = isOwnProfile
+                ? `
                     <div class="empty-state">
                         <p class="placeholder-text">Your educational background will appear here. Showcase your degrees, certifications, and academic achievements.</p>
                         <p class="placeholder-action">Click "Add Education" to highlight your educational qualifications.</p>
+                    </div>
+                `
+                : `
+                    <div class="empty-state">
+                        <p class="placeholder-text">No education information available.</p>
                     </div>
                 `;
             }
@@ -428,10 +475,16 @@ document.addEventListener('DOMContentLoaded', () => {
             
             // Display empty state with professional message
             if (skillsContainer) {
-                skillsContainer.innerHTML = `
+                skillsContainer.innerHTML = isOwnProfile
+                ? `
                     <div class="empty-state">
                         <p class="placeholder-text">Your skills will appear here. Showcase your technical expertise, professional competencies, and other relevant abilities.</p>
                         <p class="placeholder-action">Click "Edit" to add your skills.</p>
+                    </div>
+                `
+                : `
+                    <div class="empty-state">
+                        <p class="placeholder-text">No skills information available.</p>
                     </div>
                 `;
             }
@@ -1124,14 +1177,23 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load other user's profile
     async function loadOtherUserProfile(userId) {
         try {
-            // Get user document from Firestore
+            // Get other user's document from Firestore
             const userDoc = await window.db.collection("users").doc(userId).get();
             
-            if (userDoc.exists()) {
+            if (userDoc.exists) {
                 const userData = userDoc.data();
                 
                 // Update UI with the other user's data
                 updateProfileForOtherUser(userData, userId);
+                
+                // Get current authenticated user data to ensure dropdown shows correct info
+                const currentUserDoc = await window.db.collection("users").doc(currentUser.uid).get();
+                if (currentUserDoc.exists) {
+                    const currentUserData = currentUserDoc.data();
+                    
+                    // Update only the dropdown menu with current user's data
+                    updateDropdownMenuWithAuthenticatedUserData(currentUser, currentUserData);
+                }
             } else {
                 // User not found
                 showProfileNotFoundMessage();
@@ -1139,6 +1201,50 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.error("Error loading other user's profile:", error);
             showProfileNotFoundMessage();
+        }
+    }
+    
+    // Function to update only the dropdown menu with authenticated user data
+    function updateDropdownMenuWithAuthenticatedUserData(user, userData) {
+        const userName = document.getElementById('user-name');
+        const userEmail = document.getElementById('user-email');
+        const avatarInitialsDropdown = document.getElementById('avatar-initials-dropdown');
+        const avatarImageDropdown = document.getElementById('avatar-image-dropdown');
+        
+        // Get the display name (check all possible fields where it could be stored)
+        const displayName = userData.name || userData.fullName || userData.displayName || user.displayName || user.email || 'Your Account';
+        
+        // Update dropdown user info
+        if (userName) userName.textContent = displayName;
+        if (userEmail) userEmail.textContent = user.email || 'No email provided';
+        
+        // Update avatar in dropdown
+        const photoURL = userData.photoURL || user.photoURL;
+        if (photoURL) {
+            // User has a profile photo, show image
+            if (avatarImageDropdown) {
+                avatarImageDropdown.src = photoURL;
+                avatarImageDropdown.style.display = 'block';
+            }
+            
+            // Hide initials when showing image
+            if (avatarInitialsDropdown) {
+                avatarInitialsDropdown.style.display = 'none';
+            }
+        } else {
+            // No profile photo, show initials instead
+            if (avatarImageDropdown) avatarImageDropdown.style.display = 'none';
+            
+            const initials = displayName
+                .split(' ')
+                .map(name => name[0])
+                .join('')
+                .toUpperCase();
+            
+            if (avatarInitialsDropdown) {
+                avatarInitialsDropdown.style.display = 'flex';
+                avatarInitialsDropdown.textContent = initials || 'JN';
+            }
         }
     }
     
@@ -1257,10 +1363,24 @@ document.addEventListener('DOMContentLoaded', () => {
     async function setupFollowButton(profileId, currentUserId) {
         const followButton = document.getElementById('follow-button');
         const messageButton = document.getElementById('message-button');
+        const blockButton = document.createElement('button');
+        blockButton.id = 'block-button';
+        blockButton.className = 'btn-block other-profile-btn';
+        blockButton.innerHTML = '<i class="fas fa-ban"></i>';
+        blockButton.title = 'Block User';
+        
+        // Add block button to action buttons
+        const actionButtons = document.querySelector('.profile-actions');
+        if (actionButtons) {
+            actionButtons.appendChild(blockButton);
+        }
         
         // Set up message button functionality
         if (messageButton) {
             messageButton.addEventListener('click', () => {
+                // Set a flag in sessionStorage to indicate this is a direct navigation
+                sessionStorage.setItem('directNavigation', 'true');
+                
                 // Navigate to the chats page with the user ID
                 window.location.href = `../chats/chats.html?contact=${profileId}`;
             });
@@ -1269,23 +1389,134 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!followButton) return;
         
         try {
-            // Check if already following
+            // Check if already following, has a pending request, or is blocked
             const currentUserDoc = await window.db.collection("users").doc(currentUserId).get();
             
             if (currentUserDoc.exists) {
                 const userData = currentUserDoc.data();
                 const following = userData.following || [];
+                const pendingFollowRequests = userData.pendingFollowRequests || [];
+                const blockedUsers = userData.blockedUsers || [];
                 
-                if (following.includes(profileId)) {
+                if (blockedUsers.includes(profileId)) {
+                    // This user is blocked
+                    followButton.disabled = true;
+                    followButton.classList.add('disabled');
+                    followButton.title = "You've blocked this user";
+                    
+                    if (messageButton) {
+                        messageButton.disabled = true;
+                        messageButton.classList.add('disabled');
+                    }
+                    
+                    blockButton.innerHTML = '<i class="fas fa-user-check"></i>';
+                    blockButton.title = 'Unblock User';
+                    blockButton.classList.add('unblock');
+                } else if (following.includes(profileId)) {
                     // Already following this user
                     followButton.classList.add('following');
+                } else if (pendingFollowRequests.includes(profileId)) {
+                    // Request already sent
+                    followButton.classList.add('pending');
+                    // Keep the button enabled so users can cancel the request
+                    followButton.title = "Click to cancel follow request";
                 }
             }
+            
+            // Set up block/unblock functionality
+            blockButton.addEventListener('click', async () => {
+                try {
+                    const isBlocked = blockButton.classList.contains('unblock');
+                    
+                    if (isBlocked) {
+                        // Unblock user
+                        await window.db.collection("users").doc(currentUserId).update({
+                            blockedUsers: firebase.firestore.FieldValue.arrayRemove(profileId)
+                        });
+                        
+                        // Update UI
+                        blockButton.innerHTML = '<i class="fas fa-ban"></i>';
+                        blockButton.classList.remove('unblock');
+                        
+                        // Enable follow and message buttons
+                        followButton.disabled = false;
+                        followButton.classList.remove('disabled');
+                        followButton.title = "";
+                        
+                        if (messageButton) {
+                            messageButton.disabled = false;
+                            messageButton.classList.remove('disabled');
+                        }
+                        
+                        alert("User has been unblocked.");
+                    } else {
+                        // Block user - show confirmation dialog
+                        if (confirm("Are you sure you want to block this user? They won't be able to see your profile or send you messages.")) {
+                            // Remove from following/followers if needed
+                            const currentUserDoc = await window.db.collection("users").doc(currentUserId).get();
+                            if (currentUserDoc.exists) {
+                                const userData = currentUserDoc.data();
+                                const following = userData.following || [];
+                                
+                                // If we're following them, unfollow
+                                if (following.includes(profileId)) {
+                                    await window.db.collection("users").doc(currentUserId).update({
+                                        following: firebase.firestore.FieldValue.arrayRemove(profileId)
+                                    });
+                                    
+                                    // Update their followers list
+                                    await window.db.collection("users").doc(profileId).update({
+                                        followers: firebase.firestore.FieldValue.arrayRemove(currentUserId)
+                                    });
+                                }
+                                
+                                // If they have a pending follow request to us, remove it
+                                const profileUserDoc = await window.db.collection("users").doc(profileId).get();
+                                if (profileUserDoc.exists) {
+                                    const profileData = profileUserDoc.data();
+                                    if (profileData.pendingFollowRequests && profileData.pendingFollowRequests.includes(currentUserId)) {
+                                        await window.db.collection("users").doc(profileId).update({
+                                            pendingFollowRequests: firebase.firestore.FieldValue.arrayRemove(currentUserId)
+                                        });
+                                    }
+                                }
+                            }
+                            
+                            // Block the user
+                            await window.db.collection("users").doc(currentUserId).update({
+                                blockedUsers: firebase.firestore.FieldValue.arrayUnion(profileId)
+                            });
+                            
+                            // Update UI
+                            blockButton.innerHTML = '<i class="fas fa-user-check"></i>';
+                            blockButton.classList.add('unblock');
+                            
+                            // Disable follow and message buttons
+                            followButton.disabled = true;
+                            followButton.classList.add('disabled');
+                            followButton.classList.remove('following');
+                            followButton.classList.remove('pending');
+                            followButton.title = "You've blocked this user";
+                            
+                            if (messageButton) {
+                                messageButton.disabled = true;
+                                messageButton.classList.add('disabled');
+                            }
+                            
+                            alert("User has been blocked.");
+                        }
+                    }
+                } catch (error) {
+                    console.error("Error updating block status:", error);
+                    alert("There was an error updating block status. Please try again.");
+                }
+            });
             
             // Add follow/unfollow functionality
             followButton.addEventListener('click', async () => {
                 try {
                     const isFollowing = followButton.classList.contains('following');
+                    const isPending = followButton.classList.contains('pending');
                     
                     if (isFollowing) {
                         // Unfollow user
@@ -1299,21 +1530,45 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                         
                         followButton.classList.remove('following');
-                    } else {
-                        // Follow user
-                        await window.db.collection("users").doc(currentUserId).update({
-                            following: firebase.firestore.FieldValue.arrayUnion(profileId)
-                        });
-                        
-                        // Update the user's followers list
+                    } else if (isPending) {
+                        // Cancel the follow request
                         await window.db.collection("users").doc(profileId).update({
-                            followers: firebase.firestore.FieldValue.arrayUnion(currentUserId)
+                            pendingFollowRequests: firebase.firestore.FieldValue.arrayRemove(currentUserId)
                         });
                         
-                        followButton.classList.add('following');
+                        // Remove any pending notifications for this follow request
+                        const notificationsSnapshot = await window.db.collection("users")
+                            .doc(profileId)
+                            .collection("notifications")
+                            .where("type", "==", "follow_request")
+                            .where("senderId", "==", currentUserId)
+                            .get();
+                            
+                        // Delete each matching notification
+                        notificationsSnapshot.forEach(async (doc) => {
+                            await window.db.collection("users")
+                                .doc(profileId)
+                                .collection("notifications")
+                                .doc(doc.id)
+                                .delete();
+                        });
                         
-                        // Send a notification to the user being followed
-                        await sendFollowNotification(profileId, currentUserId);
+                        // Reset button state
+                        followButton.classList.remove('pending');
+                        followButton.title = "";
+                        
+                    } else {
+                        // Send follow request - store the pending request in the RECIPIENT'S profile, not the sender's
+                        await window.db.collection("users").doc(profileId).update({
+                            pendingFollowRequests: firebase.firestore.FieldValue.arrayUnion(currentUserId)
+                        });
+                        
+                        // Update button state
+                        followButton.classList.add('pending');
+                        followButton.title = "Click to cancel follow request";
+                        
+                        // Send a follow request notification
+                        await sendFollowRequestNotification(profileId, currentUserId);
                     }
                 } catch (error) {
                     console.error("Error updating follow status:", error);
@@ -1325,33 +1580,65 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    // Send a notification to the user being followed
-    async function sendFollowNotification(recipientId, senderId) {
+    // Send a follow request notification
+    async function sendFollowRequestNotification(recipientId, senderId) {
         try {
+            console.log("Starting notification creation process");
+            console.log("Recipient ID:", recipientId);
+            console.log("Sender ID:", senderId);
+            
             // Get sender's information
             const senderDoc = await window.db.collection("users").doc(senderId).get();
-            if (!senderDoc.exists) return;
+            if (!senderDoc.exists) {
+                console.error("Sender document doesn't exist");
+                return;
+            }
             
             const senderData = senderDoc.data();
             const senderName = senderData.name || senderData.fullName || senderData.displayName || 'A user';
+            console.log("Sender name:", senderName);
             
-            // Create notification
+            // Create notification with accept/reject actions
             const notification = {
-                type: 'follow',
+                type: 'follow_request',
                 senderId: senderId,
                 senderName: senderName,
                 senderPhoto: senderData.photoURL || null,
-                message: `${senderName} started following you`,
+                title: 'New Follow Request',
+                text: `${senderName} wants to follow you`,
+                actions: ['accept', 'reject'],
                 read: false,
-                createdAt: new Date()
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
             };
             
-            // Add notification to collection
-            await window.db.collection("users").doc(recipientId).collection("notifications").add(notification);
+            console.log("Notification object created:", notification);
+            console.log("Attempting to write to:", `users/${recipientId}/notifications`);
             
-            console.log("Follow notification sent successfully");
+            // Add notification to collection - use set with generated ID to ensure it works
+            const notificationsRef = window.db.collection("users").doc(recipientId).collection("notifications");
+            const newNotificationRef = notificationsRef.doc();
+            await newNotificationRef.set(notification);
+            
+            console.log("Follow request notification created with ID:", newNotificationRef.id);
+            
+            // Double check that it exists
+            setTimeout(async () => {
+                try {
+                    const check = await newNotificationRef.get();
+                    if (check.exists) {
+                        console.log("Verified notification exists:", check.data());
+                    } else {
+                        console.error("Notification was not saved correctly!");
+                    }
         } catch (error) {
-            console.error("Error sending follow notification:", error);
+                    console.error("Error checking notification:", error);
+                }
+            }, 1000);
+            
+            alert("Follow request sent successfully!");
+        } catch (error) {
+            console.error("Error sending follow request notification:", error);
+            alert("Error sending follow request. Please try again.");
         }
     }
 });

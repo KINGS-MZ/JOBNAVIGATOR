@@ -655,6 +655,16 @@ main {
     border: 1px solid #4a5568;
 }
 
+.btn-follow, .btn-message {
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
 .btn-follow {
     background-color: var(--primary-blue);
     color: white;
@@ -686,10 +696,6 @@ main {
 
 .btn-follow.following .fa-user-plus:before {
     content: "\f00c"; /* Change to checkmark icon */
-}
-
-.btn-follow.following span:before {
-    content: "Following";
 }
 
 .dark-mode .btn-follow.following {
@@ -756,13 +762,58 @@ main {
     content: "\f00d"; /* Change to X icon */
 }
 
-.btn-follow.following:hover span:before {
-    content: "Unfollow";
-}
-
 .dark-mode .btn-follow.following:hover {
     background-color: rgba(229, 57, 53, 0.2); /* Dark red with transparency */
     color: #ff6b6b;
+    border-color: #ff6b6b;
+}
+
+/* Add styles for follow button pending state */
+.btn-follow.pending {
+    background-color: #f8f9fa;
+    color: #777;
+    border: 1px dashed #999;
+    cursor: pointer;
+    position: relative;
+}
+
+.btn-follow.pending:before {
+    content: "Cancel";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(255, 235, 235, 0.95);
+    color: #e53935;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.btn-follow.pending:hover:before {
+    opacity: 1;
+}
+
+.btn-follow.pending i.fa-user-plus:before {
+    content: "\f254"; /* Hourglass icon */
+}
+
+.dark-mode .btn-follow.pending {
+    background-color: #333;
+    color: #aaa;
+    border: 1px dashed #666;
+}
+
+.dark-mode .btn-follow.pending:before {
+    background-color: rgba(229, 57, 53, 0.2);
+    color: #ff6b6b;
+}
+
+.dark-mode .btn-follow.pending:hover {
+    background-color: rgba(229, 57, 53, 0.1);
     border-color: #ff6b6b;
 }
 
@@ -781,6 +832,20 @@ main {
 
 .other-profile .other-profile-btn {
     display: flex; /* Show when viewing another profile */
+}
+
+/* Hide edit buttons when viewing another user's profile */
+.other-profile .edit-avatar,
+.other-profile .edit-cover,
+.other-profile .edit-section {
+    display: none !important;
+}
+
+/* Show edit buttons only on own profile */
+.own-profile .edit-avatar,
+.own-profile .edit-cover,
+.own-profile .edit-section {
+    display: flex;
 }
 
 /* Profile Grid Layout */
@@ -2060,4 +2125,107 @@ input[type="month"]::before {
 .dark-mode .menu-item:hover,
 .dark-mode .menu-item.active {
     background-color: var(--primary-green);
+}
+
+.btn-block {
+    background-color: transparent;
+    color: #e53935;
+    border: 1px solid #e53935;
+    transition: all 0.2s ease;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: 16px;
+}
+
+.dark-mode .btn-block {
+    background-color: transparent;
+    color: #ff6b6b;
+    border: 1px solid #ff6b6b;
+}
+
+.btn-block:hover {
+    background-color: rgba(229, 57, 53, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dark-mode .btn-block:hover {
+    background-color: rgba(255, 107, 107, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-block.unblock {
+    background-color: transparent;
+    color: #2ecc71;
+    border: 1px solid #2ecc71;
+}
+
+.dark-mode .btn-block.unblock {
+    background-color: transparent;
+    color: #4cd137;
+    border: 1px solid #4cd137;
+}
+
+.btn-block.unblock:hover {
+    background-color: rgba(46, 204, 113, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dark-mode .btn-block.unblock:hover {
+    background-color: rgba(76, 209, 55, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-share {
+    background-color: transparent;
+    color: #3498db;
+    border: 1px solid #3498db;
+    transition: all 0.2s ease;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    font-size: 16px;
+}
+
+.dark-mode .btn-share {
+    background-color: transparent;
+    color: #2ecc71;
+    border: 1px solid #2ecc71;
+}
+
+.btn-share:hover {
+    background-color: rgba(52, 152, 219, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dark-mode .btn-share:hover {
+    background-color: rgba(46, 204, 113, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.btn-follow.disabled,
+.btn-message.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.btn-follow.disabled:hover,
+.btn-message.disabled:hover {
+    transform: none;
+    box-shadow: none;
 }

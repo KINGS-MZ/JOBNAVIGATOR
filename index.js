@@ -6,14 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const sunIcon = themeToggle.querySelector('.fa-sun');
     const moonIcon = themeToggle.querySelector('.fa-moon');
 
-    // Check for saved theme preference
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme === 'dark') {
-        html.classList.add('dark-mode');
-        body.classList.add('dark-mode');
-    }
-
-    // Theme toggle functionality
+    // Theme toggle functionality (using the same implementation as in nav.js)
     themeToggle.addEventListener('click', () => {
         html.classList.toggle('dark-mode');
         body.classList.toggle('dark-mode');
@@ -22,6 +15,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const isDarkMode = html.classList.contains('dark-mode');
         localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
     });
+
+    // The theme is already applied by the theme-loader.js script
+    // This is kept for backward compatibility
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        html.classList.add('dark-mode');
+        body.classList.add('dark-mode');
+    } else {
+        html.classList.remove('dark-mode');
+        body.classList.remove('dark-mode');
+    }
 
     // Animate statistics numbers
     const stats = document.querySelectorAll('.stat-number');

@@ -8,6 +8,8 @@
     --bg-dark: #1a1a1a;
     --shadow-light: rgba(0, 0, 0, 0.1);
     --shadow-dark: rgba(0, 0, 0, 0.3);
+    /* Ensure smooth transitions for theme changes */
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 * {
@@ -20,7 +22,7 @@ body {
     font-family: 'Poppins', sans-serif;
     background-color: var(--bg-light);
     color: var(--text-dark);
-    transition: all 0.3s ease;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .dark-mode {

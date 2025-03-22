@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Theme loader script - must be first to prevent flickering -->
+    <script src="/Assets/theme-loader.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profile - Job Navigator</title>
@@ -118,15 +120,12 @@
                         </button>
                         <button class="btn-follow other-profile-btn" id="follow-button">
                             <i class="fas fa-user-plus"></i>
-                            <span>Follow</span>
                         </button>
                         <button class="btn-message other-profile-btn" id="message-button">
                             <i class="fas fa-comment"></i>
-                            <span>Message</span>
                         </button>
-                        <button class="btn-secondary">
+                        <button class="btn-share" id="share-button" title="Share Profile">
                             <i class="fas fa-share-alt"></i>
-                            Share Profile
                         </button>
                     </div>
                 </div>
@@ -267,9 +266,9 @@
             <span>Add</span>
         </a>
         
-        <a href="../notifications/notifications.html" class="bottom-nav-item">
-            <i class="fas fa-bell"></i>
-            <span>Alerts</span>
+        <a href="../users/users.html" class="bottom-nav-item">
+            <i class="fas fa-users"></i>
+            <span>Users</span>
         </a>
         <a href="../chats/chats.html" class="bottom-nav-item">
             <i class="fas fa-comments"></i>
