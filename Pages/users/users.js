@@ -274,14 +274,14 @@ function createUserElement(user, isFollowing) {
     
     // Set button class and text based on follow status
     let btnClass = '';
-    let btnText = 'Follow';
+    let btnIcon = '<i class="fas fa-user-plus"></i>';
     
     if (isFollowing) {
         btnClass = 'following';
-        btnText = 'Following';
+        btnIcon = '<i class="fas fa-check"></i>';
     } else if (isPending) {
         btnClass = 'pending';
-        btnText = 'Pending';
+        btnIcon = '<i class="fas fa-clock"></i>';
     }
     
     // Create HTML structure
@@ -295,7 +295,7 @@ function createUserElement(user, isFollowing) {
         </div>
         <div class="user-actions">
             <button class="follow-btn ${btnClass}" data-user-id="${user.id}" ${isPending ? 'title="Click to cancel follow request"' : ''}>
-                ${btnText}
+                ${btnIcon}
             </button>
             <button class="message-btn" data-user-id="${user.id}">
                 <i class="fas fa-comment"></i>
@@ -332,7 +332,13 @@ function createUserElement(user, isFollowing) {
 async function toggleFollow(userId, button) {
     const isFollowing = button.classList.contains('following');
     const isPending = button.classList.contains('pending');
-    showLoading(true);
+    
+    // Disable button during operation
+    button.disabled = true;
+    
+    // Show local loading state in the button
+    const originalContent = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     
     try {
         if (isFollowing) {
@@ -358,7 +364,7 @@ async function toggleFollow(userId, button) {
             
             // Update button
             button.classList.remove('following');
-            button.textContent = 'Follow';
+            button.innerHTML = '<i class="fas fa-user-plus"></i>';
             
         } else if (isPending) {
             // Cancel the follow request
@@ -378,7 +384,7 @@ async function toggleFollow(userId, button) {
             // Update button
             button.classList.remove('pending');
             button.removeAttribute('title');
-            button.textContent = 'Follow';
+            button.innerHTML = '<i class="fas fa-user-plus"></i>';
             
             // If there are notifications, remove them
             try {
@@ -418,7 +424,7 @@ async function toggleFollow(userId, button) {
             // Update button
             button.classList.add('pending');
             button.title = 'Click to cancel follow request';
-            button.textContent = 'Pending';
+            button.innerHTML = '<i class="fas fa-clock"></i>';
             
             // Send notification to target user
             try {
@@ -443,6 +449,9 @@ async function toggleFollow(userId, button) {
         }
     } catch (error) {
         console.error('Error toggling follow:', error);
+        // Restore original button state on error
+        button.innerHTML = originalContent;
+        
         let errorMessage = 'Failed to update follow status';
         if (isFollowing) {
             errorMessage = 'Failed to unfollow user';
@@ -453,7 +462,8 @@ async function toggleFollow(userId, button) {
         }
         showError(errorMessage);
     } finally {
-        showLoading(false);
+        // Re-enable button
+        button.disabled = false;
     }
 }
 

@@ -7,161 +7,144 @@ import {
 import { 
     onAuthStateChanged
 } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
+import { ensureUserInFirestore } from '../../Firebase/auth-helpers.js';
 
 // Only update UI if user is signed in
 onAuthStateChanged(auth, async (user) => {
     const menuSections = document.querySelector('.menu-sections');
     
     if (user) {
-        // Fetch user profile data from Firestore
-        try {
-            const userRef = doc(db, "users", user.uid);
-            const userSnap = await getDoc(userRef);
+        // Ensure user exists in Firestore first
+        const userData = await ensureUserInFirestore(user);
+        
+        // Update user info in the dropdown if user is signed in
+        const userNameElement = document.getElementById('user-name');
+        const userEmailElement = document.getElementById('user-email');
+        const avatarInitials = document.getElementById('avatar-initials');
+        const avatarInitialsDropdown = document.getElementById('avatar-initials-dropdown');
+        const avatarImage = document.getElementById('avatar-image');
+        const avatarImageDropdown = document.getElementById('avatar-image-dropdown');
+        
+        if (userData) {
+            // Use user data from our helper function
+            if (userNameElement) {
+                userNameElement.textContent = userData.fullName || user.displayName || 'User';
+            }
             
-            // Update user info in the dropdown if user is signed in
-            const userNameElement = document.getElementById('user-name');
-            const userEmailElement = document.getElementById('user-email');
-            const avatarInitials = document.getElementById('avatar-initials');
-            const avatarInitialsDropdown = document.getElementById('avatar-initials-dropdown');
-            const avatarImage = document.getElementById('avatar-image');
-            const avatarImageDropdown = document.getElementById('avatar-image-dropdown');
+            if (userEmailElement && user.email) {
+                userEmailElement.textContent = user.email;
+            }
             
-            if (userSnap.exists()) {
-                const userData = userSnap.data();
-                
-                // Use custom profile name if available, otherwise fallback to auth name
-                if (userNameElement) {
-                    userNameElement.textContent = userData.fullName || user.displayName || 'User';
+            // Handle profile picture - check for custom avatar first
+            if (userData.photoURL) {
+                // User has a custom profile picture from Firestore
+                if (avatarImage) {
+                    avatarImage.src = userData.photoURL;
+                    avatarImage.style.display = 'block';
                 }
-                
-                if (userEmailElement && user.email) {
-                    userEmailElement.textContent = user.email;
+                if (avatarImageDropdown) {
+                    avatarImageDropdown.src = userData.photoURL;
+                    avatarImageDropdown.style.display = 'block';
                 }
-                
-                // Handle profile picture - check for custom avatar first
-                if (userData.photoURL) {
-                    // User has a custom profile picture from Firestore
-                    if (avatarImage) {
-                        avatarImage.src = userData.photoURL;
-                        avatarImage.style.display = 'block';
-                    }
-                    if (avatarImageDropdown) {
-                        avatarImageDropdown.src = userData.photoURL;
-                        avatarImageDropdown.style.display = 'block';
-                    }
-                    if (avatarInitials) {
-                        avatarInitials.style.display = 'none';
-                    }
-                    if (avatarInitialsDropdown) {
-                        avatarInitialsDropdown.style.display = 'none';
-                    }
-                } else if (user.photoURL) {
-                    // Fallback to auth profile picture
-                    if (avatarImage) {
-                        avatarImage.src = user.photoURL;
-                        avatarImage.style.display = 'block';
-                    }
-                    if (avatarImageDropdown) {
-                        avatarImageDropdown.src = user.photoURL;
-                        avatarImageDropdown.style.display = 'block';
-                    }
-                    if (avatarInitials) {
-                        avatarInitials.style.display = 'none';
-                    }
-                    if (avatarInitialsDropdown) {
-                        avatarInitialsDropdown.style.display = 'none';
-                    }
-                } else {
-                    // No profile picture, show initials
-                    if (avatarImage) {
-                        avatarImage.style.display = 'none';
-                    }
-                    if (avatarImageDropdown) {
-                        avatarImageDropdown.style.display = 'none';
-                    }
-                    
-                    // Get initials from custom name if available
-                    const fullName = userData.fullName || user.displayName || '';
-                    const initials = fullName
-                        ? fullName
-                            .split(' ')
-                            .map(name => name[0])
-                            .join('')
-                            .toUpperCase()
-                        : 'JN';
-                    
-                    if (avatarInitials) {
-                        avatarInitials.style.display = 'flex';
-                        avatarInitials.textContent = initials;
-                    }
-                    if (avatarInitialsDropdown) {
-                        avatarInitialsDropdown.style.display = 'flex';
-                        avatarInitialsDropdown.textContent = initials;
-                    }
+                if (avatarInitials) {
+                    avatarInitials.style.display = 'none';
+                }
+                if (avatarInitialsDropdown) {
+                    avatarInitialsDropdown.style.display = 'none';
+                }
+            } else if (user.photoURL) {
+                // Fallback to auth profile picture
+                if (avatarImage) {
+                    avatarImage.src = user.photoURL;
+                    avatarImage.style.display = 'block';
+                }
+                if (avatarImageDropdown) {
+                    avatarImageDropdown.src = user.photoURL;
+                    avatarImageDropdown.style.display = 'block';
+                }
+                if (avatarInitials) {
+                    avatarInitials.style.display = 'none';
+                }
+                if (avatarInitialsDropdown) {
+                    avatarInitialsDropdown.style.display = 'none';
                 }
             } else {
-                // If no Firestore data, fallback to auth data
-                if (userNameElement && user.displayName) {
-                    userNameElement.textContent = user.displayName;
+                // No profile picture, show initials
+                if (avatarImage) {
+                    avatarImage.style.display = 'none';
+                }
+                if (avatarImageDropdown) {
+                    avatarImageDropdown.style.display = 'none';
                 }
                 
-                if (userEmailElement && user.email) {
-                    userEmailElement.textContent = user.email;
-                }
+                // Get initials from custom name if available
+                const fullName = userData.fullName || user.displayName || '';
+                const initials = fullName
+                    ? fullName
+                        .split(' ')
+                        .map(name => name[0])
+                        .join('')
+                        .toUpperCase()
+                    : 'JN';
                 
-                // Handle default profile picture
-                if (user.photoURL) {
-                    if (avatarImage) {
-                        avatarImage.src = user.photoURL;
-                        avatarImage.style.display = 'block';
-                    }
-                    if (avatarImageDropdown) {
-                        avatarImageDropdown.src = user.photoURL;
-                        avatarImageDropdown.style.display = 'block';
-                    }
-                    if (avatarInitials) {
-                        avatarInitials.style.display = 'none';
-                    }
-                    if (avatarInitialsDropdown) {
-                        avatarInitialsDropdown.style.display = 'none';
-                    }
-                } else {
-                    if (avatarImage) {
-                        avatarImage.style.display = 'none';
-                    }
-                    if (avatarImageDropdown) {
-                        avatarImageDropdown.style.display = 'none';
-                    }
-                    const initials = user.displayName
-                        ? user.displayName
-                            .split(' ')
-                            .map(name => name[0])
-                            .join('')
-                            .toUpperCase()
-                        : 'JN';
-                        
-                    if (avatarInitials) {
-                        avatarInitials.style.display = 'flex';
-                        avatarInitials.textContent = initials;
-                    }
-                    if (avatarInitialsDropdown) {
-                        avatarInitialsDropdown.style.display = 'flex';
-                        avatarInitialsDropdown.textContent = initials;
-                    }
+                if (avatarInitials) {
+                    avatarInitials.style.display = 'flex';
+                    avatarInitials.textContent = initials;
+                }
+                if (avatarInitialsDropdown) {
+                    avatarInitialsDropdown.style.display = 'flex';
+                    avatarInitialsDropdown.textContent = initials;
                 }
             }
-        } catch (error) {
-            console.error('Error fetching user profile:', error);
-            // Fallback to auth data if Firestore fetch fails
-            const userNameElement = document.getElementById('user-name');
-            const userEmailElement = document.getElementById('user-email');
-            
+        } else {
+            // If no Firestore data, fallback to auth data
             if (userNameElement && user.displayName) {
                 userNameElement.textContent = user.displayName;
             }
             
             if (userEmailElement && user.email) {
                 userEmailElement.textContent = user.email;
+            }
+            
+            // Handle default profile picture
+            if (user.photoURL) {
+                if (avatarImage) {
+                    avatarImage.src = user.photoURL;
+                    avatarImage.style.display = 'block';
+                }
+                if (avatarImageDropdown) {
+                    avatarImageDropdown.src = user.photoURL;
+                    avatarImageDropdown.style.display = 'block';
+                }
+                if (avatarInitials) {
+                    avatarInitials.style.display = 'none';
+                }
+                if (avatarInitialsDropdown) {
+                    avatarInitialsDropdown.style.display = 'none';
+                }
+            } else {
+                if (avatarImage) {
+                    avatarImage.style.display = 'none';
+                }
+                if (avatarImageDropdown) {
+                    avatarImageDropdown.style.display = 'none';
+                }
+                const initials = user.displayName
+                    ? user.displayName
+                        .split(' ')
+                        .map(name => name[0])
+                        .join('')
+                        .toUpperCase()
+                    : 'JN';
+                    
+                if (avatarInitials) {
+                    avatarInitials.style.display = 'flex';
+                    avatarInitials.textContent = initials;
+                }
+                if (avatarInitialsDropdown) {
+                    avatarInitialsDropdown.style.display = 'flex';
+                    avatarInitialsDropdown.textContent = initials;
+                }
             }
         }
 

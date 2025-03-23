@@ -19,6 +19,7 @@ import {
     doc, 
     setDoc 
 } from '../../Firebase/firebase-config.js';
+import { ensureUserInFirestore } from '../../Firebase/auth-helpers.js';
 
 // Check if user is already logged in
 onAuthStateChanged(auth, (user) => {
@@ -188,13 +189,18 @@ document.addEventListener('DOMContentLoaded', function() {
     signupForm?.addEventListener('submit', async function(e) {
         e.preventDefault();
         
+        // Clear previous errors
+        const errorElements = signupForm.querySelectorAll('.error-message');
+        errorElements.forEach(el => el.textContent = '');
+        
+        // Get form values
         const firstName = document.getElementById('firstName').value.trim();
         const lastName = document.getElementById('lastName').value.trim();
         const email = document.getElementById('signupEmail').value.trim();
         const password = document.getElementById('signupPassword').value;
         const confirmPassword = document.getElementById('confirmPassword').value;
         
-        // Validate inputs
+        // Validate form fields
         if (!firstName) {
             showError('firstNameError', 'Please enter your first name');
             return;
@@ -232,16 +238,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 displayName: `${firstName} ${lastName}`
             });
             
-            // Create user document in Firestore with name info
+            // Create comprehensive user document using our helper function
+            const userData = {
+                fullName: `${firstName} ${lastName}`,
+                name: `${firstName} ${lastName}`,
+                email: email,
+                createdAt: new Date(),
+                status: 'online',
+                following: [],
+                followers: [],
+                pendingFollowRequests: [],
+                bio: '',
+                skills: [],
+                interests: [],
+                uid: userCredential.user.uid
+            };
+            
             try {
-                await setDoc(doc(db, 'users', userCredential.user.uid), {
-                    fullName: `${firstName} ${lastName}`,
-                    name: `${firstName} ${lastName}`,
-                    email: email,
-                    createdAt: new Date(),
-                    status: 'online',
-                    uid: userCredential.user.uid
-                });
+                // Set the user data in Firestore directly
+                await setDoc(doc(db, 'users', userCredential.user.uid), userData);
+                
+                // Also use our helper to ensure consistency and handle any additional fields
+                await ensureUserInFirestore(userCredential.user);
+                
+                console.log('User document created successfully');
             } catch (firestoreError) {
                 console.error('Error creating user document:', firestoreError);
                 // Continue even if Firestore creation fails
@@ -278,6 +298,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 provider.addScope('profile');
                 provider.addScope('email');
                 const result = await signInWithPopup(auth, provider);
+                
+                // Ensure user is created in Firestore
+                await ensureUserInFirestore(result.user);
+                
                 console.log('Google sign-in successful');
                 window.location.href = '/Pages/home/home.html';
             } catch (error) {

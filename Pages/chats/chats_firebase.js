@@ -1,5 +1,5 @@
 // Firebase Chat Functionality
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Current user reference
     let currentUser = null;
     let currentUserID = null;
@@ -7,7 +7,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentContact = null;
     let isEditingMessage = false;
     let editingMessageId = null;
+    let editingOriginalText = null;
     let currentImageFile = null;
+    
+    // Message tracking
+    window.renderedMessageIds = new Set();
+    window.loadedMessageIds = new Set();
+    window.tempToRealIdMap = new Map();
     
     // Get DOM elements
     const messagesSection = document.getElementById('messages-section');
@@ -117,35 +123,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const userDoc = await firebase.firestore().collection('users').doc(user.uid).get();
             let userData = userDoc.exists ? userDoc.data() : null;
             
-            // Create user data if it doesn't exist
-            if (!userData) {
-                userData = {
-                    id: user.uid,
-                    name: user.displayName || 'User',
-                    fullName: user.displayName || 'User',
-                    email: user.email,
-                    photoURL: user.photoURL,
-                    status: 'online',
-                    createdAt: new Date()
-                };
+            if (userData) {
+                // Update dropdown user info
+                document.getElementById('user-name').textContent = userData.name || user.displayName || 'User';
+                document.getElementById('user-email').textContent = userData.email || user.email || '';
                 
-                // Save user data to Firestore
-                await firebase.firestore().collection('users').doc(user.uid).set(userData);
-            } else if (!userData.name && user.displayName) {
-                // Update user data if name is missing but displayName exists
-                userData.name = user.displayName;
-                userData.fullName = user.displayName;
-                await firebase.firestore().collection('users').doc(user.uid).update({
-                    name: user.displayName,
-                    fullName: user.displayName
-                });
+                // Update avatar display with our function
+                const userAvatarContainer = document.querySelector('.user-avatar');
+                updateUserAvatar(userAvatarContainer, user, userData);
+                
+                // Also update dropdown avatar
+                const dropdownAvatarContainer = document.querySelector('.dropdown-header .user-avatar');
+                updateUserAvatar(dropdownAvatarContainer, user, userData);
             }
-            
-            // Update online status
-            await firebase.firestore().collection('users').doc(user.uid).update({
-                status: 'online',
-                lastActive: new Date()
-            });
             
             // Set status to offline when user leaves
             window.addEventListener('beforeunload', async () => {
@@ -160,20 +150,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             });
-            
-            if (userData) {
-                // Update dropdown user info
-                document.getElementById('user-name').textContent = userData.name || user.displayName || 'User';
-                document.getElementById('user-email').textContent = userData.email || user.email || '';
-                
-                // Update avatar display with our new function
-                const userAvatarContainer = document.querySelector('.user-avatar');
-                updateUserAvatar(userAvatarContainer, user, userData);
-                
-                // Also update dropdown avatar
-                const dropdownAvatarContainer = document.querySelector('.dropdown-header .user-avatar');
-                updateUserAvatar(dropdownAvatarContainer, user, userData);
-            }
             
             // Initialize the chat UI
             initializeChatsUI();
@@ -1242,8 +1218,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             });
             
-            // Scroll to bottom
-            scrollToBottom();
+            // Ensure scroll to bottom happens after messages are rendered
+            setTimeout(scrollToBottom, 0);
             
             // Set up scroll listener for loading more messages when needed
             setupScrollListener(chatId, messagesSnapshot.docs[0], requestedChatId);
@@ -1314,8 +1290,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         messagesContainer.appendChild(messageElement);
                     }
                     
-                    // Scroll to bottom
-                    scrollToBottom();
+                    // Ensure scroll to bottom with a slight delay to allow rendering
+                    setTimeout(scrollToBottom, 0);
                     
                     // Switch to regular message listener since we now have messages
                     setupNewMessageListener(chatId, requestedChatId);
@@ -1372,30 +1348,24 @@ document.addEventListener('DOMContentLoaded', () => {
                         const messageId = change.doc.id;
                         
                         // Skip if already rendered
-                        if (isMessageRendered(messageId)) {
-                            return;
-                        }
+                        if (isMessageRendered(messageId)) return;
+                        
+                        // Add to our tracking set
+                        window.renderedMessageIds.add(messageId);
                         
                         const message = {
                             id: messageId,
                             ...change.doc.data()
                         };
                         
-                        // Track this message as rendered
-                        window.renderedMessageIds.add(messageId);
-                        
-                        // Remove empty state if it exists
-                        const emptyState = document.querySelector('.empty-messages');
-                        if (emptyState) {
-                            emptyState.remove();
-                        }
-                        
-                        // Add the new message to the UI
+                        // Add the message to UI
                         addMessageToUI(message.id, message, currentUserID);
-                        scrollToBottom();
+                        
+                        // Ensure scroll to bottom happens consistently
+                        setTimeout(scrollToBottom, 0);
                     }
                 });
-        }, error => {
+            }, error => {
                 console.error("Error listening for new messages:", error);
             });
     }
@@ -1452,25 +1422,33 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     const moreMessages = [];
                     moreMessagesSnapshot.forEach(doc => {
-                        moreMessages.push({
-                            id: doc.id,
-                            ...doc.data()
-                        });
+                        const messageId = doc.id;
+                        // Only add messages that haven't been rendered yet
+                        if (!isMessageRendered(messageId)) {
+                            moreMessages.push({
+                                id: messageId,
+                                ...doc.data()
+                            });
+                            // Add to tracking set
+                            window.renderedMessageIds.add(messageId);
+                        }
                     });
                     
                     // Update the first visible doc reference for next pagination
                     firstVisibleDoc = moreMessagesSnapshot.docs[moreMessagesSnapshot.docs.length - 1];
                     
-                    // Add messages to the top in reverse order
-                    moreMessages.forEach(message => {
-                        const messageElement = addMessageToUI(message.id, message, currentUserID, true);
-                        if (messageElement) {
-                            messagesContainer.prepend(messageElement);
-                        }
-                    });
-                    
-                    // Maintain scroll position
-                    messagesContainer.scrollTop = messagesContainer.scrollHeight - scrollHeight;
+                    // Add messages to the top in reverse order (only if we have new messages)
+                    if (moreMessages.length > 0) {
+                        moreMessages.forEach(message => {
+                            const messageElement = addMessageToUI(message.id, message, currentUserID, true);
+                            if (messageElement) {
+                                messagesContainer.prepend(messageElement);
+                            }
+                        });
+                        
+                        // Maintain scroll position
+                        messagesContainer.scrollTop = messagesContainer.scrollHeight - scrollHeight;
+                    }
                     
                 } catch (error) {
                     console.error("Error loading more messages:", error);
@@ -1480,6 +1458,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    
     
     // Modified addMessageToUI to support prepending for history loading
     function addMessageToUI(messageId, message, currentUserId, returnElementOnly = false) {
@@ -1515,9 +1494,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 <p>${message.text || ''}</p>
                 <div class="message-info">
                     <span class="message-time">${formattedTime}</span>
-                    ${editedInfo}
                     ${messageStatus}
                 </div>
+                ${editedInfo}
                 ${isSentByCurrentUser ? `
                     <div class="message-actions">
                         <button class="message-action-btn" aria-label="Message actions">
@@ -1540,28 +1519,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
         `;
         
-        // Check if messagesContainer exists before adding message
-        const messagesContainer = document.querySelector('.messages-container');
-        if (!messagesContainer) return;
-        
-        // Function to check if user is at bottom of messages container
-        function isUserAtBottom() {
-            if (!messagesContainer) return true;
-            const tolerance = 100; // pixels from bottom to consider as "at bottom"
-            return messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight < tolerance;
-        }
-        
-        // Save current scroll position and check if user was at bottom
-        const wasAtBottom = isUserAtBottom();
-        
-        
-        messagesContainer.appendChild(messageDiv);
-        
-        // Add message appear animation
-        messageDiv.classList.add('message-appear');
-        setTimeout(() => messageDiv.classList.remove('message-appear'), 300);
-        
-        // Add event listeners for message actions
+        // Add event listeners for message actions - ALWAYS add these regardless of returnElementOnly
         if (isSentByCurrentUser) {
             const actionBtn = messageDiv.querySelector('.message-action-btn');
             const actionMenu = messageDiv.querySelector('.message-action-menu');
@@ -1571,19 +1529,19 @@ document.addEventListener('DOMContentLoaded', () => {
             // Toggle menu visibility when clicking the action button
             actionBtn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                actionMenu.classList.toggle('show');
                 
-                // Close other open menus
+                // Toggle this menu
+                const isCurrentlyShown = actionMenu.classList.contains('show');
+                
+                // First close all menus
                 document.querySelectorAll('.message-action-menu.show').forEach(menu => {
-                    if (menu !== actionMenu) {
-                        menu.classList.remove('show');
-                    }
+                    menu.classList.remove('show');
                 });
-            });
-            
-            // Close menu when clicking outside
-            document.addEventListener('click', () => {
-                actionMenu.classList.remove('show');
+                
+                // Then open this one if it wasn't already open
+                if (!isCurrentlyShown) {
+                    actionMenu.classList.add('show');
+                }
             });
             
             // Prevent menu from closing when clicking inside it
@@ -1611,6 +1569,35 @@ document.addEventListener('DOMContentLoaded', () => {
             window.loadedMessageIds.add(messageId);
         }
         
+        // For infinite scroll, if only returning the element, exit now that all listeners are added
+        if (returnElementOnly) {
+            return messageDiv;
+        }
+        
+        // Check if messagesContainer exists before adding message
+        const messagesContainer = document.querySelector('.messages-container');
+        if (!messagesContainer) {
+            console.warn('Messages container not found. Cannot add message to UI.');
+            return messageDiv; // Still return the element in case it's needed
+        }
+        
+        // Function to check if user is at bottom of messages container
+        function isUserAtBottom() {
+            if (!messagesContainer) return true;
+            const tolerance = 100; // pixels from bottom to consider as "at bottom"
+            return messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight < tolerance;
+        }
+        
+        // Save current scroll position and check if user was at bottom
+        const wasAtBottom = isUserAtBottom();
+        
+        
+        messagesContainer.appendChild(messageDiv);
+        
+        // Add message appear animation
+        messageDiv.classList.add('message-appear');
+        setTimeout(() => messageDiv.classList.remove('message-appear'), 300);
+        
         // Update the contact preview if this is a new received message
         if (!isSentByCurrentUser && !isTemp) {
             updateContactPreview(currentChatId, message.text);
@@ -1621,14 +1608,28 @@ document.addEventListener('DOMContentLoaded', () => {
             scrollToBottom();
         }
         
-        // For infinite scroll, return the element instead of appending directly
-        if (returnElementOnly) {
-            return messageDiv;
-        }
+        return messageDiv;
+    }
+    
+    // Global document click handler for message menus (define this once in the outer scope)
+    if (!window.messageMenuHandlerAdded) {
+        document.addEventListener('click', (e) => {
+            // If the click is outside any message with an open menu, close all menus
+            const clickedInsideMenu = e.target.closest('.message-action-menu') || 
+                                     e.target.closest('.message-action-btn');
+            
+            if (!clickedInsideMenu) {
+                document.querySelectorAll('.message-action-menu.show').forEach(menu => {
+                    menu.classList.remove('show');
+                });
+            }
+        });
+        
+        window.messageMenuHandlerAdded = true;
     }
     
     // Variables for message editing
-    let editingOriginalText = null;
+    // Note: editingOriginalText is already declared at the top of the file
 
     // Start editing a message
     function startEditingMessage(messageId, message) {
@@ -1636,9 +1637,39 @@ document.addEventListener('DOMContentLoaded', () => {
         const messageInput = document.querySelector('.message-input input');
         const sendBtn = document.querySelector('.send-btn');
         
+        // Check if we have a temporary ID that was replaced with a real ID
+        let actualMessageId = messageId;
+        
+        // If this is a temporary ID and we have a map of temp to real IDs
+        if (messageId.toString().startsWith('temp-') && window.tempToRealIdMap && window.tempToRealIdMap.has(messageId)) {
+            actualMessageId = window.tempToRealIdMap.get(messageId);
+            console.log(`Using real ID ${actualMessageId} instead of temp ID ${messageId}`);
+        }
+        
+        // Get the message element first
+        let messageElement = document.getElementById(`message-${actualMessageId}`);
+        
+        // If not found with the actual ID, try the original ID
+        if (!messageElement && actualMessageId !== messageId) {
+            messageElement = document.getElementById(`message-${messageId}`);
+        }
+        
+        // If still not found, try finding by data-temp-id attribute
+        if (!messageElement && messageId.toString().startsWith('temp-')) {
+            messageElement = document.querySelector(`[data-temp-id="${messageId}"]`);
+        }
+        
+        // Check if message element exists, if not, return early
+        if (!messageElement) {
+            console.warn(`Cannot edit message: Element with ID message-${messageId} not found`);
+            return;
+        }
+        
+        // Update the editing message ID to use the actual ID
+        editingMessageId = actualMessageId;
+        
         // Switch to edit mode
         isEditingMessage = true;
-        editingMessageId = messageId;
         editingOriginalText = message.text;
         
         // Set the message text in the input field
@@ -1665,7 +1696,6 @@ document.addEventListener('DOMContentLoaded', () => {
         cancelBtn.addEventListener('click', cancelEditingMessage);
         
         // Highlight the message being edited
-        const messageElement = document.getElementById(`message-${messageId}`);
         messageElement.classList.add('editing');
         
         // Show editing indicator
@@ -1734,11 +1764,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Add edited tag if not already present
                 if (!messageElement.querySelector('.message-edited')) {
-                    const messageInfo = messageElement.querySelector('.message-info');
+                    const messageContent = messageElement.querySelector('.message-content');
                     const editedSpan = document.createElement('span');
                     editedSpan.className = 'message-edited';
                     editedSpan.textContent = 'Edited';
-                    messageInfo.appendChild(editedSpan);
+                    
+                    // Append after the message-info
+                    messageContent.appendChild(editedSpan);
                 }
             }
             
@@ -2099,10 +2131,19 @@ document.addEventListener('DOMContentLoaded', () => {
             // Track this message as rendered to prevent duplicates from real-time listeners
             window.renderedMessageIds.add(messageRef.id);
             
+            // Map temporary ID to real ID for future reference
+            if (!window.tempToRealIdMap) {
+                window.tempToRealIdMap = new Map();
+            }
+            window.tempToRealIdMap.set(tempId, messageRef.id);
+            
             // Update the temporary message with the real ID and status
             const tempElement = document.getElementById(`message-${tempId}`);
             if (tempElement) {
                 tempElement.id = `message-${messageRef.id}`;
+                
+                // Add a data attribute for the temp ID for backward compatibility
+                tempElement.setAttribute('data-temp-id', tempId);
                 
                 // Update status to "sent"
                 const messageInfo = tempElement.querySelector('.message-info');
@@ -2200,6 +2241,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function scrollToBottom() {
         // Use requestAnimationFrame to ensure DOM is updated before scrolling
         requestAnimationFrame(() => {
+            const messagesContainer = document.querySelector('.messages-container');
             if (messagesContainer) {
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
                 
@@ -2207,6 +2249,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => {
                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
                 }, 100);
+                
+                // Add a second timeout with a longer delay for cases where images are loading
+                // which could change the scrollHeight after initial scroll
+                setTimeout(() => {
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }, 500);
             }
         });
     }
@@ -2798,7 +2846,7 @@ service cloud.firestore {
         const isDirectNavigation = sessionStorage.getItem('directNavigation') === 'true';
         
         // Load chat previews only (lazy load messages)
-        loadUserChats(currentUserID).then(async () => {
+        loadUserChats(currentUserID).then(async (chats) => {
             // Set up chat preview listeners after chats are loaded
             setupChatPreviewListeners(currentUserID);
             
@@ -2834,112 +2882,9 @@ service cloud.firestore {
                 }
             }
         });
-        
-        // ... rest of existing code ...
     }
     
-    // Helper function to load a specific chat by ID
-    async function loadSpecificChat(chatId, showMessages) {
-        if (!chatId || !currentUserID) return;
-        
-        // First check if the chat exists and the current user is a participant
-        const chatDoc = await firebase.firestore().collection('chats').doc(chatId).get();
-        
-        if (chatDoc.exists) {
-            const chatData = chatDoc.data();
-            
-            // Ensure current user is a participant
-            if (chatData.participants.includes(currentUserID)) {
-                // Find the other participant
-                const otherUserId = chatData.participants.find(id => id !== currentUserID);
-                
-                if (otherUserId) {
-                    // Get the other user's data
-                    const otherUserDoc = await firebase.firestore().collection('users').doc(otherUserId).get();
-                    
-                    if (otherUserDoc.exists) {
-                        const otherUserData = otherUserDoc.data();
-                        
-                        // Create contact object
-                        const contact = {
-                            id: otherUserId,
-                            name: otherUserData.name || otherUserData.fullName || 'User',
-                            photoURL: otherUserData.photoURL || null,
-                            status: otherUserData.status || 'offline'
-                        };
-                        
-                        // Load the chat
-                        loadChat(chatId, contact);
-                        
-                        // If showMessages parameter is true, show the messages section on mobile
-                        if (showMessages === 'true' && window.innerWidth <= 768) {
-                            showMessages();
-                        }
-                        
-                        // Add active class to the corresponding contact item
-                        const contactItems = document.querySelectorAll('.contact-item');
-                        contactItems.forEach(item => {
-                            if (item.dataset.chatId === chatId) {
-                                item.classList.add('active');
-                            } else {
-                                item.classList.remove('active');
-                            }
-                        });
-                    }
-                }
-            }
-        }
-    }
-    
-    // Helper function to handle navigation from a contact ID
-    async function handleContactNavigation(contactId) {
-        if (!contactId || !currentUserID) return;
-        
-        try {
-            // Get the contact user data
-            const contactUserDoc = await firebase.firestore().collection('users').doc(contactId).get();
-            
-            if (!contactUserDoc.exists) {
-                console.error("Contact user not found:", contactId);
-                return;
-            }
-            
-            const contactUserData = contactUserDoc.data();
-            
-            // Check if a chat already exists with this user
-            const chatsRef = firebase.firestore().collection('chats');
-            const q1 = await chatsRef
-                .where('participants', 'array-contains', currentUserID)
-                .get();
-            
-            let existingChatId = null;
-            
-            q1.forEach(doc => {
-                const chatData = doc.data();
-                if (chatData.participants.includes(contactId)) {
-                    existingChatId = doc.id;
-                }
-            });
-            
-            if (existingChatId) {
-                // Chat exists, load it
-                await loadSpecificChat(existingChatId, 'true');
-            } else {
-                // No existing chat, create one
-                const otherUser = {
-                    id: contactId,
-                    name: contactUserData.name || contactUserData.fullName || 'User',
-                    photoURL: contactUserData.photoURL || null
-                };
-                
-                await createNewChat(otherUser);
-            }
-        } catch (error) {
-            console.error("Error handling contact navigation:", error);
-        }
-    }
-
-    // ... existing code ...
+    // ... rest of existing code ...
 
     // Check for any pending chat requests and retry them
     async function checkPendingChatRequests() {
@@ -3965,4 +3910,24 @@ service cloud.firestore {
     document.addEventListener('DOMContentLoaded', () => {
         setTimeout(addDebugTools, 2000); // Add after a short delay to ensure other initialization is complete
     });
+
+    // Function to update message status in the UI
+    function updateMessageInUI(messageId, message) {
+        const messageElement = document.getElementById(`message-${messageId}`);
+        if (!messageElement) {
+            return; // Message element not found
+        }
+        
+        const statusElement = messageElement.querySelector('.message-status');
+        if (statusElement && message.senderId === currentUserID) {
+            // Update read status for sent messages
+            if (message.read) {
+                statusElement.innerHTML = '<i class="fas fa-check-double"></i>';
+                statusElement.setAttribute('data-status', 'read');
+            } else {
+                statusElement.innerHTML = '<i class="fas fa-check"></i>';
+                statusElement.setAttribute('data-status', 'sent');
+            }
+        }
+    }
 });

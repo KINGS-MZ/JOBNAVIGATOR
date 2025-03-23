@@ -595,18 +595,21 @@ body.dark-mode .users-list::-webkit-scrollbar-thumb {
     background-color: var(--primary-green);
 }
 
-/* User Profile Item */
+/* User Profile Item - New Design */
 .user-item {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    padding: 1.25rem;
-    border-radius: 10px;
-    margin-bottom: 0.75rem;
+    padding: 1.5rem 1rem;
+    border-radius: 12px;
     transition: all 0.25s ease;
     background-color: var(--bg-light);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
     cursor: pointer;
     border: 1px solid rgba(0, 0, 0, 0.04);
+    position: relative;
+    text-align: center;
+    height: 100%;
 }
 
 .dark-mode .user-item,
@@ -627,27 +630,27 @@ body.dark-mode .user-item:hover {
 }
 
 .user-avatar {
-    width: 3.5rem;
-    height: 3.5rem;
+    width: 5rem;
+    height: 5rem;
     border-radius: 50%;
     overflow: hidden;
-    margin-right: 1.25rem;
     display: flex;
     align-items: center;
     justify-content: center;
     background-color: var(--primary-blue);
     color: var(--text-light);
     font-weight: 600;
-    font-size: 1.2rem;
+    font-size: 1.8rem;
     flex-shrink: 0;
     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
-    border: 2px solid var(--bg-light);
+    border: 3px solid var(--bg-light);
+    margin: 0 auto 1rem auto;
 }
 
 .dark-mode .user-avatar,
 body.dark-mode .user-avatar {
     background-color: var(--primary-green);
-    border: 2px solid var(--bg-dark);
+    border: 3px solid var(--bg-dark);
 }
 
 .user-avatar img {
@@ -657,16 +660,17 @@ body.dark-mode .user-avatar {
 }
 
 .user-details {
-    flex: 1;
+    width: 100%;
     min-width: 0;
     overflow: hidden;
-    max-width: calc(100% - 120px);
+    text-align: center;
+    margin-bottom: 1.25rem;
 }
 
 .user-name {
     font-weight: 600;
     font-size: 1.1rem;
-    margin-bottom: 0.35rem;
+    margin-bottom: 0.5rem;
     color: var(--text-dark);
     white-space: nowrap;
     overflow: hidden;
@@ -685,9 +689,9 @@ body.dark-mode .user-name {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 280px;
     opacity: 0.85;
     letter-spacing: 0.01em;
+    max-width: 100%;
 }
 
 .dark-mode .user-bio,
@@ -698,21 +702,25 @@ body.dark-mode .user-bio {
 
 .user-actions {
     display: flex;
-    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    width: 100%;
 }
 
 .follow-btn {
     background-color: var(--primary-blue);
     color: white;
     border: none;
-    padding: 0.55rem 1.35rem;
-    border-radius: 6px;
-    font-weight: 500;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 8px;
     cursor: pointer;
     transition: all 0.25s ease;
-    letter-spacing: 0.02em;
-    font-size: 0.9rem;
+    font-size: 1rem;
     box-shadow: 0 2px 4px rgba(52, 152, 219, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .dark-mode .follow-btn,
@@ -752,11 +760,10 @@ body.dark-mode .follow-btn.following {
     border: 1px solid rgba(0, 0, 0, 0.1);
     width: 2.75rem;
     height: 2.75rem;
-    border-radius: 6px;
+    border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-left: 0.75rem;
     cursor: pointer;
     transition: all 0.25s ease;
     color: var(--primary-blue);
@@ -1106,32 +1113,50 @@ body.dark-mode .toast-message {
         align-items: flex-start;
         gap: 0.75rem;
     }
+    
+    .users-list {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+    }
 
     .user-item {
         margin-bottom: 0;
-        padding: 0.75rem;
+        padding: 1rem 0.5rem;
+        height: auto;
+    }
+    
+    .user-avatar {
+        width: 3.5rem;
+        height: 3.5rem;
+        font-size: 1.5rem;
+        margin-bottom: 0.75rem;
     }
 
     .user-bio {
         display: none;
     }
+    
+    .user-name {
+        font-size: 0.9rem;
+        margin-bottom: 0.75rem;
+    }
 
-    .follow-btn {
-        font-size: 0.8rem;
-        padding: 0.4rem 0.75rem;
+    .follow-btn, .message-btn {
+        width: 2.25rem;
+        height: 2.25rem;
+        font-size: 0.9rem;
     }
 }
 
 @media (min-width: 768px) {
     .users-list {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-        gap: 1rem;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 1.25rem;
     }
     
     .user-item {
-        height: 100px; /* Set fixed height for desktop view */
-        align-items: center;
         margin-bottom: 0;
     }
 }
@@ -1173,24 +1198,10 @@ body.dark-mode .follow-btn.following:hover {
     position: relative;
 }
 
-.follow-btn.pending:before {
-    content: "Cancel";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: rgba(255, 235, 235, 0.95);
-    color: #e53935;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-
-.follow-btn.pending:hover:before {
-    opacity: 1;
+.follow-btn.pending:hover {
+    background-color: rgba(231, 76, 60, 0.1);
+    color: #e74c3c;
+    border-color: #e74c3c;
 }
 
 .dark-mode .follow-btn.pending,
@@ -1200,14 +1211,9 @@ body.dark-mode .follow-btn.pending {
     border: 1px dashed #666;
 }
 
-.dark-mode .follow-btn.pending:before,
-body.dark-mode .follow-btn.pending:before {
-    background-color: rgba(229, 57, 53, 0.2);
-    color: #ff6b6b;
-}
-
 .dark-mode .follow-btn.pending:hover,
 body.dark-mode .follow-btn.pending:hover {
     background-color: rgba(229, 57, 53, 0.1);
+    color: #ff6b6b;
     border-color: #ff6b6b;
 } 

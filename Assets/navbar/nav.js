@@ -1,5 +1,6 @@
 import { auth, db, doc, getDoc } from '../../Firebase/firebase-config.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
+import { ensureUserInFirestore } from '../../Firebase/auth-helpers.js';
 
 document.addEventListener('DOMContentLoaded', () => {
     const themeToggle = document.getElementById('theme-toggle');
@@ -82,21 +83,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // Handle user authentication state
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            // User is signed in - first try to get profile data from Firestore
             try {
-                const userRef = doc(db, "users", user.uid);
-                const userSnap = await getDoc(userRef);
+                // Ensure user is in Firestore first - this is the key change
+                const userData = await ensureUserInFirestore(user);
                 
-                if (userSnap.exists()) {
-                    const userData = userSnap.data();
-                    
-                    // Update user info with custom data from Firestore
+                if (userData) {
+                    // Use user data from our helper function
                     if (userName) userName.textContent = userData.fullName || user.displayName || 'User';
                     if (userEmail) userEmail.textContent = user.email;
                     
                     // Update avatar - check for custom avatar first
                     if (userData.photoURL) {
-                        // User has custom profile picture
+                        // User has profile picture
                         if (avatarImage) {
                             avatarImage.style.display = 'block';
                             avatarImage.src = userData.photoURL;
@@ -138,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                 } else {
-                    // No Firestore data, fallback to auth data
+                    // Fallback if our helper failed
                     const displayName = user.displayName || 'User';
                     const email = user.email;
                     const photoURL = user.photoURL;
