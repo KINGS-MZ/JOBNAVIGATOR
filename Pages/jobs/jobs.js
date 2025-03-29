@@ -198,11 +198,6 @@ onAuthStateChanged(auth, async (user) => {
                     Saved Jobs
                     <span class="badge">${savedJobsCount}</span>
                 </a>
-                <a href="../notifications/notifications.html">
-                    <i class="fas fa-bell"></i>
-                    Notifications
-                    <span class="badge active">3</span>
-                </a>
                 <a href="../chats/chats.html">
                     <i class="fas fa-comments"></i>
                     Chats

@@ -3,12 +3,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Current user reference
     let currentUser = null;
     let currentUserID = null;
-    let currentChatId = null;
+    // Make currentChatId global so it can be accessed by the chat details functions
+    window.currentChatId = null;
     let currentContact = null;
     let isEditingMessage = false;
     let editingMessageId = null;
     let editingOriginalText = null;
     let currentImageFile = null;
+    
+    // Variables to track deleted and edited messages for undo functionality
+    let lastDeletedMessage = null;
+    let lastDeletedMessageId = null;
+    let lastDeletedMessageElement = null;
+    let lastEditedMessage = null;
+    let lastEditedMessageId = null;
+    let lastEditedOriginalText = null;
+    let toastTimeout = null;
     
     // Message tracking
     window.renderedMessageIds = new Set();
@@ -958,7 +968,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Clear the messages section
         messagesContainer.innerHTML = `
             <div class="empty-chat-state">
-                <i class="fas fa-comments"></i>
+                <span class="material-symbols-rounded" style="font-size: 48px; margin-bottom: 12px;">chat</span>
                 <h3>No Conversations Yet</h3>
                 <p>Click the + button to start a new conversation</p>
             </div>
@@ -967,8 +977,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Add empty state to contacts list
         contactsList.innerHTML = `
             <div class="empty-contacts-state">
-                <i class="fas fa-user-friends"></i>
-                <p>No conversations yet</p>
+                <span class="material-symbols-rounded" style="font-size: 48px; margin-bottom: 12px;">group</span>
+                <p>No friends yet</p>
                 <p>Click the + button to start chatting</p>
             </div>
         `;
@@ -1080,7 +1090,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     // Load a chat from Firebase
-    function loadChat(chatId, contact) {
+    async function loadChat(chatId, contact) {
         if (!chatId || !currentUserID) return;
         
         // Store the current chat ID for validation later
@@ -1088,10 +1098,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Update current chat ID and contact
         currentChatId = chatId;
+        window.currentChatId = chatId; // Make it available to chat details functions
         currentContact = contact;
         
         // Remove any existing event listeners to prevent memory leaks
         cleanupChatListeners();
+        
+        // Restore chat UI elements (show header and input)
+        restoreChatUI();
         
         // Show loading state
         const messagesContainer = document.querySelector('.messages-container');
@@ -1122,6 +1136,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         
         // Now lazily load the messages
         loadChatMessages(chatId, requestedChatId);
+        
+        // Setup typing indicator
+        setupTypingIndicator(chatId, contact);
+        
+        // Update current contact status display
+        updateCurrentContactStatus(contact.isOnline);
+        
+        // Update chat details if they're open
+        const chatDetails = document.getElementById('chat-details');
+        if (chatDetails && chatDetails.classList.contains('active') && window.updateChatDetails) {
+            window.updateChatDetails();
+        }
     }
     
     // Clean up any existing listeners before loading a new chat
@@ -1161,6 +1187,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Clear the message tracking set when loading a new chat
         window.renderedMessageIds.clear();
         
+        // Clean up any existing chat details listeners
+        if (window.cleanupChatDetailsListeners) {
+            window.cleanupChatDetailsListeners();
+        }
+        
         const messagesContainer = document.querySelector('.messages-container');
         
         try {
@@ -1188,7 +1219,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 messagesContainer.innerHTML = `
                     <div class="empty-messages">
                         <div class="empty-icon">
-                            <i class="fas fa-comments"></i>
+                            <i class="material-symbols-rounded" style="font-variation-settings: 'FILL' 1;">chat</i>
                         </div>
                         <p>No messages yet</p>
                         <p class="empty-subtitle">Start the conversation!</p>
@@ -1541,6 +1572,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // Then open this one if it wasn't already open
                 if (!isCurrentlyShown) {
                     actionMenu.classList.add('show');
+                    
+                    // Determine if the menu should appear above or below based on position
+                    const messageRect = messageDiv.getBoundingClientRect();
+                    const viewportHeight = window.innerHeight;
+                    const messageBottom = messageRect.bottom;
+                    const spaceBelow = viewportHeight - messageBottom;
+                    
+                    // If there's not enough space below (less than 150px), show menu above
+                    if (spaceBelow < 150) {
+                        actionMenu.classList.add('position-above');
+                    } else {
+                        actionMenu.classList.remove('position-above');
+                    }
                 }
             });
             
@@ -1745,6 +1789,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!newText.trim()) return;
         
         try {
+            // Get original message data before updating
+            const messageDoc = await firebase.firestore()
+                .collection('chats')
+                .doc(currentChatId)
+                .collection('messages')
+                .doc(messageId)
+                .get();
+            
+            if (!messageDoc.exists) {
+                console.error('Message not found');
+                return;
+            }
+            
+            // Save original message data for potential undo
+            lastEditedMessage = messageDoc.data();
+            lastEditedMessageId = messageId;
+            lastEditedOriginalText = lastEditedMessage.text;
+            
             await firebase.firestore()
                 .collection('chats')
                 .doc(currentChatId)
@@ -1791,6 +1853,54 @@ document.addEventListener('DOMContentLoaded', async () => {
                     });
             }
             
+            // Show success toast with undo option
+            showToast('Message edited', 'success', true, async () => {
+                // Restore the original message if undo is clicked
+                try {
+                    // Update message back to original in Firestore
+                    await firebase.firestore()
+                        .collection('chats')
+                        .doc(currentChatId)
+                        .collection('messages')
+                        .doc(lastEditedMessageId)
+                        .update({
+                            text: lastEditedOriginalText,
+                            edited: lastEditedMessage.edited || false,
+                            editedAt: lastEditedMessage.editedAt || null
+                        });
+                    
+                    // Update UI to show original message
+                    const messageElement = document.getElementById(`message-${lastEditedMessageId}`);
+                    if (messageElement) {
+                        const messageParagraph = messageElement.querySelector('p');
+                        messageParagraph.textContent = lastEditedOriginalText;
+                        
+                        // Remove edited tag if it was added by this edit
+                        if (!lastEditedMessage.edited) {
+                            const editedSpan = messageElement.querySelector('.message-edited');
+                            if (editedSpan) {
+                                editedSpan.remove();
+                            }
+                        }
+                    }
+                    
+                    // Update chat preview if needed
+                    if (chatData.lastMessageSender === currentUserID) {
+                        await firebase.firestore()
+                            .collection('chats')
+                            .doc(currentChatId)
+                            .update({
+                                lastMessage: lastEditedOriginalText
+                            });
+                    }
+                    
+                    showToast('Edit undone', 'success');
+                } catch (error) {
+                    console.error('Error undoing edit:', error);
+                    showToast('Failed to undo edit', 'error');
+                }
+            });
+            
         } catch (error) {
             console.error('Error editing message:', error);
             showToast('Failed to edit message. Please try again.', 'error');
@@ -1802,11 +1912,35 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!currentChatId || !messageId) return;
         
         try {
+            // Get message data before deleting
+            const messageDoc = await firebase.firestore()
+                .collection('chats')
+                .doc(currentChatId)
+                .collection('messages')
+                .doc(messageId)
+                .get();
+            
+            if (!messageDoc.exists) {
+                console.error('Message not found');
+                return;
+            }
+            
+            // Save message data for potential undo
+            lastDeletedMessage = messageDoc.data();
+            lastDeletedMessageId = messageId;
+            
             // Add loading state to the message
             const messageElement = document.getElementById(`message-${messageId}`);
             if (messageElement) {
                 messageElement.classList.add('deleting');
                 messageElement.querySelector('.message-content').style.opacity = '0.5';
+                
+                // Clone the element for undo functionality
+                lastDeletedMessageElement = messageElement.cloneNode(true);
+                const parentElement = messageElement.parentNode;
+                const nextElement = messageElement.nextElementSibling;
+                lastDeletedMessageElement._parentElement = parentElement;
+                lastDeletedMessageElement._nextElement = nextElement;
             }
             
             // Delete the message from Firestore
@@ -1856,8 +1990,56 @@ document.addEventListener('DOMContentLoaded', async () => {
                     });
             }
             
-            // Show success toast
-            showToast('Message deleted successfully', 'success');
+            // Always show toast with undo option for every deletion
+            showToast('Message deleted', 'success', true, async () => {
+                // Restore the message if undo is clicked
+                try {
+                    // Add message back to Firestore
+                    await firebase.firestore()
+                        .collection('chats')
+                        .doc(currentChatId)
+                        .collection('messages')
+                        .doc(lastDeletedMessageId)
+                        .set(lastDeletedMessage);
+                    
+                    // Restore message in UI
+                    if (lastDeletedMessageElement) {
+                        lastDeletedMessageElement.classList.remove('deleting');
+                        const messageContent = lastDeletedMessageElement.querySelector('.message-content');
+                        if (messageContent) {
+                            messageContent.style.opacity = '1';
+                        }
+                        
+                        if (lastDeletedMessageElement._parentElement) {
+                            if (lastDeletedMessageElement._nextElement) {
+                                lastDeletedMessageElement._parentElement.insertBefore(
+                                    lastDeletedMessageElement, 
+                                    lastDeletedMessageElement._nextElement
+                                );
+                            } else {
+                                lastDeletedMessageElement._parentElement.appendChild(lastDeletedMessageElement);
+                            }
+                        }
+                    }
+                    
+                    // Update chat preview if needed
+                    if (lastDeletedMessage.senderId === currentUserID) {
+                        await firebase.firestore()
+                            .collection('chats')
+                            .doc(currentChatId)
+                            .update({
+                                lastMessage: lastDeletedMessage.text,
+                                lastMessageTime: lastDeletedMessage.timestamp,
+                                lastMessageSender: lastDeletedMessage.senderId
+                            });
+                    }
+                    
+                    showToast('Message restored', 'success');
+                } catch (error) {
+                    console.error('Error restoring message:', error);
+                    showToast('Failed to restore message', 'error');
+                }
+            });
             
         } catch (error) {
             console.error('Error deleting message:', error);
@@ -1875,26 +2057,258 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     
     // Show a toast message
-    function showToast(message, type = 'error') {
-        // Create toast element if it doesn't exist
-        let toast = document.querySelector('.toast-message');
-        if (!toast) {
-            toast = document.createElement('div');
-            toast.className = 'toast-message';
-            document.body.appendChild(toast);
+    function showToast(message, type = 'error', showUndo = false, undoCallback = null) {
+        // Clear any existing toast timeout
+        if (toastTimeout) {
+            clearTimeout(toastTimeout);
         }
         
-        // Set toast content and type
-        toast.textContent = message;
-        toast.className = `toast-message ${type}`;
+        // First remove any existing toast
+        const existingToast = document.querySelector('.whatsapp-toast');
+        if (existingToast) {
+            existingToast.remove();
+        }
         
-        // Show the toast
-        toast.classList.add('show');
+        // Get references to key elements
+        const messageInputContainer = document.querySelector('.message-input-container');
+        const messagesContainer = document.querySelector('.messages-container');
         
-        // Hide after 3 seconds
+        // Create toast container if it doesn't exist or make sure it's visible
+        let toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container';
+            
+            // Find the parent element that contains both the messages container and input container
+            if (messageInputContainer && messageInputContainer.parentNode) {
+                const parent = messageInputContainer.parentNode;
+                
+                // Insert the toast container before the input container
+                parent.insertBefore(toastContainer, messageInputContainer);
+            }
+        } else {
+            // Ensure the container is visible
+            toastContainer.style.display = 'flex';
+        }
+        
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = 'whatsapp-toast';
+        toastContainer.appendChild(toast);
+
+        // Add icon based on type
+        const iconElement = document.createElement('div');
+        iconElement.className = 'toast-icon';
+        let iconName = 'info';
+        if (type === 'success') {
+            iconName = 'check_circle';
+        } else if (type === 'error') {
+            iconName = 'error';
+        } else if (type === 'warning') {
+            iconName = 'warning';
+        }
+        iconElement.innerHTML = `<span class="material-symbols-rounded">${iconName}</span>`;
+        toast.appendChild(iconElement);
+        
+        // Add styles if they don't exist yet
+        if (!document.querySelector('#whatsapp-toast-styles')) {
+            const styleElement = document.createElement('style');
+            styleElement.id = 'whatsapp-toast-styles';
+            styleElement.textContent = `
+                .toast-container {
+                    width: 100%;
+                    position: relative;
+                    padding: 0 16px;
+                    box-sizing: border-box;
+                    display: flex;
+                    justify-content: center;
+                    margin-bottom: 8px;
+                    background: transparent;
+                    pointer-events: none; /* Allow clicks to pass through when no toast */
+                }
+                
+                .toast-container:empty {
+                    display: none;
+                }
+                
+                .whatsapp-toast {
+                    position: relative;
+                    width: 100%;
+                    max-width: 500px;
+                    background-color: var(--bg-light);
+                    color: var(--text-primary);
+                    padding: 12px 16px;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+                    display: flex;
+                    justify-content: flex-start;
+                    align-items: center;
+                    z-index: 100;
+                    opacity: 0;
+                    transform: translateY(20px);
+                    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+                    pointer-events: auto; /* Re-enable clicks for the toast */
+                }
+                
+                .dark-mode .whatsapp-toast {
+                    background-color: var(--bg-dark-secondary);
+                    color: var(--text-light);
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+                }
+                
+                .toast-icon {
+                    margin-right: 12px;
+                    display: flex;
+                    align-items: center;
+                }
+                
+                .toast-icon .material-symbols-rounded {
+                    font-size: 20px;
+                }
+                
+                .whatsapp-toast.success .toast-icon {
+                    color: #4CAF50;
+                }
+                
+                .whatsapp-toast.error .toast-icon {
+                    color: #F44336;
+                }
+                
+                .whatsapp-toast.warning .toast-icon {
+                    color: #FFC107;
+                }
+                
+                .whatsapp-toast.info .toast-icon {
+                    color: #2196F3;
+                }
+                
+                .whatsapp-toast.show {
+                    transform: translateY(0);
+                    opacity: 1;
+                }
+                
+                .whatsapp-toast .undo-button {
+                    background: none;
+                    border: none;
+                    color: var(--primary-blue);
+                    font-weight: bold;
+                    cursor: pointer;
+                    padding: 0 8px;
+                    text-transform: uppercase;
+                    white-space: nowrap;
+                    margin-left: 12px;
+                }
+                
+                .whatsapp-toast .undo-button:hover {
+                    text-decoration: underline;
+                }
+                
+                .whatsapp-toast .close-button {
+                    background: none;
+                    border: none;
+                    color: var(--text-secondary);
+                    cursor: pointer;
+                    margin-left: 8px;
+                    opacity: 0.7;
+                    transition: opacity 0.2s;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 4px;
+                }
+                
+                .whatsapp-toast .close-button:hover {
+                    opacity: 1;
+                }
+                
+                .whatsapp-toast .close-button .material-symbols-rounded {
+                    font-size: 18px;
+                }
+                
+                /* Make sure the message text can wrap if needed */
+                .whatsapp-toast .message-text {
+                    flex: 1;
+                    white-space: normal;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+                
+                /* Mobile optimizations */
+                @media (max-width: 768px) {
+                    .toast-container {
+                        padding: 0 8px;
+                    }
+                    
+                    .whatsapp-toast {
+                        max-width: 100%;
+                    }
+                }
+            `;
+            document.head.appendChild(styleElement);
+        }
+        
+        // Create message text element
+        const messageText = document.createElement('div');
+        messageText.className = 'message-text';
+        messageText.textContent = message;
+        toast.appendChild(messageText);
+        
+        // Add undo button if needed
+        if (showUndo && undoCallback) {
+            const undoButton = document.createElement('button');
+            undoButton.className = 'undo-button';
+            undoButton.textContent = 'UNDO';
+            undoButton.addEventListener('click', () => {
+                undoCallback();
+                dismissToast(toast);
+            });
+            toast.appendChild(undoButton);
+        }
+        
+        // Add close button
+        const closeButton = document.createElement('button');
+        closeButton.className = 'close-button';
+        closeButton.innerHTML = '<span class="material-symbols-rounded">close</span>';
+        closeButton.setAttribute('aria-label', 'Close');
+        closeButton.addEventListener('click', () => {
+            dismissToast(toast);
+        });
+        toast.appendChild(closeButton);
+        
+        // Helper function to dismiss toast
+        function dismissToast(toastElement) {
+            if (toastTimeout) {
+                clearTimeout(toastTimeout);
+                toastTimeout = null;
+            }
+            
+            toastElement.classList.remove('show');
+            
         setTimeout(() => {
-            toast.classList.remove('show');
-        }, 3000);
+                if (toastElement && toastElement.parentNode) {
+                    toastElement.remove();
+                }
+            }, 300);
+        }
+        
+        // Set toast type (default to 'info' if type is not recognized)
+        if (!['success', 'error', 'warning'].includes(type)) {
+            type = 'info';
+        }
+        toast.className = `whatsapp-toast ${type}`;
+        
+        // Show the toast with a slight delay for animation effect
+        setTimeout(() => {
+            toast.classList.add('show');
+        }, 10);
+        
+        // Hide after 5 seconds
+        toastTimeout = setTimeout(() => {
+            dismissToast(toast);
+        }, 5000);
+        
+        // Return the toast for potential reference
+        return toast;
     }
     
     // Mark messages as read
@@ -2051,6 +2465,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function sendMessage(text) {
         if (!text.trim()) return;
         
+        // Get emoji picker reference
+        const emojiPicker = document.getElementById('emoji-picker');
+        const wasEmojiPickerOpen = emojiPicker && emojiPicker.classList.contains('active');
+        
         // If we're in edit mode, update the existing message
         if (isEditingMessage && editingMessageId) {
             await saveEditedMessage(editingMessageId, text);
@@ -2103,6 +2521,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             // Clear input immediately for better UX
             messageInput.value = '';
+            
+            // If emoji picker was open, reposition it after clearing input
+            if (wasEmojiPickerOpen && typeof positionEmojiPicker === 'function') {
+                setTimeout(positionEmojiPicker, 50);
+            }
             
             // Update contact preview immediately
             updateContactPreview(currentChatId, text, true);
@@ -2327,58 +2750,71 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Add click handlers to the existing contacts in the HTML
     function addContactClickHandlers() {
-        const contacts = document.querySelectorAll('.contact-item');
+        const contactsList = document.querySelector('.contacts-list');
         
-        contacts.forEach(contactItem => {
-            // Skip if we already added a handler (check for data attribute)
-            if (contactItem.dataset.hasClickHandler === 'true') return;
-            
-            // Mark as having a handler to avoid duplicates
-            contactItem.dataset.hasClickHandler = 'true';
-            
-            contactItem.addEventListener('click', () => {
-                // Get chat ID and contact info from data attributes
+        if (contactsList) {
+            contactsList.addEventListener('click', async (e) => {
+                const contactItem = e.target.closest('.contact-item');
+                
+                if (!contactItem || !contactItem.dataset.chatId) return;
+                
                 const chatId = contactItem.dataset.chatId;
-                if (!chatId) return;
+                const contactName = contactItem.querySelector('.contact-name')?.textContent || 'User';
+                const contactStatus = contactItem.querySelector('.status-indicator')?.classList.contains('online') ? 'online' : 'offline';
+                const contactAvatar = contactItem.querySelector('.contact-avatar img')?.src || '';
                 
-                // Get contact details
-                const contactName = contactItem.querySelector('.contact-name').textContent;
-                const contactStatus = contactItem.dataset.status || 'offline';
-                const contactId = contactItem.dataset.userId;
-                let contactPhoto = null;
-                
-                // Try to get photo from image if it exists
-                const avatarImg = contactItem.querySelector('.contact-avatar img');
-                if (avatarImg && avatarImg.src) {
-                    contactPhoto = avatarImg.src;
-                }
-                                            
-                                            // Create contact object
-                                            const contact = {
-                    id: contactId,
-                    name: contactName,
-                    status: contactStatus,
-                    photoURL: contactPhoto
-                };
-                
-                // Remove active class from all contacts
-                document.querySelectorAll('.contact-item').forEach(item => 
-                    item.classList.remove('active')
-                );
-                
-                // Add active class to clicked contact
+                // Mark the selected contact as active
+                document.querySelectorAll('.contact-item').forEach(el => el.classList.remove('active'));
                 contactItem.classList.add('active');
                 
-                // Remove unread badge when clicking on contact
+                // Remove unread count
                 const unreadBadge = contactItem.querySelector('.unread-count');
                 if (unreadBadge) {
-                    unreadBadge.remove();
+                    unreadBadge.style.display = 'none';
+                }
+                
+                // Update the preview message (mark as read visually)
+                const previewElement = contactItem.querySelector('.contact-preview p');
+                if (previewElement) {
+                    previewElement.style.fontWeight = 'normal';
+                    previewElement.style.color = ''; // Reset to CSS default
+                }
+                
+                // Create a contact object to pass to loadChat
+                const contact = {
+                    name: contactName,
+                    isOnline: contactStatus === 'online',
+                    photoURL: contactAvatar,
+                    chatId: chatId
+                };
+                
+                // Get the other user's ID from the chat data
+                try {
+                    const chatDoc = await firebase.firestore().collection('chats').doc(chatId).get();
+                    const chatData = chatDoc.data();
+                    
+                    if (chatData && chatData.participants) {
+                        const otherUserId = chatData.participants.find(id => id !== currentUserID);
+                        if (otherUserId) {
+                            contact.userId = otherUserId;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error getting chat data:', error);
                 }
                 
                 // Load the chat
                 loadChat(chatId, contact);
+                
+                // Open chat details panel on desktop view automatically
+                if (window.innerWidth > 992 && window.openChatDetails) {
+                    // Use setTimeout to ensure DOM update sequence is complete
+                    setTimeout(() => {
+                        window.openChatDetails();
+                    }, 300);
+                }
             });
-        });
+        }
     }
 
     // Show empty state for messages when no chat is selected
@@ -2386,62 +2822,122 @@ document.addEventListener('DOMContentLoaded', async () => {
         const messagesSection = document.getElementById('messages-section');
         const messagesContainer = messagesSection.querySelector('.messages-container');
         const chatHeader = messagesSection.querySelector('.chat-header');
+        const messageInputContainer = messagesSection.querySelector('.message-input-container');
+        
+        // Hide chat header and message input container
+        chatHeader.style.display = 'none';
+        messageInputContainer.style.display = 'none';
         
         // Clear current messages
         messagesContainer.innerHTML = '';
         
-        // Reset header
-        chatHeader.querySelector('.contact-details h3').textContent = '';
-        chatHeader.querySelector('.contact-details p').textContent = '';
-        chatHeader.querySelector('.contact-avatar img').style.display = 'none';
-        
-        // Add empty state message
-        const emptyState = document.createElement('div');
-        emptyState.className = 'empty-state';
-        emptyState.innerHTML = `
-            <div class="empty-icon">
-                <i class="fas fa-comments"></i>
+        // Add professional empty state with minimal design
+        messagesContainer.innerHTML = `
+            <div class="empty-chat-container">
+                <span class="material-symbols-rounded" style="font-size: 48px; margin-bottom: 20px; color: #d1d5db;">chat</span>
+                <h4>No Conversation Selected</h4>
+                <button class="start-chat-button">Start a conversation</button>
             </div>
-            <h3>No conversation selected</h3>
-            <p>Choose a conversation from the list or start a new chat</p>
         `;
-        messagesContainer.appendChild(emptyState);
+        
+        // Add event listener to the new conversation button
+        const startChatButton = messagesContainer.querySelector('.start-chat-button');
+        if (startChatButton) {
+            startChatButton.addEventListener('click', () => {
+                const newChatBtn = document.querySelector('.new-chat-btn');
+                if (newChatBtn) {
+                    newChatBtn.click();
+                }
+            });
+        }
         
         // Add styles for empty state if not already added
         if (!document.getElementById('empty-state-styles')) {
             const styleTag = document.createElement('style');
             styleTag.id = 'empty-state-styles';
             styleTag.textContent = `
-                .empty-state {
+                .empty-chat-container {
                     display: flex;
                     flex-direction: column;
                     align-items: center;
                     justify-content: center;
                     height: 100%;
-                    padding: 20px;
-                    text-align: center;
-                    color: var(--text-secondary);
+                    background-color: var(--bg-light);
                 }
                 
-                .empty-icon {
-                    font-size: 60px;
-                    margin-bottom: 20px;
-                    color: var(--bg-tertiary);
+                body.dark-mode .empty-chat-container {
+                    background-color: var(--bg-dark);
                 }
                 
-                .empty-state h3 {
-                    margin: 0 0 10px;
-                    font-size: 20px;
-                    color: var(--text-primary);
+                body.dark-mode .empty-chat-container .material-symbols-rounded {
+                    color: #4b5563;
                 }
                 
-                .empty-state p {
-                    margin: 0;
-                    font-size: 14px;
+                .empty-chat-container h4 {
+                    font-size: 15px;
+                    font-weight: 500;
+                    margin: 0 0 24px 0;
+                    color: #6b7280;
+                    letter-spacing: 0.3px;
+                }
+                
+                body.dark-mode .empty-chat-container h4 {
+                    color: #9ca3af;
+                }
+                
+                .start-chat-button {
+                    background-color: transparent;
+                    color: var(--primary-blue);
+                    border: 1px solid var(--primary-blue);
+                    border-radius: 4px;
+                    padding: 8px 16px;
+                    font-size: 13px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                }
+                
+                body.dark-mode .start-chat-button {
+                    color: var(--primary-green);
+                    border-color: var(--primary-green);
+                }
+                
+                .start-chat-button:hover {
+                    background-color: rgba(37, 99, 235, 0.05);
+                }
+                
+                body.dark-mode .start-chat-button:hover {
+                    background-color: rgba(16, 185, 129, 0.05);
+                }
+                
+                @media (max-width: 768px) {
+                    .empty-chat-container .material-symbols-rounded {
+                        font-size: 36px;
+                    }
+                    
+                    .empty-chat-container h4 {
+                        font-size: 14px;
+                    }
+                    
+                    .start-chat-button {
+                        font-size: 12px;
+                        padding: 7px 14px;
+                    }
                 }
             `;
             document.head.appendChild(styleTag);
         }
+    }
+
+    // Function to restore the chat UI when a chat is selected
+    function restoreChatUI() {
+        const messagesSection = document.getElementById('messages-section');
+        const chatHeader = messagesSection.querySelector('.chat-header');
+        const messageInputContainer = messagesSection.querySelector('.message-input-container');
+        
+        // Show chat header and message input container
+        chatHeader.style.display = 'flex';
+        messageInputContainer.style.display = 'flex';
     }
 
     // Set up back button for mobile view
@@ -2836,6 +3332,9 @@ service cloud.firestore {
         // Set up the new chat button
         setupNewChatButton();
         
+        // Show the empty state UI initially
+        showEmptyMessagesState();
+        
         // Check for URL parameters to load a specific chat
         const urlParams = new URLSearchParams(window.location.search);
         const chatId = urlParams.get('chatId');
@@ -2882,6 +3381,9 @@ service cloud.firestore {
                 }
             }
         });
+        
+        // Initialize sidebar functionality
+        initializeSidebarTabs();
     }
     
     // ... rest of existing code ...
@@ -3930,4 +4432,104 @@ service cloud.firestore {
             }
         }
     }
+
+    // Initialize the sidebar tabs functionality
+    function initializeSidebarTabs() {
+        const sidebarIcons = document.querySelectorAll('.sidebar-icon');
+        
+        // Initialize sidebar avatar
+        initializeSidebarAvatar();
+        
+        sidebarIcons.forEach(icon => {
+            icon.addEventListener('click', () => {
+                const tab = icon.getAttribute('data-tab');
+                
+                // Don't change active state for the profile icon
+                if (tab !== 'profile') {
+                    // Remove active class from all icons except profile
+                    sidebarIcons.forEach(i => {
+                        if (i.getAttribute('data-tab') !== 'profile') {
+                            i.classList.remove('active');
+                        }
+                    });
+                    
+                    // Add active class to clicked icon
+                    icon.classList.add('active');
+                }
+                
+                // Handle different tab actions
+                switch(tab) {
+                    case 'chats':
+                        // Default view, do nothing special
+                        break;
+                    case 'add':
+                        // Open new chat modal
+                        const newChatBtn = document.querySelector('.new-chat-btn');
+                        if (newChatBtn) {
+                            newChatBtn.click();
+                        }
+                        break;
+                    case 'blocked':
+                        // Show blocked users (placeholder)
+                        showToast('Blocked contacts feature coming soon', 'info');
+                        break;
+                    case 'archived':
+                        // Show archived chats (placeholder)
+                        showToast('Archived chats feature coming soon', 'info');
+                        break;
+                    case 'profile':
+                        // Navigate to profile page
+                        window.location.href = '../profile/profile.html';
+                        break;
+                }
+            });
+        });
+    }
+
+    // Initialize the sidebar avatar with user info
+    function initializeSidebarAvatar() {
+        const sidebarAvatar = document.getElementById('avatar-initials-sidebar');
+        if (!sidebarAvatar) return;
+        
+        const currentUser = firebase.auth().currentUser;
+        
+        if (currentUser) {
+            if (currentUser.photoURL) {
+                // Create and set image if user has profile photo
+                const avatarContainer = document.getElementById('sidebar-avatar');
+                
+                // Clear existing content first
+                avatarContainer.innerHTML = '';
+                
+                // Create the image element
+                const img = document.createElement('img');
+                img.src = currentUser.photoURL;
+                img.alt = "Profile photo";
+                img.style.width = '100%';
+                img.style.height = '100%';
+                img.style.objectFit = 'cover';
+                
+                // Append to container directly
+                avatarContainer.appendChild(img);
+            } else {
+                // Set initials if no profile photo
+                let initials = 'U';
+                if (currentUser.displayName) {
+                    const nameParts = currentUser.displayName.split(' ');
+                    if (nameParts.length > 1) {
+                        initials = `${nameParts[0].charAt(0)}${nameParts[1].charAt(0)}`;
+                    } else {
+                        initials = nameParts[0].charAt(0);
+                    }
+                } else if (currentUser.email) {
+                    initials = currentUser.email.charAt(0).toUpperCase();
+                }
+                sidebarAvatar.textContent = initials;
+            }
+        } else {
+            // Default for not logged in
+            sidebarAvatar.textContent = 'G';
+        }
+    }
 });
+

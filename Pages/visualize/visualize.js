@@ -245,11 +245,6 @@ onAuthStateChanged(auth, (user) => {
                 Saved Jobs
                 <span class="badge">0</span>
             </a>
-            <a href="../notifications/notifications.html">
-                <i class="fas fa-bell"></i>
-                Notifications
-                <span class="badge active">0</span>
-            </a>
             <a href="../chats/chats.html">
                 <i class="fas fa-comments"></i>
                 Chats
@@ -368,23 +363,12 @@ function createRequirementsList(requirements) {
 
 // Function to show loading state
 function showLoading() {
-    const loadingHTML = `
-        <div class="loading-container">
-            <div id="lottie-loading"></div>
-            <p>Loading job details...</p>
-        </div>
-    `;
+    // Set the loading container to show skeleton loaders
     document.querySelector('.job-details-content').style.display = 'none';
-    document.querySelector('.job-details-container').innerHTML = loadingHTML;
-
-    // Initialize Lottie animation
-    lottie.loadAnimation({
-        container: document.getElementById('lottie-loading'),
-        renderer: 'svg',
-        loop: true,
-        autoplay: true,
-        path: 'https://lottie.host/0a32af61-c5c3-4557-9fdd-a4f789d88a1b/QpRxAkRZEi.json'
-    });
+    
+    // Make sure loading container is visible
+    const loadingContainer = document.querySelector('.loading-container');
+    loadingContainer.style.display = 'block';
 }
 
 // Variable to store if job is saved
@@ -570,12 +554,25 @@ function displayJobDetails(job) {
         `;
 
         // Add creator info if available
-        if (job.createdBy) {
-            const postedBy = document.createElement('p');
-            postedBy.className = 'posted-by';
-            postedBy.innerHTML = `Posted by: ${job.createdBy.displayName || 'Anonymous'}`;
-            mainContent.appendChild(postedBy);
+        if (job.createdBy && job.createdBy.uid) {
+            // First add basic creator info
+            addCreatorInfoToPage(job.createdBy);
+            
+            // Then try to fetch the latest profile data for this user
+            fetchUserProfileData(job.createdBy.uid)
+                .then(userProfile => {
+                    if (userProfile && userProfile.photoURL) {
+                        // Update the avatar with the latest photo
+                        updateCreatorAvatar(userProfile);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching user profile:', error);
+                });
         }
+
+        // Fetch and display similar jobs
+        fetchSimilarJobs(job);
 
         console.log('Job details displayed successfully');
     } catch (error) {
@@ -584,46 +581,152 @@ function displayJobDetails(job) {
     }
 }
 
+// Function to add creator info to the page
+function addCreatorInfoToPage(creatorData) {
+    console.log('Adding creator info to page:', creatorData);
+    
+    const mainContent = document.querySelector('.main-content');
+    const postedBy = document.createElement('div');
+    postedBy.className = 'posted-by';
+    postedBy.id = 'posted-by-container';
+    
+    // Create a link to the user's profile
+    const userLink = document.createElement('a');
+    userLink.href = `../profile/profile.html?id=${creatorData.uid}`;
+    userLink.className = 'user-link';
+    
+    // Add user avatar
+    const userAvatar = document.createElement('div');
+    userAvatar.className = 'user-avatar';
+    userAvatar.id = 'creator-avatar';
+    
+    // Check different possible locations for the photo URL
+    const userPhotoURL = creatorData.photoURL || 
+                         creatorData.photoUrl || 
+                         (creatorData.user && creatorData.user.photoURL) ||
+                         null;
+    
+    if (userPhotoURL) {
+        // If user has a profile picture, use it
+        const avatarImg = document.createElement('img');
+        avatarImg.src = userPhotoURL;
+        avatarImg.alt = `${creatorData.displayName || 'User'}'s avatar`;
+        avatarImg.className = 'avatar-image';
+        avatarImg.style.display = 'block'; // Ensure image is displayed
+        userAvatar.appendChild(avatarImg);
+    } else {
+        // Otherwise, display initials or icon
+        const avatarInitials = document.createElement('div');
+        avatarInitials.className = 'avatar-initials';
+        avatarInitials.id = 'creator-initials';
+        
+        if (creatorData.displayName) {
+            // Get initials from display name
+            const initials = creatorData.displayName
+                .split(' ')
+                .map(name => name[0])
+                .join('')
+                .toUpperCase()
+                .substring(0, 2);
+            avatarInitials.textContent = initials;
+        } else {
+            // Use default user icon if no display name
+            avatarInitials.innerHTML = '<i class="fa-solid fa-circle-user"></i>';
+        }
+        
+        userAvatar.appendChild(avatarInitials);
+    }
+    
+    // Add user name
+    const userName = document.createElement('span');
+    userName.textContent = creatorData.displayName || 'Anonymous';
+    
+    // Assemble the components
+    userLink.appendChild(userAvatar);
+    userLink.appendChild(userName);
+    postedBy.appendChild(document.createTextNode('Posted by: '));
+    postedBy.appendChild(userLink);
+    
+    mainContent.appendChild(postedBy);
+}
+
+// Function to update the creator's avatar with latest data
+function updateCreatorAvatar(userProfile) {
+    console.log('Updating creator avatar with latest data:', userProfile);
+    
+    if (!userProfile.photoURL) return;
+    
+    const creatorAvatar = document.getElementById('creator-avatar');
+    if (!creatorAvatar) return;
+    
+    // Clear existing content
+    creatorAvatar.innerHTML = '';
+    
+    // Add the updated avatar image
+    const avatarImg = document.createElement('img');
+    avatarImg.src = userProfile.photoURL;
+    avatarImg.alt = `${userProfile.displayName || 'User'}'s avatar`;
+    avatarImg.className = 'avatar-image';
+    avatarImg.style.display = 'block';
+    creatorAvatar.appendChild(avatarImg);
+}
+
+// Function to fetch the latest user profile data
+async function fetchUserProfileData(userId) {
+    try {
+        const userDoc = await getDoc(doc(db, "users", userId));
+        if (userDoc.exists()) {
+            return userDoc.data();
+        }
+        return null;
+    } catch (error) {
+        console.error('Error fetching user data:', error);
+        return null;
+    }
+}
+
 // Function to show error state
 function showError(message) {
     console.error('Showing error:', message);
+    
+    // Hide loading and job details containers
     const loadingContainer = document.querySelector('.loading-container');
+    loadingContainer.style.display = 'none';
+    
+    document.querySelector('.job-details-content').style.display = 'none';
+    
+    // Show the error container
+    const errorContainer = document.querySelector('.error');
+    errorContainer.style.display = 'flex';
+    
+    // Update error message
+    const errorMessage = errorContainer.querySelector('.error-message');
+    if (errorMessage) {
+        errorMessage.textContent = message || 'Error loading job details. Please try again later.';
+    }
     
     // Check if the error is about no job ID
     if (message === 'No job ID provided') {
-        // Create countdown element with redirection message
-        loadingContainer.innerHTML = `
-            <p class="error-message">${message}</p>
-            <p class="redirect-message">Redirecting to jobs page in <span id="countdown">3</span> seconds...</p>
-        `;
+        // Set a special message for this case
+        errorContainer.querySelector('.error-title').textContent = 'No Job Selected';
+        errorContainer.querySelector('.error-message').textContent = 'Please select a job to view its details.';
+        errorContainer.querySelector('.error-button').innerHTML = '<i class="fas fa-briefcase"></i> Browse Jobs';
+        errorContainer.querySelector('.error-button').onclick = function() {
+            window.location.href = '../jobs/jobs.html';
+        };
         
-        // Start countdown
+        // Start countdown for auto-redirect
         let countdown = 3;
-        const countdownElement = document.getElementById('countdown');
         
         const countdownInterval = setInterval(() => {
             countdown--;
-            countdownElement.textContent = countdown;
             
             if (countdown <= 0) {
                 clearInterval(countdownInterval);
                 // Redirect to jobs page
-                window.location.href = '../jobs/Jobs.html';
+                window.location.href = '../jobs/jobs.html';
             }
         }, 1000);
-    } else {
-        // For other errors, show the error animation
-        loadingContainer.innerHTML = `
-            <lottie-player 
-                src="https://lottie.host/58cd0d57-9c9c-4897-8a0f-e421585cf238/1Xk51HlxlI.json" 
-                background="transparent" 
-                speed="1" 
-                style="width: 200px; height: 200px;" 
-                loop 
-                autoplay>
-            </lottie-player>
-            <p class="error-message">${message}</p>
-        `;
     }
 }
 
@@ -786,3 +889,113 @@ async function toggleSaveJob(job) {
 }
 
 // Force refresh trigger
+
+// Function to fetch and display similar jobs
+async function fetchSimilarJobs(currentJob) {
+    try {
+        const similarJobsContainer = document.getElementById('similar-jobs');
+        
+        if (!similarJobsContainer) return;
+        
+        // Create a loading indicator
+        similarJobsContainer.innerHTML = `
+            <div class="loading-similar-jobs">
+                <i class="fas fa-spinner fa-spin"></i> Loading similar jobs...
+            </div>
+        `;
+        
+        // Extract skills and job type from current job
+        const jobType = currentJob.type;
+        const skills = currentJob.skills || [];
+        const currentJobId = currentJob.id;
+        
+        // Query the jobs collection for similar jobs
+        const jobsRef = collection(db, "jobs");
+        const jobsSnapshot = await getDocs(jobsRef);
+        
+        // Filter jobs on the client side
+        let similarJobs = [];
+        
+        jobsSnapshot.forEach(doc => {
+            const job = doc.data();
+            job.id = doc.id;
+            
+            // Skip the current job - ensure reliable comparison by checking both the ID and title/company
+            if (job.id === currentJobId || 
+               (job.title === currentJob.title && job.company === currentJob.company)) {
+                return;
+            }
+            
+            // Calculate a similarity score
+            let similarityScore = 0;
+            
+            // Add points for matching job type
+            if (job.type === jobType) {
+                similarityScore += 2;
+            }
+            
+            // Add points for matching skills
+            const jobSkills = job.skills || [];
+            for (const skill of jobSkills) {
+                if (skills.includes(skill)) {
+                    similarityScore += 1;
+                }
+            }
+            
+            // Add points for location match
+            if (job.location === currentJob.location) {
+                similarityScore += 1;
+            }
+            
+            // Only include jobs with some similarity
+            if (similarityScore > 0) {
+                job.similarityScore = similarityScore;
+                similarJobs.push(job);
+            }
+        });
+        
+        // Sort by similarity score (highest first)
+        similarJobs.sort((a, b) => b.similarityScore - a.similarityScore);
+        
+        // Limit to top 5 matches
+        similarJobs = similarJobs.slice(0, 5);
+        
+        // Display similar jobs or a message if none found
+        if (similarJobs.length > 0) {
+            // Create HTML for similar job cards
+            const jobCards = similarJobs.map(job => `
+                <a href="../visualize/visualize.html?id=${job.id}" class="similar-job-card">
+                    <div class="similar-job-info">
+                        <h4>${job.title}</h4>
+                        <p>${job.company} · ${job.location}</p>
+                        <div class="similar-job-tags">
+                            ${job.skills?.slice(0, 3).map(skill => `<span class="job-tag">${skill}</span>`).join('') || ''}
+                            ${job.skills?.length > 3 ? `<span class="job-tag">+${job.skills.length - 3} more</span>` : ''}
+                        </div>
+                    </div>
+                </a>
+            `).join('');
+            
+            similarJobsContainer.innerHTML = jobCards;
+        } else {
+            // Display a message when no similar jobs are found
+            similarJobsContainer.innerHTML = `
+                <div class="no-similar-jobs">
+                    <i class="fas fa-search"></i>
+                    <p>No similar jobs found at the moment. Check back later or expand your search criteria.</p>
+                </div>
+            `;
+        }
+    } catch (error) {
+        console.error('Error fetching similar jobs:', error);
+        const similarJobsContainer = document.getElementById('similar-jobs');
+        if (similarJobsContainer) {
+            similarJobsContainer.innerHTML = `
+                <div class="no-similar-jobs">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <p>Unable to load similar jobs. Please try again later.</p>
+                </div>
+            `;
+        }
+    }
+}

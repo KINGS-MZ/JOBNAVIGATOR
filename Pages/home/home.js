@@ -169,11 +169,6 @@ onAuthStateChanged(auth, async (user) => {
                     Saved Jobs
                     <span class="badge">4</span>
                 </a>
-                <a href="../notifications/notifications.html">
-                    <i class="fas fa-bell"></i>
-                    Notifications
-                    <span class="badge active">3</span>
-                </a>
                 <a href="../chats/chats.html">
                     <i class="fas fa-comments"></i>
                     Chats
@@ -253,26 +248,33 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeToggle = document.getElementById('theme-toggle');
     const html = document.documentElement;
     const body = document.body;
-    const icon = themeToggle.querySelector('i');
+    const moonIcon = themeToggle ? themeToggle.querySelector('.moon-icon') : null;
+    const sunIcon = themeToggle ? themeToggle.querySelector('.sun-icon') : null;
     
-    // Check for saved theme preference
-    const savedTheme = localStorage.getItem('theme');
-    if (savedTheme) {
-        html.classList.toggle('dark-mode', savedTheme === 'dark');
-        body.classList.toggle('dark-mode', savedTheme === 'dark');
-        icon.classList.toggle('fa-sun', savedTheme === 'dark');
-        icon.classList.toggle('fa-moon', savedTheme === 'light');
+    if (themeToggle && moonIcon && sunIcon) {
+        // Check for saved theme preference
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            html.classList.toggle('dark-mode', savedTheme === 'dark');
+            body.classList.toggle('dark-mode', savedTheme === 'dark');
+            
+            // Update visibility of icons
+            moonIcon.style.opacity = savedTheme === 'light' ? '1' : '0';
+            sunIcon.style.opacity = savedTheme === 'dark' ? '1' : '0';
+        }
+        
+        // Theme toggle click handler
+        themeToggle.addEventListener('click', () => {
+            html.classList.toggle('dark-mode');
+            body.classList.toggle('dark-mode');
+            const isDark = html.classList.contains('dark-mode');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            
+            // Update visibility of icons
+            moonIcon.style.opacity = isDark ? '0' : '1';
+            sunIcon.style.opacity = isDark ? '1' : '0';
+        });
     }
-    
-    // Theme toggle click handler
-    themeToggle.addEventListener('click', () => {
-        html.classList.toggle('dark-mode');
-        body.classList.toggle('dark-mode');
-        const isDark = html.classList.contains('dark-mode');
-        localStorage.setItem('theme', isDark ? 'dark' : 'light');
-        icon.classList.toggle('fa-sun', isDark);
-        icon.classList.toggle('fa-moon', !isDark);
-    });
 
     // Dropdown Menu
     const userMenuBtn = document.getElementById('user-menu-btn');
@@ -494,7 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Add authentication check for protected buttons in the floating menu
+    // Add authentication check for protected buttons in the floating menu (if they exist)
     const addPostBtn = document.querySelector('.menu-items .posts-btn');
     const settingsBtn = document.querySelector('.menu-items .settings-btn');
 
@@ -505,8 +507,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.location.href = '../posts/posts.html';
             }
         });
-    } else {
-        console.error('Add Post button not found');
     }
 
     if (settingsBtn) {
@@ -516,13 +516,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.location.href = '../settings/settings.html';
             }
         });
-    } else {
-        console.error('Settings button not found');
     }
-
-    // Add console log to debug button selection
-    console.log('Add Post button:', addPostBtn);
-    console.log('Settings button:', settingsBtn);
 
     // Add authentication check for bottom navigation protected items
     const bottomNavAddBtn = document.querySelector('.bottom-nav .bottom-nav-add');

@@ -309,32 +309,43 @@ function initializeNotifications() {
 
     // Theme Toggle
     const themeToggle = document.getElementById('theme-toggle');
-    const themeIcon = themeToggle.querySelector('i');
+    if (themeToggle) {
+        // Material Symbols icons are used instead of Font Awesome
+        const moonIcon = themeToggle.querySelector('.moon-icon');
+        const sunIcon = themeToggle.querySelector('.sun-icon');
 
-    // Initialize theme
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const storedTheme = localStorage.getItem('theme');
-    const isDark = storedTheme ? storedTheme === 'dark' : prefersDark;
+        // Initialize theme
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const storedTheme = localStorage.getItem('theme');
+        const isDark = storedTheme ? storedTheme === 'dark' : prefersDark;
 
-    if (isDark) {
-        document.documentElement.classList.add('dark-mode');
-        document.body.classList.add('dark-mode');
-        themeIcon.className = 'fas fa-sun';
+        if (isDark) {
+            document.documentElement.classList.add('dark-mode');
+            document.body.classList.add('dark-mode');
+            // Toggle visibility of icons for dark mode
+            if (moonIcon && sunIcon) {
+                moonIcon.style.opacity = '0';
+                sunIcon.style.opacity = '1';
+            }
+        }
+
+        function toggleTheme() {
+            document.documentElement.classList.toggle('dark-mode');
+            document.body.classList.toggle('dark-mode');
+            const isDark = document.body.classList.contains('dark-mode');
+            
+            // Toggle visibility of icons based on theme
+            if (moonIcon && sunIcon) {
+                moonIcon.style.opacity = isDark ? '0' : '1';
+                sunIcon.style.opacity = isDark ? '1' : '0';
+            }
+            
+            // Save preference
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        }
+
+        themeToggle.addEventListener('click', toggleTheme);
     }
-
-    function toggleTheme() {
-        document.documentElement.classList.toggle('dark-mode');
-        document.body.classList.toggle('dark-mode');
-        const isDark = document.body.classList.contains('dark-mode');
-        
-        // Update icon
-        themeIcon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
-        
-        // Save preference
-        localStorage.setItem('theme', isDark ? 'dark' : 'light');
-    }
-
-    themeToggle.addEventListener('click', toggleTheme);
 
     // Dropdown Menu
     const userMenuBtn = document.getElementById('user-menu-btn');

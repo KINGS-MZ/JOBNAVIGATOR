@@ -19,7 +19,6 @@ import { arrayUnion, arrayRemove } from 'https://www.gstatic.com/firebasejs/9.22
 const usersList = document.getElementById('users-list');
 const userSearch = document.getElementById('user-search');
 const emptyState = document.getElementById('empty-state');
-const loadingSpinner = document.getElementById('loading-spinner');
 const filterButtons = document.querySelectorAll('.filter-btn');
 
 // Current user ID
@@ -57,18 +56,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Let's add the theme toggle icon switch functionality
     const themeToggle = document.getElementById('theme-toggle');
-    const moonIcon = document.getElementById('moon-icon');
-    const sunIcon = document.getElementById('sun-icon');
+    const moonIcon = themeToggle ? themeToggle.querySelector('.moon-icon') : null;
+    const sunIcon = themeToggle ? themeToggle.querySelector('.sun-icon') : null;
 
     // Set initial icon state based on current theme
     function updateThemeIcons() {
+        if (!moonIcon || !sunIcon) return;
+        
         const isDarkMode = document.body.classList.contains('dark-mode');
         if (isDarkMode) {
-            moonIcon.style.display = 'none';
-            sunIcon.style.display = 'block';
+            moonIcon.style.opacity = '0';
+            sunIcon.style.opacity = '1';
         } else {
-            moonIcon.style.display = 'block';
-            sunIcon.style.display = 'none';
+            moonIcon.style.opacity = '1';
+            sunIcon.style.opacity = '0';
         }
     }
 
@@ -76,10 +77,12 @@ document.addEventListener('DOMContentLoaded', () => {
     updateThemeIcons();
 
     // Update when theme changes
-    themeToggle.addEventListener('click', () => {
-        // Wait a moment for the dark-mode class to be applied/removed
-        setTimeout(updateThemeIcons, 50);
-    });
+    if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+            // Wait a moment for the dark-mode class to be applied/removed
+            setTimeout(updateThemeIcons, 50);
+        });
+    }
 });
 
 // Setup event listeners
@@ -95,6 +98,14 @@ function setupEventListeners() {
             applyFilter(filter);
         });
     });
+    
+    // Notification button
+    const notificationsBtn = document.getElementById('notifications-btn');
+    if (notificationsBtn) {
+        notificationsBtn.addEventListener('click', () => {
+            window.location.href = '../notifications/notifications.html';
+        });
+    }
 }
 
 // Load all users from Firestore
@@ -581,9 +592,22 @@ async function navigateToChat(userId) {
     }
 }
 
-// Show/hide loading spinner
+// Show/hide loading state
 function showLoading(isLoading) {
-    loadingSpinner.style.display = isLoading ? 'flex' : 'none';
+    // Get all skeleton users
+    const skeletonUsers = usersList.querySelectorAll('.skeleton-user');
+    
+    // Show/hide skeletons based on loading state
+    skeletonUsers.forEach(skeleton => {
+        skeleton.style.display = isLoading ? 'flex' : 'none';
+    });
+    
+    // If loading is finished, ensure the empty state is updated correctly
+    if (!isLoading && allUsers.length === 0) {
+        emptyState.style.display = 'flex';
+    } else if (!isLoading) {
+        emptyState.style.display = 'none';
+    }
 }
 
 // Show error toast

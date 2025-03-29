@@ -1,4 +1,4 @@
-import { auth, db, doc, getDoc } from '../../Firebase/firebase-config.js';
+import { auth, db, doc, getDoc, collection, query, where, getDocs } from '../../Firebase/firebase-config.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
 import { ensureUserInFirestore } from '../../Firebase/auth-helpers.js';
 
@@ -14,6 +14,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const userEmail = document.getElementById('user-email');
     const menuSections = document.querySelector('.menu-sections');
     const signInLink = document.querySelector('.sign-in-link');
+    const notificationsBtn = document.getElementById('notifications-btn');
+    const notificationCount = document.getElementById('notification-count');
 
     // Initialize guest state - only if elements exist
     if (avatarImage) avatarImage.style.display = 'none';
@@ -77,6 +79,13 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!userMenuBtn.contains(e.target) && !dropdownMenu.contains(e.target)) {
                 dropdownMenu.classList.remove('show');
             }
+        });
+    }
+
+    // Add notification button functionality
+    if (notificationsBtn) {
+        notificationsBtn.addEventListener('click', () => {
+            window.location.href = '../notifications/notifications.html';
         });
     }
 
@@ -172,6 +181,80 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }
                 }
+
+                // Update notification count - moved outside the if/else blocks
+                if (notificationCount) {
+                    try {
+                        const notificationsRef = collection(db, 'users', user.uid, 'notifications');
+                        const unreadQuery = query(notificationsRef, where('read', '==', false));
+                        const unreadSnapshot = await getDocs(unreadQuery);
+                        const count = unreadSnapshot.size;
+                        
+                        notificationCount.textContent = count;
+                    } catch (error) {
+                        console.error('Error fetching notifications:', error);
+                        notificationCount.textContent = '0';
+                    }
+                }
+
+                // Update menu sections for signed-in user
+                if (menuSections) {
+                    menuSections.innerHTML = `
+                        <a href="../home/home.html">
+                            <i class="fas fa-home"></i>
+                            Home
+                        </a>
+                        <a href="../jobs/jobs.html">
+                            <i class="fas fa-briefcase"></i>
+                            Jobs
+                        </a>
+                        <a href="../posts/posts.html">
+                            <i class="fas fa-newspaper"></i>
+                            Posts
+                        </a>
+                        <div class="menu-divider"></div>
+                        <a href="../saved/saved.html">
+                            <i class="fas fa-heart"></i>
+                            Saved Jobs
+                            <span class="badge">0</span>
+                        </a>
+                        <a href="../chats/chats.html">
+                            <i class="fas fa-comments"></i>
+                            Chats
+                        </a>
+                        <div class="menu-divider"></div>
+                        <a href="../users/users.html">
+                            <i class="fas fa-users"></i>
+                            Users
+                        </a>
+                        <a href="../profile/profile.html">
+                            <i class="fas fa-user"></i>
+                            My Profile
+                        </a>
+                        <a href="../settings/settings.html">
+                            <i class="fas fa-cog"></i>
+                            Settings
+                        </a>
+                        <div class="menu-divider"></div>
+                        <a href="#" id="logout-link" class="logout-link">
+                            <i class="fas fa-sign-out-alt"></i>
+                            Sign Out
+                        </a>
+                    `;
+
+                    // Add logout functionality
+                    const logoutLink = document.getElementById('logout-link');
+                    if (logoutLink) {
+                        logoutLink.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            auth.signOut().then(() => {
+                                window.location.href = '../login/login.html';
+                            }).catch((error) => {
+                                console.error('Error signing out:', error);
+                            });
+                        });
+                    }
+                }
             } catch (error) {
                 console.error('Error fetching user profile:', error);
                 // Fallback to auth data if Firestore fetch fails
@@ -208,58 +291,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         avatarInitialsDropdown.style.display = 'flex';
                         avatarInitialsDropdown.textContent = initials;
                     }
-                }
-            }
-
-            // Update menu sections for signed-in user
-            if (menuSections) {
-                menuSections.innerHTML = `
-                    <a href="../saved/saved.html">
-                        <i class="fas fa-heart"></i>
-                        Saved Jobs
-                        <span class="badge">0</span>
-                    </a>
-                    <a href="../applications/applications.html">
-                        <i class="fas fa-briefcase"></i>
-                        Applications
-                        <span class="badge">0</span>
-                    </a>
-                    <a href="../notifications/notifications.html">
-                        <i class="fas fa-bell"></i>
-                        Notifications
-                        <span class="badge active">0</span>
-                    </a>
-                    <div class="menu-divider"></div>
-                    <a href="../profile/profile.html">
-                        <i class="fas fa-user"></i>
-                        My Profile
-                    </a>
-                    <a href="../profile/Resume.html">
-                        <i class="fas fa-file-alt"></i>
-                        My Resume
-                    </a>
-                    <a href="../settings/settings.html">
-                        <i class="fas fa-cog"></i>
-                        Settings
-                    </a>
-                    <div class="menu-divider"></div>
-                    <a href="#" id="logout-link" class="logout-link">
-                        <i class="fas fa-sign-out-alt"></i>
-                        Sign Out
-                    </a>
-                `;
-
-                // Add logout functionality
-                const logoutLink = document.getElementById('logout-link');
-                if (logoutLink) {
-                    logoutLink.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        auth.signOut().then(() => {
-                            window.location.href = '../login/login.html';
-                        }).catch((error) => {
-                            console.error('Error signing out:', error);
-                        });
-                    });
                 }
             }
         } else {

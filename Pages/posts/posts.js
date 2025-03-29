@@ -404,29 +404,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Theme Toggle
     const themeToggle = document.getElementById('theme-toggle');
-    const themeIcon = themeToggle.querySelector('i');
-
-    // Initialize theme
-    const storedTheme = localStorage.getItem('theme');
-    if (storedTheme === 'dark') {
-        document.documentElement.classList.add('dark-mode');
-        document.body.classList.add('dark-mode');
-        themeIcon.className = 'fas fa-sun';
-    }
-
-    function toggleTheme() {
-        document.documentElement.classList.toggle('dark-mode');
-        document.body.classList.toggle('dark-mode');
-        const isDark = document.body.classList.contains('dark-mode');
+    
+    if (themeToggle) {
+        const moonIcon = themeToggle.querySelector('.moon-icon');
+        const sunIcon = themeToggle.querySelector('.sun-icon');
         
-        // Update icon
-        themeIcon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
-        
-        // Save preference
-        localStorage.setItem('theme', isDark ? 'dark' : 'light');
+        // Initialize theme
+        const storedTheme = localStorage.getItem('theme');
+        if (moonIcon && sunIcon) {
+            if (storedTheme === 'dark') {
+                document.documentElement.classList.add('dark-mode');
+                document.body.classList.add('dark-mode');
+                moonIcon.style.opacity = '0';
+                sunIcon.style.opacity = '1';
+            } else {
+                moonIcon.style.opacity = '1';
+                sunIcon.style.opacity = '0';
+            }
+            
+            function toggleTheme() {
+                document.documentElement.classList.toggle('dark-mode');
+                document.body.classList.toggle('dark-mode');
+                const isDark = document.body.classList.contains('dark-mode');
+                
+                // Update icon visibility
+                moonIcon.style.opacity = isDark ? '0' : '1';
+                sunIcon.style.opacity = isDark ? '1' : '0';
+                
+                // Save preference
+                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            }
+            
+            themeToggle.addEventListener('click', toggleTheme);
+        }
     }
-
-    themeToggle.addEventListener('click', toggleTheme);
 
     // Dropdown Menu
     const userMenuBtn = document.getElementById('user-menu-btn');
@@ -561,7 +572,8 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     Object.values(jobFormElements).forEach(input => {
-        if (input.required) {
+        // Add null check to prevent errors
+        if (input && input.required) {
             input.addEventListener('invalid', () => {
                 input.classList.add('invalid');
             });

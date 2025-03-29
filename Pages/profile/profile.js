@@ -42,7 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     
-    // Theme Toggle Functionality
+    // Theme Toggle Functionality - REMOVE this section as it's handled by nav.js
+    /*
     const themeToggle = document.getElementById('theme-toggle');
     const userMenuBtn = document.getElementById('user-menu-btn');
     const userDropdown = document.getElementById('user-dropdown');
@@ -83,6 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }, 0);
         }
     });
+    */
 
     // Retry loading user data every few seconds to ensure settings changes are reflected
     let retryCount = 0;
@@ -203,84 +205,23 @@ document.addEventListener('DOMContentLoaded', () => {
         const profileAvatarInitials = document.getElementById('profile-avatar-initials');
         const profileAvatarImage = document.getElementById('profile-avatar-image');
         const headline = document.querySelector('.headline');
-        const location = document.querySelector('.location');
+        const locationEl = document.querySelector('.location');
         const menuSections = document.querySelector('.menu-sections');
         
-        // Get the display name (check all possible fields where it could be stored)
-        // Settings page might store it as name, fullName, or displayName
-        const displayName = userData.name || userData.fullName || userData.displayName || user.displayName || 'Your Name';
+        // Update dropdown and other profile elements
+        if (userName) userName.textContent = userData.fullName || user.displayName || 'User';
+        if (userEmail) userEmail.textContent = user.email || '';
         
-        console.log('User data from Firestore:', userData); // Debugging
-        console.log('Display name being used:', displayName); // Debugging
-        
-        // Update dropdown user info
-        if (userName) userName.textContent = displayName;
-        if (userEmail) userEmail.textContent = user.email || 'No email provided';
-        
-        // Update menu sections with correct links for authenticated users
-        if (menuSections) {
-            menuSections.innerHTML = `
-                <a href="../home/home.html">
-                    <i class="fas fa-home"></i>
-                    Home
-                </a>
-                <a href="../jobs/jobs.html">
-                    <i class="fas fa-briefcase"></i>
-                    Jobs
-                </a>
-                <a href="../posts/posts.html">
-                    <i class="fas fa-newspaper"></i>
-                    Posts
-                </a>
-                <div class="menu-divider"></div>
-                <a href="../saved/saved.html">
-                    <i class="fas fa-heart"></i>
-                    Saved Jobs
-                    <span class="badge">4</span>
-                </a>
-                <a href="../notifications/notifications.html">
-                    <i class="fas fa-bell"></i>
-                    Notifications
-                    <span class="badge active">3</span>
-                </a>
-                <a href="../chats/chats.html">
-                    <i class="fas fa-comments"></i>
-                    Chats
-                </a>
-                <div class="menu-divider"></div>
-                <a href="profile.html">
-                    <i class="fas fa-user"></i>
-                    My Profile
-                </a>
-                <a href="../settings/settings.html">
-                    <i class="fas fa-cog"></i>
-                    Settings
-                </a>
-                <div class="menu-divider"></div>
-                <a href="#" id="logout-link" class="logout-link">
-                    <i class="fas fa-sign-out-alt"></i>
-                    Sign Out
-                </a>
-            `;
-            
-            // Reattach logout event listener
-            const logoutLink = document.getElementById('logout-link');
-            if (logoutLink) {
-                logoutLink.addEventListener('click', (event) => {
-                    event.preventDefault();
-                    signOut(window.auth).then(() => {
-                        window.location.href = '../login/login.html';
-                    }).catch((error) => {
-                        console.error('Error signing out:', error);
-                    });
-                });
-            }
-        }
-        
-        // Update avatar initials and images
+        // Get the user's photo URL from Firestore or auth
         const photoURL = userData.photoURL || user.photoURL;
+        
         if (photoURL) {
             // User has a profile photo, show images and hide initials
+            if (profileAvatarImage) {
+                profileAvatarImage.src = photoURL;
+                profileAvatarImage.style.display = 'block';
+            }
+            
             if (avatarImage) {
                 avatarImage.src = photoURL;
                 avatarImage.style.display = 'block';
@@ -291,76 +232,205 @@ document.addEventListener('DOMContentLoaded', () => {
                 avatarImageDropdown.style.display = 'block';
             }
             
-            if (profileAvatarImage) {
-                profileAvatarImage.src = photoURL;
-                profileAvatarImage.style.display = 'block';
-            }
-            
-            // Hide initials when showing images
-            if (avatarInitials.length) {
+            // Hide all initials when showing images
                 avatarInitials.forEach(el => {
-                    el.style.display = 'none';
+                if (el) el.style.display = 'none';
                 });
-            }
         } else {
             // No profile photo, show initials instead
+            if (profileAvatarImage) profileAvatarImage.style.display = 'none';
             if (avatarImage) avatarImage.style.display = 'none';
             if (avatarImageDropdown) avatarImageDropdown.style.display = 'none';
-            if (profileAvatarImage) profileAvatarImage.style.display = 'none';
             
-            const initials = displayName
-                .split(' ')
-                .map(name => name[0])
-                .join('')
-                .toUpperCase();
-            
-            // Show all initial elements with the user's initials
-            if (avatarInitials.length) {
+            // Update avatar initials
+            const displayName = userData.fullName || user.displayName || 'User';
+            const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase();
                 avatarInitials.forEach(el => {
+                if (el) {
+                    el.textContent = initials;
                     el.style.display = 'flex';
-                    el.textContent = initials || 'JN';
-                });
-            }
+                }
+            });
         }
         
-        // Update profile name if on profile page
-        if (profileName) {
-            profileName.textContent = displayName;
-        }
+        // Update profile details
+        if (profileName) profileName.textContent = userData.fullName || user.displayName || 'Your Name';
         
-        // Update professional headline
+        // Update headline with data from Firebase or show placeholder
         if (headline) {
-            headline.textContent = userData.headline || 'Professional headline not set';
-            if (!userData.headline) {
-                headline.classList.add('placeholder-text');
-            } else {
+            if (userData.headline) {
+                headline.textContent = userData.headline;
                 headline.classList.remove('placeholder-text');
+            } else {
+                headline.textContent = 'Professional headline not set';
+                headline.classList.add('placeholder-text');
             }
         }
         
-        // Update location
-        if (location) {
-            const locationIcon = location.querySelector('i');
-            const locationText = document.createTextNode(userData.location || 'Location not specified');
-            
-            // Clear existing content except for the icon
-            while (location.lastChild) {
-                location.removeChild(location.lastChild);
-            }
-            
-            location.appendChild(locationIcon);
-            location.appendChild(locationText);
-            
-            if (!userData.location) {
-                location.classList.add('placeholder-text');
+        // Update location with data from Firebase or hide it
+        if (locationEl) {
+            if (userData.location) {
+                locationEl.innerHTML = `<i class="fas fa-map-marker-alt"></i> ${userData.location}`;
+                locationEl.style.display = 'flex';
             } else {
-                location.classList.remove('placeholder-text');
+                locationEl.style.display = 'none';
             }
         }
         
         // Update about section
         updateProfileWithUserData(userData);
+        
+        // Setup edit profile button functionality
+        setupEditProfileButton(user.uid, userData);
+        
+        // Setup avatar upload functionality
+        setupAvatarUpload(user);
     };
+    
+    // Function to set up edit profile button functionality
+    function setupEditProfileButton(userId, userData) {
+        const editProfileBtn = document.getElementById('edit-profile-button');
+        if (!editProfileBtn) return;
+        
+        // Get modal elements
+        const profileEditModal = document.getElementById('profileEditModal');
+        const fullNameInput = document.getElementById('fullName');
+        const headlineInput = document.getElementById('headline');
+        const locationInput = document.getElementById('profileLocation');
+        const cancelBtn = document.getElementById('cancelProfileEdit');
+        const saveBtn = document.getElementById('saveProfileEdit');
+        const closeBtn = profileEditModal.querySelector('.modal-close');
+        
+        // Fill inputs with existing data
+        fullNameInput.value = userData.fullName || '';
+        headlineInput.value = userData.headline || '';
+        locationInput.value = userData.location || '';
+        
+        // Open modal when Edit Profile button is clicked
+        editProfileBtn.addEventListener('click', () => {
+            openModal('profileEditModal');
+        });
+        
+        // Close modal handlers
+        cancelBtn.addEventListener('click', () => {
+            closeModal('profileEditModal');
+        });
+        
+        closeBtn.addEventListener('click', () => {
+            closeModal('profileEditModal');
+        });
+        
+        // Save changes
+        saveBtn.addEventListener('click', async () => {
+            const updatedData = {
+                fullName: fullNameInput.value.trim(),
+                headline: headlineInput.value.trim(),
+                location: locationInput.value.trim()
+            };
+            
+            try {
+                // Update in Firestore
+                await window.db.collection('users').doc(userId).update(updatedData);
+                
+                // Update UI
+                const profileName = document.querySelector('.profile-details h1');
+                const headline = document.querySelector('.headline');
+                const locationEl = document.querySelector('.location');
+                
+                if (profileName) profileName.textContent = updatedData.fullName;
+                
+        if (headline) {
+                    if (updatedData.headline) {
+                        headline.textContent = updatedData.headline;
+                        headline.classList.remove('placeholder-text');
+                    } else {
+                        headline.textContent = 'Professional headline not set';
+                headline.classList.add('placeholder-text');
+                    }
+                }
+                
+                if (locationEl) {
+                    if (updatedData.location) {
+                        locationEl.innerHTML = `<i class="fas fa-map-marker-alt"></i> ${updatedData.location}`;
+                        locationEl.style.display = 'flex';
+            } else {
+                        locationEl.style.display = 'none';
+                    }
+                }
+                
+                // Also update dropdown for consistency
+                const userName = document.getElementById('user-name');
+                if (userName) userName.textContent = updatedData.fullName;
+                
+                // Update avatar initials
+                const initials = updatedData.fullName.split(' ').map(n => n[0]).join('').toUpperCase();
+                const avatarInitials = document.querySelectorAll('.avatar-initials');
+                avatarInitials.forEach(el => {
+                    if (el) el.textContent = initials;
+                });
+                
+                // Close modal
+                closeModal('profileEditModal');
+                
+                // Show success message
+                showToast('Profile updated successfully');
+            } catch (error) {
+                console.error('Error updating profile:', error);
+                showToast('Failed to update profile. Please try again.', 'error');
+            }
+        });
+    }
+    
+    // Enhanced toast notification function
+    function showToast(message, type = 'success') {
+        // Check if a toast container already exists
+        let toastContainer = document.querySelector('.toast-container');
+        
+        // Create container if it doesn't exist
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container';
+            document.body.appendChild(toastContainer);
+        }
+        
+        // Create toast
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.textContent = message;
+        
+        // Add dismiss button
+        const dismissBtn = document.createElement('button');
+        dismissBtn.className = 'toast-dismiss';
+        dismissBtn.innerHTML = '<i class="fas fa-times"></i>';
+        dismissBtn.addEventListener('click', () => {
+            toast.classList.add('hide');
+            setTimeout(() => {
+                toast.remove();
+                // Remove container if empty
+                if (toastContainer.children.length === 0) {
+                    toastContainer.remove();
+                }
+            }, 300);
+        });
+        
+        toast.appendChild(dismissBtn);
+        
+        // Add to container
+        toastContainer.appendChild(toast);
+        
+        // Auto remove after 4 seconds (increased from 3 seconds)
+        setTimeout(() => {
+            toast.classList.add('hide');
+            setTimeout(() => {
+                toast.remove();
+                
+                // Remove container if empty
+                if (toastContainer.children.length === 0) {
+                    toastContainer.remove();
+                }
+            }, 300);
+        }, 4000);
+    }
     
     // Update profile with additional user data from Firestore
     const updateProfileWithUserData = (userData) => {
@@ -1077,13 +1147,21 @@ document.addEventListener('DOMContentLoaded', () => {
     function setupAvatarUpload(user) {
         const editAvatarBtn = document.querySelector('.edit-avatar');
         const profileAvatarImage = document.getElementById('profile-avatar-image');
+        const profileAvatarInitials = document.getElementById('profile-avatar-initials');
         
         if (!editAvatarBtn) return;
+        
+        // Remove any existing input to prevent duplicates
+        const existingInput = document.getElementById('avatar-upload-input');
+        if (existingInput) {
+            existingInput.remove();
+        }
         
         // Create a hidden file input
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
         fileInput.accept = 'image/*';
+        fileInput.id = 'avatar-upload-input';
         fileInput.style.display = 'none';
         document.body.appendChild(fileInput);
         
@@ -1097,12 +1175,27 @@ document.addEventListener('DOMContentLoaded', () => {
             const file = e.target.files[0];
             if (!file) return;
             
+            // Check file size (max 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                showToast('Image is too large. Maximum size is 5MB.', 'error');
+                return;
+            }
+            
+            // Check file type
+            if (!file.type.startsWith('image/')) {
+                showToast('Please select an image file.', 'error');
+                return;
+            }
+            
             try {
             // Show loading state
             editAvatarBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
             editAvatarBtn.disabled = true;
             
-                // Upload the image to ImageBB (or another service)
+                // Show upload in progress toast
+                showToast('Uploading your profile picture...', 'info');
+                
+                // Upload the image to ImageBB
                 const imageUrl = await uploadImageToImageBB(file);
                 
                 if (imageUrl) {
@@ -1111,30 +1204,46 @@ document.addEventListener('DOMContentLoaded', () => {
                         photoURL: imageUrl
                     });
                     
-                    // Update UI
+                    // Update all UI elements
+                    // Profile avatar
+                    if (profileAvatarImage) {
                     profileAvatarImage.src = imageUrl;
                     profileAvatarImage.style.display = 'block';
-                    document.getElementById('profile-avatar-initials').style.display = 'none';
+                    }
+                    if (profileAvatarInitials) {
+                        profileAvatarInitials.style.display = 'none';
+                    }
                     
-                    // Update avatar in navbar
+                    // Navbar avatar
                     const avatarImage = document.getElementById('avatar-image');
-                    const avatarImageDropdown = document.getElementById('avatar-image-dropdown');
-                    
                     if (avatarImage) {
                         avatarImage.src = imageUrl;
                         avatarImage.style.display = 'block';
-                        document.getElementById('avatar-initials').style.display = 'none';
                     }
                     
+                    const avatarInitials = document.getElementById('avatar-initials');
+                    if (avatarInitials) {
+                        avatarInitials.style.display = 'none';
+                    }
+                    
+                    // Dropdown avatar
+                    const avatarImageDropdown = document.getElementById('avatar-image-dropdown');
                     if (avatarImageDropdown) {
                         avatarImageDropdown.src = imageUrl;
                         avatarImageDropdown.style.display = 'block';
-                        document.getElementById('avatar-initials-dropdown').style.display = 'none';
                     }
+                    
+                    const avatarInitialsDropdown = document.getElementById('avatar-initials-dropdown');
+                    if (avatarInitialsDropdown) {
+                        avatarInitialsDropdown.style.display = 'none';
+                    }
+                    
+                    // Show success message
+                    showToast('Profile picture updated successfully', 'success');
                 }
             } catch (error) {
                 console.error("Error updating avatar:", error);
-                alert("Failed to update avatar. Please try again.");
+                showToast('Failed to update profile picture. Please try again.', 'error');
             } finally {
                 // Reset button
                 editAvatarBtn.innerHTML = '<i class="fas fa-camera"></i>';
@@ -1148,25 +1257,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const formData = new FormData();
         formData.append('image', file);
         
-        // ImageBB API key
+        // ImageBB API key - you might want to move this to a server-side function for security
         const apiKey = 'e0a6fcfe00b70b788c6cf56e59297e2f';
         
         try {
+            console.log('Starting image upload to ImageBB...');
+            
             const response = await fetch(`https://api.imgbb.com/1/upload?key=${apiKey}`, {
                 method: 'POST',
                 body: formData
             });
             
             if (!response.ok) {
-                throw new Error(`ImageBB API error: ${response.status}`);
+                throw new Error(`ImageBB API error: ${response.status} - ${response.statusText}`);
             }
             
             const data = await response.json();
+            console.log('ImageBB response:', data);
             
             if (data.success) {
-                return data.data.url;
+                // Return the display URL for the image
+                return data.data.display_url;
             } else {
-                throw new Error('ImageBB upload failed');
+                throw new Error('ImageBB upload failed: ' + (data.error?.message || 'Unknown error'));
             }
         } catch (error) {
             console.error('Error uploading to ImageBB:', error);

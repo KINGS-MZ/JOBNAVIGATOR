@@ -53,11 +53,25 @@ function setTheme(theme) {
     if (isDark) {
         document.documentElement.classList.add('dark-mode');
         document.body.classList.add('dark-mode');
-        themeToggle.querySelector('i').className = 'fas fa-sun';
     } else {
         document.documentElement.classList.remove('dark-mode');
         document.body.classList.remove('dark-mode');
-        themeToggle.querySelector('i').className = 'fas fa-moon';
+    }
+    
+    // Update icon if theme toggle exists
+    if (themeToggle) {
+        const moonIcon = themeToggle.querySelector('.moon-icon');
+        const sunIcon = themeToggle.querySelector('.sun-icon');
+        
+        if (moonIcon && sunIcon) {
+            if (isDark) {
+                moonIcon.style.opacity = '0';
+                sunIcon.style.opacity = '1';
+            } else {
+                moonIcon.style.opacity = '1'; 
+                sunIcon.style.opacity = '0';
+            }
+        }
     }
     
     localStorage.setItem('theme', theme);
@@ -406,11 +420,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         <i class="fas fa-heart"></i>
                         Saved Jobs
                         <span class="badge">0</span>
-                    </a>
-                    <a href="../notifications/notifications.html">
-                        <i class="fas fa-bell"></i>
-                        Notifications
-                        <span class="badge active">0</span>
                     </a>
                     <a href="../chats/chats.html">
                         <i class="fas fa-comments"></i>
