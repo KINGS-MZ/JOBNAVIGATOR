@@ -17,9 +17,26 @@ import { arrayUnion, arrayRemove } from 'https://www.gstatic.com/firebasejs/9.22
 
 // DOM Elements
 const usersList = document.getElementById('users-list');
-const userSearch = document.getElementById('user-search');
 const emptyState = document.getElementById('empty-state');
-const filterButtons = document.querySelectorAll('.filter-btn');
+const filterOptions = document.querySelectorAll('.filter-option');
+
+// Counter elements
+const allCountElement = document.getElementById('all-count');
+const followingCountElement = document.getElementById('following-count');
+const followersCountElement = document.getElementById('followers-count');
+const allCountBadge = document.getElementById('all-count-badge');
+const followingCountBadge = document.getElementById('following-count-badge');
+const followersCountBadge = document.getElementById('followers-count-badge');
+
+// Sidebar toggle
+const sidebarCollapseBtn = document.getElementById('sidebar-collapse');
+const sidebar = document.getElementById('sidebar');
+const contentArea = document.querySelector('.content-area');
+
+// Action buttons
+const refreshBtn = document.querySelector('.action-button[title="Refresh"]');
+const layoutBtn = document.querySelector('.action-button[title="Layout"]');
+const advancedSearchBtn = document.querySelector('.sidebar-footer-button');
 
 // Current user ID
 let currentUserId = null;
@@ -32,12 +49,11 @@ let followingList = [];
 let followersList = [];
 let pendingFollowRequests = [];
 let outgoingPendingRequests = [];
+// Layout view (grid or list)
+let currentLayout = 'grid';
 
 // Initialize page
 document.addEventListener('DOMContentLoaded', () => {
-    // Set default active filter
-    setActiveFilter('all');
-    
     // Check authentication state
     auth.onAuthStateChanged(async (user) => {
         if (user) {
@@ -46,6 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 loadAllUsers(),
                 loadFollowingAndFollowers()
             ]);
+            updateCounters();
             applyFilter(currentFilter);
             setupEventListeners();
         } else {
@@ -83,17 +100,73 @@ document.addEventListener('DOMContentLoaded', () => {
             setTimeout(updateThemeIcons, 50);
         });
     }
+    
+    // Handle sidebar toggle on mobile
+    const toggleSidebarBtn = document.getElementById('toggle-sidebar');
+    
+    if (toggleSidebarBtn && sidebar) {
+        toggleSidebarBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('active');
+        });
+    }
+    
+    // Handle sidebar collapse button
+    if (sidebarCollapseBtn && sidebar && contentArea) {
+        sidebarCollapseBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('collapsed');
+            contentArea.classList.toggle('expanded');
+            
+            // Update the icon
+            const icon = sidebarCollapseBtn.querySelector('.material-symbols-rounded');
+            if (sidebar.classList.contains('collapsed')) {
+                icon.textContent = 'menu';
+            } else {
+                icon.textContent = 'menu_open';
+            }
+        });
+    }
+    
+    // Handle action buttons
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', async () => {
+            await Promise.all([
+                loadAllUsers(),
+                loadFollowingAndFollowers()
+            ]);
+            updateCounters();
+            applyFilter(currentFilter);
+        });
+    }
+    
+    if (layoutBtn) {
+        layoutBtn.addEventListener('click', () => {
+            currentLayout = currentLayout === 'grid' ? 'list' : 'grid';
+            usersList.classList.toggle('list-view');
+            
+            // Update the icon
+            const icon = layoutBtn.querySelector('.material-symbols-rounded');
+            if (currentLayout === 'grid') {
+                icon.textContent = 'view_module';
+            } else {
+                icon.textContent = 'view_list';
+            }
+        });
+    }
+    
+    if (advancedSearchBtn) {
+        advancedSearchBtn.addEventListener('click', () => {
+            // Placeholder for advanced search functionality
+            alert('Advanced search coming soon!');
+        });
+    }
 });
 
 // Setup event listeners
 function setupEventListeners() {
-    // Search functionality
-    userSearch.addEventListener('input', handleSearch);
-    
-    // Filter buttons
-    filterButtons.forEach(button => {
-        button.addEventListener('click', (e) => {
-            const filter = e.target.dataset.filter;
+    // Filter options in sidebar
+    filterOptions.forEach(option => {
+        option.addEventListener('click', (e) => {
+            const filter = e.currentTarget.dataset.filter;
             setActiveFilter(filter);
             applyFilter(filter);
         });
@@ -179,7 +252,40 @@ async function loadFollowingAndFollowers() {
     }
 }
 
-// Apply filter (all, following, followers)
+// Update the counters in the sidebar
+function updateCounters() {
+    const allCount = allUsers.length;
+    const followingCount = followingList.length;
+    const followersCount = followersList.length;
+    
+    // Update stat cards
+    if (allCountElement) {
+        allCountElement.textContent = allCount;
+    }
+    
+    if (followingCountElement) {
+        followingCountElement.textContent = followingCount;
+    }
+    
+    if (followersCountElement) {
+        followersCountElement.textContent = followersCount;
+    }
+    
+    // Update badges in filter options
+    if (allCountBadge) {
+        allCountBadge.textContent = allCount;
+    }
+    
+    if (followingCountBadge) {
+        followingCountBadge.textContent = followingCount;
+    }
+    
+    if (followersCountBadge) {
+        followersCountBadge.textContent = followersCount;
+    }
+}
+
+// Apply filter (all, following, followers, etc.)
 function applyFilter(filter) {
     currentFilter = filter;
     let filteredUsers = [];
@@ -191,36 +297,60 @@ function applyFilter(filter) {
         case 'followers':
             filteredUsers = allUsers.filter(user => followersList.includes(user.id));
             break;
+        case 'recent':
+            // Sort by last activity (if available) or creation date
+            filteredUsers = [...allUsers].sort((a, b) => {
+                const aDate = a.lastActive ? a.lastActive.toDate() : a.createdAt ? a.createdAt.toDate() : new Date(0);
+                const bDate = b.lastActive ? b.lastActive.toDate() : b.createdAt ? b.createdAt.toDate() : new Date(0);
+                return bDate - aDate;
+            });
+            break;
+        case 'connections':
+            // Show users with common connections first
+            // This is a placeholder - actual implementation would need to check mutual connections
+            filteredUsers = [...allUsers];
+            break;
+        case 'industry':
+            // Show users from the same industry
+            // Get current user's industry first
+            const currentUserIndustry = getCurrentUserIndustry();
+            filteredUsers = allUsers.filter(user => user.industry === currentUserIndustry);
+            break;
+        case 'suggested':
+            // Suggested users - could be based on interests, industry, etc.
+            filteredUsers = [...allUsers];
+            break;
+        case 'recruiters':
+            // Show recruiters if they have a role field set to 'recruiter'
+            filteredUsers = allUsers.filter(user => user.role === 'recruiter');
+            break;
+        case 'nearby':
+            // Nearby users - would require location data
+            filteredUsers = [...allUsers];
+            break;
         case 'all':
         default:
             filteredUsers = [...allUsers];
             break;
     }
     
-    // Apply any current search filter
-    if (userSearch.value.trim() !== '') {
-        const searchTerm = userSearch.value.trim().toLowerCase();
-        filteredUsers = filteredUsers.filter(user => 
-            (user.fullName && user.fullName.toLowerCase().includes(searchTerm)) ||
-            (user.email && user.email.toLowerCase().includes(searchTerm))
-        );
-    }
-    
     displayUsers(filteredUsers);
 }
 
-// Handle search input
-function handleSearch() {
-    applyFilter(currentFilter);
+// Get current user's industry (placeholder function)
+function getCurrentUserIndustry() {
+    // This would normally fetch from the current user's data
+    // For now we return a placeholder
+    return "Technology";
 }
 
-// Set active filter button
+// Set active filter 
 function setActiveFilter(filter) {
-    filterButtons.forEach(button => {
-        if (button.dataset.filter === filter) {
-            button.classList.add('active');
+    filterOptions.forEach(option => {
+        if (option.dataset.filter === filter) {
+            option.classList.add('active');
         } else {
-            button.classList.remove('active');
+            option.classList.remove('active');
         }
     });
 }
@@ -242,394 +372,465 @@ function displayUsers(users) {
         } else if (currentFilter === 'followers') {
             emptyStateHeading.textContent = 'No followers yet';
             emptyStateText.textContent = 'When users follow you, they will appear here';
-        } else if (userSearch.value.trim() !== '') {
-            emptyStateHeading.textContent = 'No users found';
-            emptyStateText.textContent = 'Try adjusting your search criteria';
         } else {
             emptyStateHeading.textContent = 'No users available';
-            emptyStateText.textContent = 'Check back later for more users';
+            emptyStateText.textContent = 'Try adjusting your filter criteria';
         }
+    } else {
+        emptyState.style.display = 'none';
         
-        return;
-    }
-    
-    emptyState.style.display = 'none';
-    
+        // Create and append user elements
     users.forEach(user => {
         const isFollowing = followingList.includes(user.id);
         const userElement = createUserElement(user, isFollowing);
         usersList.appendChild(userElement);
     });
+    }
 }
 
-// Create HTML element for a user
+// Create a user element for display
 function createUserElement(user, isFollowing) {
+    // Create the main user item container
     const userItem = document.createElement('div');
     userItem.className = 'user-item';
+    userItem.dataset.userId = user.id;
     
-    // Get user's avatar or display default icon
-    let avatarContent = '';
-    if (user.photoURL) {
-        avatarContent = `<img src="${user.photoURL}" alt="${user.fullName || 'User'}">`;
+    // ----- User Header -----
+    const userHeader = document.createElement('div');
+    userHeader.className = 'user-header';
+    
+    // Avatar
+    const avatarContainer = document.createElement('div');
+    avatarContainer.className = 'user-avatar';
+    
+    // Check if user has a profile picture
+    if (user.profilePicture) {
+        const avatar = document.createElement('img');
+        avatar.src = user.profilePicture;
+        avatar.alt = `${user.fullName || 'User'}'s profile picture`;
+        avatarContainer.appendChild(avatar);
     } else {
-        // Always use default icon for users without photos
-        avatarContent = `<i class="fas fa-user"></i>`;
+        // Display initials if no profile picture
+        const initials = getInitials(user.fullName || user.email || 'User');
+        avatarContainer.textContent = initials;
     }
     
-    // Ensure we display the user's name if available
-    // Make sure to trim the name and check it's not empty
-    const displayName = user.fullName && user.fullName.trim() ? user.fullName : 'User';
+    // User basic info
+    const userInfo = document.createElement('div');
+    userInfo.className = 'user-info';
     
-    // Check if we have a pending follow request to this user
-    const isPending = outgoingPendingRequests.includes(user.id);
+    // Name
+    const userName = document.createElement('div');
+    userName.className = 'user-name';
+    userName.textContent = user.fullName || user.email || 'Anonymous User';
+    userInfo.appendChild(userName);
     
-    // Set button class and text based on follow status
-    let btnClass = '';
-    let btnIcon = '<i class="fas fa-user-plus"></i>';
+    // Professional headline
+    if (user.headline) {
+        const userHeadline = document.createElement('div');
+        userHeadline.className = 'user-headline';
+        userHeadline.textContent = user.headline;
+        userInfo.appendChild(userHeadline);
+    } else {
+        const userHeadline = document.createElement('div');
+        userHeadline.className = 'user-headline';
+        userHeadline.textContent = 'Job seeker';
+        userHeadline.style.opacity = '0.7';
+        userInfo.appendChild(userHeadline);
+    }
+    
+    // Location if available
+    if (user.location) {
+        const userLocation = document.createElement('div');
+        userLocation.className = 'user-location';
+        
+        const locationIcon = document.createElement('span');
+        locationIcon.className = 'material-symbols-rounded';
+        locationIcon.textContent = 'location_on';
+        
+        const locationText = document.createElement('span');
+        locationText.textContent = user.location;
+        
+        userLocation.appendChild(locationIcon);
+        userLocation.appendChild(locationText);
+        userInfo.appendChild(userLocation);
+    } else {
+        const userLocation = document.createElement('div');
+        userLocation.className = 'user-location';
+        
+        const locationIcon = document.createElement('span');
+        locationIcon.className = 'material-symbols-rounded';
+        locationIcon.textContent = 'public';
+        
+        const locationText = document.createElement('span');
+        locationText.textContent = 'Location unknown';
+        
+        userLocation.appendChild(locationIcon);
+        userLocation.appendChild(locationText);
+        userInfo.appendChild(userLocation);
+    }
+    
+    // Add avatar and info to header
+    userHeader.appendChild(avatarContainer);
+    userHeader.appendChild(userInfo);
+    userItem.appendChild(userHeader);
+    
+    // ----- User Body -----
+    const userBody = document.createElement('div');
+    userBody.className = 'user-body';
+    
+    // Bio
+    if (user.bio) {
+        const userBio = document.createElement('div');
+        userBio.className = 'user-bio';
+        userBio.textContent = user.bio;
+        userBody.appendChild(userBio);
+    } else {
+        const userBio = document.createElement('div');
+        userBio.className = 'user-bio';
+        userBio.textContent = 'No bio provided.';
+        userBio.style.opacity = '0.7';
+        userBody.appendChild(userBio);
+    }
+    
+    // Skills
+    if (user.skills && user.skills.length > 0) {
+        const skillsContainer = document.createElement('div');
+        skillsContainer.className = 'user-skills';
+        
+        // Limit to 4 skills for display
+        const displaySkills = user.skills.slice(0, 4);
+        
+        displaySkills.forEach(skill => {
+            const skillTag = document.createElement('div');
+            skillTag.className = 'skill-tag';
+            skillTag.textContent = skill;
+            skillsContainer.appendChild(skillTag);
+        });
+        
+        // Show +X more if there are additional skills
+        if (user.skills.length > 4) {
+            const moreSkills = document.createElement('div');
+            moreSkills.className = 'skill-tag';
+            moreSkills.textContent = `+${user.skills.length - 4} more`;
+            skillsContainer.appendChild(moreSkills);
+        }
+        
+        userBody.appendChild(skillsContainer);
+    } else {
+        const skillsContainer = document.createElement('div');
+        skillsContainer.className = 'user-skills';
+        
+        const skillTag = document.createElement('div');
+        skillTag.className = 'skill-tag';
+        skillTag.textContent = 'No skills listed';
+        skillTag.style.opacity = '0.7';
+        
+        skillsContainer.appendChild(skillTag);
+        userBody.appendChild(skillsContainer);
+    }
+    
+    userItem.appendChild(userBody);
+    
+    // ----- User Actions -----
+    const userActions = document.createElement('div');
+    userActions.className = 'user-actions';
+    
+    // Action buttons
+    const actionButtons = document.createElement('div');
+    actionButtons.className = 'action-buttons';
+    
+    // Follow button
+    const followBtn = document.createElement('button');
+    followBtn.className = 'follow-btn';
+    
+    const isPendingRequest = outgoingPendingRequests.includes(user.id);
     
     if (isFollowing) {
-        btnClass = 'following';
-        btnIcon = '<i class="fas fa-check"></i>';
-    } else if (isPending) {
-        btnClass = 'pending';
-        btnIcon = '<i class="fas fa-clock"></i>';
+        followBtn.classList.add('following');
+        followBtn.innerHTML = '<span class="material-symbols-rounded">check</span>';
+        followBtn.setAttribute('title', 'Following');
+    } else if (isPendingRequest) {
+        followBtn.classList.add('pending');
+        followBtn.innerHTML = '<span class="material-symbols-rounded">pending</span>';
+        followBtn.setAttribute('title', 'Pending');
+    } else {
+        followBtn.innerHTML = '<span class="material-symbols-rounded">person_add</span>';
+        followBtn.setAttribute('title', 'Follow');
     }
     
-    // Create HTML structure
-    userItem.innerHTML = `
-        <div class="user-avatar">
-            ${avatarContent}
-        </div>
-        <div class="user-details">
-            <div class="user-name">${displayName}</div>
-            <div class="user-bio">${user.bio || user.email || ''}</div>
-        </div>
-        <div class="user-actions">
-            <button class="follow-btn ${btnClass}" data-user-id="${user.id}" ${isPending ? 'title="Click to cancel follow request"' : ''}>
-                ${btnIcon}
-            </button>
-            <button class="message-btn" data-user-id="${user.id}">
-                <i class="fas fa-comment"></i>
-            </button>
-        </div>
-    `;
-    
-    // Make the entire user item clickable to navigate to profile
-    userItem.addEventListener('click', (e) => {
-        // Don't navigate if clicking on buttons
-        if (!e.target.closest('.follow-btn') && !e.target.closest('.message-btn')) {
-            navigateToProfile(user.id);
-        }
-    });
-    
-    // Add follow/unfollow functionality
-    const followBtn = userItem.querySelector('.follow-btn');
     followBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        toggleFollow(user.id, followBtn);
+        handleFollowAction(user.id, isFollowing, isPendingRequest);
     });
     
-    // Add message functionality
-    const messageBtn = userItem.querySelector('.message-btn');
+    // Message button
+    const messageBtn = document.createElement('button');
+    messageBtn.className = 'message-btn';
+    messageBtn.innerHTML = '<span class="material-symbols-rounded">chat</span>';
+    messageBtn.setAttribute('title', 'Message');
+    
     messageBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        navigateToChat(user.id);
+        handleMessageAction(user.id);
+    });
+    
+    actionButtons.appendChild(followBtn);
+    actionButtons.appendChild(messageBtn);
+    
+    // Options button
+    const moreOptionsBtn = document.createElement('button');
+    moreOptionsBtn.className = 'more-options-btn';
+    moreOptionsBtn.innerHTML = '<span class="material-symbols-rounded">more_vert</span>';
+    moreOptionsBtn.setAttribute('aria-label', 'More options');
+    
+    moreOptionsBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showUserOptions(user.id);
+    });
+    
+    userActions.appendChild(actionButtons);
+    userActions.appendChild(moreOptionsBtn);
+    userItem.appendChild(userActions);
+    
+    // Make the entire user card clickable to view profile
+    userItem.addEventListener('click', () => {
+        navigateToUserProfile(user.id);
     });
     
     return userItem;
 }
 
-// Toggle follow/unfollow
-async function toggleFollow(userId, button) {
-    const isFollowing = button.classList.contains('following');
-    const isPending = button.classList.contains('pending');
+// Get user initials for avatar placeholder
+function getInitials(name) {
+    if (!name) return 'U';
     
-    // Disable button during operation
-    button.disabled = true;
+    const parts = name.split(' ');
+    if (parts.length === 1) {
+        return parts[0].charAt(0).toUpperCase();
+    }
     
-    // Show local loading state in the button
-    const originalContent = button.innerHTML;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+}
+
+// Handle follow/unfollow action
+function handleFollowAction(userId, isFollowing, isPending) {
+    if (isFollowing) {
+        // Unfollow
+        unfollowUser(userId);
+    } else if (isPending) {
+        // Cancel pending request
+        cancelFollowRequest(userId);
+    } else {
+        // Send follow request
+        followUser(userId);
+    }
+}
+
+// Follow a user
+async function followUser(userId) {
     try {
-        if (isFollowing) {
-            // Unfollow user
-            const batch = writeBatch(db);
-            
-            // Update current user's following list
-            const currentUserRef = doc(db, 'users', currentUserId);
-            batch.update(currentUserRef, {
-                following: arrayRemove(userId)
-            });
-            
-            // Update target user's followers list
-            const targetUserRef = doc(db, 'users', userId);
-            batch.update(targetUserRef, {
-                followers: arrayRemove(currentUserId)
-            });
-            
-            await batch.commit();
-            
-            // Update local cache
-            followingList = followingList.filter(id => id !== userId);
-            
-            // Update button
-            button.classList.remove('following');
-            button.innerHTML = '<i class="fas fa-user-plus"></i>';
-            
-        } else if (isPending) {
-            // Cancel the follow request
-            const batch = writeBatch(db);
-            
-            // Remove from pending requests in target user's document
-            const targetUserRef = doc(db, 'users', userId);
-            batch.update(targetUserRef, {
-                pendingFollowRequests: arrayRemove(currentUserId)
-            });
-            
-            await batch.commit();
-            
-            // Update local cache
-            outgoingPendingRequests = outgoingPendingRequests.filter(id => id !== userId);
-            
-            // Update button
-            button.classList.remove('pending');
-            button.removeAttribute('title');
-            button.innerHTML = '<i class="fas fa-user-plus"></i>';
-            
-            // If there are notifications, remove them
-            try {
-                const notificationsRef = collection(db, 'users', userId, 'notifications');
-                const q = query(notificationsRef, 
-                    where("type", "==", "follow_request"),
-                    where("senderId", "==", currentUserId)
-                );
-                
-                const notificationSnapshot = await getDocs(q);
-                
-                if (!notificationSnapshot.empty) {
-                    const batch = writeBatch(db);
-                    
-                    notificationSnapshot.forEach(doc => {
-                        batch.delete(doc.ref);
-                    });
-                    
-                    await batch.commit();
-                }
-            } catch (notifError) {
-                console.error('Error removing notification:', notifError);
-            }
-            
-        } else {
-            // Send follow request
-            const targetUserRef = doc(db, 'users', userId);
-            
-            // Add to target user's pending requests
-            await updateDoc(targetUserRef, {
+        const userRef = doc(db, 'users', userId);
+        const userDoc = await getDoc(userRef);
+        
+        if (!userDoc.exists()) {
+            console.error('User not found');
+            return;
+        }
+        
+        const userData = userDoc.data();
+        
+        // Check if this user requires follow approval
+        if (userData.requiresFollowApproval) {
+            // Add current user to target user's pending requests
+            await updateDoc(userRef, {
                 pendingFollowRequests: arrayUnion(currentUserId)
             });
             
-            // Update local cache
+            // Update UI to show pending status
+            const followBtn = document.querySelector(`.user-item[data-user-id="${userId}"] .follow-btn`);
+            if (followBtn) {
+                followBtn.classList.add('pending');
+                followBtn.innerHTML = '<span class="material-symbols-rounded">pending</span>';
+            }
+            
+            // Add to local tracking
             outgoingPendingRequests.push(userId);
             
-            // Update button
-            button.classList.add('pending');
-            button.title = 'Click to cancel follow request';
-            button.innerHTML = '<i class="fas fa-clock"></i>';
+            showToast('Follow request sent');
+        } else {
+            // Direct follow - add to each other's following/followers lists
+            // Update the target user's followers
+            await updateDoc(userRef, {
+                followers: arrayUnion(currentUserId)
+            });
             
-            // Send notification to target user
-            try {
-                // Get sender info
-                const senderName = auth.currentUser.displayName || 'A user';
-                
-                const notificationRef = collection(db, 'users', userId, 'notifications');
-                await addDoc(notificationRef, {
-                    type: 'follow_request',
-                    senderId: currentUserId,
-                    senderName: senderName,
-                    senderPhoto: auth.currentUser.photoURL || null,
-                    title: 'New Follow Request',
-                    text: `${senderName} wants to follow you`,
-                    actions: ['accept', 'reject'],
-                    read: false,
-                    timestamp: new Date()
-                });
-            } catch (notifError) {
-                console.error('Error sending notification:', notifError);
+            // Update current user's following
+            const currentUserRef = doc(db, 'users', currentUserId);
+            await updateDoc(currentUserRef, {
+                following: arrayUnion(userId)
+            });
+            
+            // Update UI
+            const followBtn = document.querySelector(`.user-item[data-user-id="${userId}"] .follow-btn`);
+            if (followBtn) {
+                followBtn.classList.add('following');
+                followBtn.innerHTML = '<span class="material-symbols-rounded">check</span>';
             }
+            
+            // Update local lists
+            followingList.push(userId);
+            
+            showToast('Started following user');
         }
     } catch (error) {
-        console.error('Error toggling follow:', error);
-        // Restore original button state on error
-        button.innerHTML = originalContent;
+        console.error('Error following user:', error);
+        showToast('Error following user. Please try again.');
+    }
+}
+
+// Unfollow a user
+async function unfollowUser(userId) {
+    try {
+        // Update target user's followers
+        const userRef = doc(db, 'users', userId);
+        await updateDoc(userRef, {
+            followers: arrayRemove(currentUserId)
+        });
         
-        let errorMessage = 'Failed to update follow status';
-        if (isFollowing) {
-            errorMessage = 'Failed to unfollow user';
-        } else if (isPending) {
-            errorMessage = 'Failed to cancel follow request';
-        } else {
-            errorMessage = 'Failed to send follow request';
+        // Update current user's following
+        const currentUserRef = doc(db, 'users', currentUserId);
+        await updateDoc(currentUserRef, {
+            following: arrayRemove(userId)
+        });
+        
+        // Update UI
+        const followBtn = document.querySelector(`.user-item[data-user-id="${userId}"] .follow-btn`);
+        if (followBtn) {
+            followBtn.classList.remove('following');
+            followBtn.innerHTML = '<span class="material-symbols-rounded">person_add</span>';
         }
-        showError(errorMessage);
-    } finally {
-        // Re-enable button
-        button.disabled = false;
+        
+        // Update local list
+        followingList = followingList.filter(id => id !== userId);
+        
+        showToast('Unfollowed user');
+    } catch (error) {
+        console.error('Error unfollowing user:', error);
+        showToast('Error unfollowing user. Please try again.');
+    }
+}
+
+// Cancel a pending follow request
+async function cancelFollowRequest(userId) {
+    try {
+        const userRef = doc(db, 'users', userId);
+        
+        // Remove current user from target user's pending requests
+        await updateDoc(userRef, {
+            pendingFollowRequests: arrayRemove(currentUserId)
+        });
+        
+        // Update UI
+        const followBtn = document.querySelector(`.user-item[data-user-id="${userId}"] .follow-btn`);
+        if (followBtn) {
+            followBtn.classList.remove('pending');
+            followBtn.innerHTML = '<span class="material-symbols-rounded">person_add</span>';
+        }
+        
+        // Update local tracking
+        outgoingPendingRequests = outgoingPendingRequests.filter(id => id !== userId);
+        
+        showToast('Follow request cancelled');
+    } catch (error) {
+        console.error('Error cancelling request:', error);
+        showToast('Error cancelling request. Please try again.');
     }
 }
 
 // Navigate to user profile
-function navigateToProfile(userId) {
+function navigateToUserProfile(userId) {
     window.location.href = `../profile/profile.html?userId=${userId}`;
 }
 
-// Navigate to chat with user
-async function navigateToChat(userId) {
-    try {
-        showLoading(true);
+// Handle message action
+function handleMessageAction(userId) {
+    // Navigate to chat with this user
+    window.location.href = `../chats/chats.html?userId=${userId}`;
+}
+
+// Show user options menu
+function showUserOptions(userId) {
+    // This would typically show a dropdown or modal with additional options
+    // For simplicity, just show a toast message
+    showToast('More options coming soon');
+}
+
+// Show a toast message
+function showToast(message) {
+    // Check if there's an existing toast
+    let toast = document.querySelector('.toast-message');
+    
+    // Create new toast if none exists
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.className = 'toast-message';
+        document.body.appendChild(toast);
         
-        // Get current user and target user details
-        const currentUser = auth.currentUser;
-        const targetUserDoc = await getDoc(doc(db, 'users', userId));
-        
-        if (!currentUser || !targetUserDoc.exists()) {
-            showError('User not found');
-            return;
-        }
-        
-        const targetUser = targetUserDoc.data();
-        
-        // Check if a chat already exists between these users
-        const chatsRef = collection(db, 'chats');
-        const q1 = query(chatsRef, 
-            where('participants', 'array-contains', currentUserId),
-            where('type', '==', 'direct')
-        );
-        
-        const chatsSnapshot = await getDocs(q1);
-        let existingChatId = null;
-        
-        // Look for an existing chat with the target user
-        chatsSnapshot.forEach(chatDoc => {
-            const chatData = chatDoc.data();
-            if (chatData.participants.includes(userId)) {
-                existingChatId = chatDoc.id;
-            }
+        // Style the toast
+        Object.assign(toast.style, {
+            position: 'fixed',
+            bottom: '20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            color: 'white',
+            padding: '10px 20px',
+            zIndex: '1000',
+            borderRadius: '4px',
+            opacity: '0',
+            transition: 'opacity 0.3s ease'
         });
-        
-        // If no existing chat, create a new one
-        if (!existingChatId) {
-            const newChatRef = doc(collection(db, 'chats'));
-            const currentTime = new Date();
-            
-            // Create the chat document without initial message
-            await setDoc(newChatRef, {
-                type: 'direct',
-                participants: [currentUserId, userId],
-                lastMessage: "",
-                lastMessageTime: currentTime,
-                lastMessageSender: "",
-                createdAt: currentTime,
-                lastUpdated: currentTime,
-                creator: currentUserId
-            });
-            
-            // Create user-specific chat data
-            const currentUserName = currentUser.displayName || 'You';
-            const targetUserName = targetUser.fullName || targetUser.displayName || 'User';
-            
-            // Add chat to current user's chats collection
-            await setDoc(doc(db, 'users', currentUserId, 'chats', newChatRef.id), {
-                chatId: newChatRef.id,
-                name: targetUserName,
-                photoURL: targetUser.photoURL || null,
-                unreadCount: 0,
-                lastAccess: currentTime,
-                lastMessage: "",
-                lastMessageTime: currentTime,
-                lastMessageSender: ""
-            });
-            
-            // Add chat to target user's chats collection
-            await setDoc(doc(db, 'users', userId, 'chats', newChatRef.id), {
-                chatId: newChatRef.id,
-                name: currentUserName,
-                photoURL: currentUser.photoURL || null,
-                unreadCount: 0,
-                lastAccess: currentTime,
-                lastMessage: "",
-                lastMessageTime: currentTime,
-                lastMessageSender: ""
-            });
-            
-            // Send notification to the target user
-            const notificationRef = collection(db, 'users', userId, 'notifications');
-            await addDoc(notificationRef, {
-                type: 'new_chat',
-                senderId: currentUserId,
-                senderName: currentUserName,
-                senderPhoto: currentUser.photoURL || null,
-                title: 'New Chat',
-                text: `${currentUserName} started a new conversation with you`,
-                read: false,
-                timestamp: currentTime
-            });
-            
-            existingChatId = newChatRef.id;
-        }
-        
-        // Set a flag in sessionStorage to indicate this is a direct navigation
-        sessionStorage.setItem('directNavigation', 'true');
-        
-        // Navigate to chats page with the chat ID and showMessages parameter
-        window.location.href = `../chats/chats.html?chatId=${existingChatId}&showMessages=true`;
-        
-    } catch (error) {
-        console.error('Error creating or navigating to chat:', error);
-        showError('Unable to start chat. Please try again.');
-    } finally {
-        showLoading(false);
     }
-}
-
-// Show/hide loading state
-function showLoading(isLoading) {
-    // Get all skeleton users
-    const skeletonUsers = usersList.querySelectorAll('.skeleton-user');
     
-    // Show/hide skeletons based on loading state
-    skeletonUsers.forEach(skeleton => {
-        skeleton.style.display = isLoading ? 'flex' : 'none';
-    });
-    
-    // If loading is finished, ensure the empty state is updated correctly
-    if (!isLoading && allUsers.length === 0) {
-        emptyState.style.display = 'flex';
-    } else if (!isLoading) {
-        emptyState.style.display = 'none';
-    }
-}
-
-// Show error toast
-function showError(message) {
-    // Create toast element
-    const toast = document.createElement('div');
-    toast.className = 'toast-message error';
+    // Set message and show
     toast.textContent = message;
     
-    // Add to body
-    document.body.appendChild(toast);
-    
-    // Show toast
+    // Fade in
     setTimeout(() => {
-        toast.classList.add('show');
-    }, 100);
+        toast.style.opacity = '1';
+    }, 10);
     
-    // Hide and remove toast
+    // Fade out and remove after delay
     setTimeout(() => {
-        toast.classList.remove('show');
+        toast.style.opacity = '0';
         setTimeout(() => {
-            document.body.removeChild(toast);
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
         }, 300);
     }, 3000);
+}
+
+// Show loading skeletons
+function showLoading(isLoading) {
+    if (isLoading) {
+        // Already has skeleton loaders in HTML
+        emptyState.style.display = 'none';
+    } else {
+        // Clear skeletons when loading is done
+        usersList.querySelectorAll('.skeleton-user').forEach(skeleton => {
+            skeleton.remove();
+        });
+    }
+}
+
+// Show error message
+function showError(message) {
+    emptyState.style.display = 'flex';
+    const heading = emptyState.querySelector('h3');
+    const text = emptyState.querySelector('p');
+    
+    if (heading) heading.textContent = 'Error Loading Users';
+    if (text) text.textContent = message;
 } 

@@ -1,6 +1,10 @@
 import { auth, db, doc, getDoc, collection, query, where, getDocs } from '../../Firebase/firebase-config.js';
 import { onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js';
+import { onSnapshot } from 'https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js';
 import { ensureUserInFirestore } from '../../Firebase/auth-helpers.js';
+
+// Store the notification listener so we can unsubscribe when user logs out
+let notificationListener = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     const themeToggle = document.getElementById('theme-toggle');
@@ -16,6 +20,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const signInLink = document.querySelector('.sign-in-link');
     const notificationsBtn = document.getElementById('notifications-btn');
     const notificationCount = document.getElementById('notification-count');
+
+    // Debug logging - check if dropdown elements are found
+    console.log('Dropdown menu element:', dropdownMenu);
+    console.log('User menu button element:', userMenuBtn);
 
     // Initialize guest state - only if elements exist
     if (avatarImage) avatarImage.style.display = 'none';
@@ -43,16 +51,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // Theme toggle functionality
     if (themeToggle) {
         themeToggle.addEventListener('click', () => {
-            const isDarkMode = document.body.classList.contains('dark-mode');
-            if (isDarkMode) {
-                document.body.classList.remove('dark-mode');
-                document.documentElement.classList.remove('dark-mode');
-                localStorage.setItem('theme', 'light');
-            } else {
-                document.body.classList.add('dark-mode');
-                document.documentElement.classList.add('dark-mode');
-                localStorage.setItem('theme', 'dark');
-            }
+            const savedTheme = localStorage.getItem('theme') || 'auto';
+            const newTheme = savedTheme === 'dark' ? 'light' : 'dark';
+            
+            // Update theme using the global function from theme-loader.js
+            window.updateTheme(newTheme);
         });
     }
 
@@ -60,24 +63,64 @@ document.addEventListener('DOMContentLoaded', () => {
     // but we keep it for backward compatibility
     const savedTheme = localStorage.getItem('theme') || 'light';
     if (savedTheme === 'dark') {
-        document.body.classList.add('dark-mode');
-        document.documentElement.classList.add('dark-mode');
+        document.documentElement.classList.add('dark-theme');
+        document.documentElement.classList.remove('light-theme');
     } else {
-        document.body.classList.remove('dark-mode');
-        document.documentElement.classList.remove('dark-mode');
+        document.documentElement.classList.add('light-theme');
+        document.documentElement.classList.remove('dark-theme');
     }
 
     // User menu dropdown toggle
     if (userMenuBtn && dropdownMenu) {
+        // Create a simple state tracker
+        let isMenuOpen = false;
+
+        // Remove any existing inline styles
+        dropdownMenu.removeAttribute('style');
+
         userMenuBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            dropdownMenu.classList.toggle('show');
+            e.preventDefault();
+            
+            console.log('User menu button clicked, current state:', isMenuOpen);
+            
+            // Toggle state
+            isMenuOpen = !isMenuOpen;
+            
+            // Apply the appropriate state
+            if (isMenuOpen) {
+                // Show dropdown
+                dropdownMenu.style.display = 'block';
+                dropdownMenu.style.opacity = '1';
+                dropdownMenu.style.visibility = 'visible';
+                dropdownMenu.style.transform = 'translateY(0)';
+                dropdownMenu.style.pointerEvents = 'auto';
+                dropdownMenu.classList.add('show');
+            } else {
+                // Hide dropdown
+                dropdownMenu.style.display = 'none';
+                dropdownMenu.style.opacity = '0';
+                dropdownMenu.style.visibility = 'hidden';
+                dropdownMenu.style.pointerEvents = 'none';
+                dropdownMenu.classList.remove('show');
+            }
+            
+            console.log('Menu state after click:', isMenuOpen);
         });
 
         // Close dropdown when clicking outside
         document.addEventListener('click', (e) => {
-            if (!userMenuBtn.contains(e.target) && !dropdownMenu.contains(e.target)) {
+            if (isMenuOpen && !userMenuBtn.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                // Hide dropdown
+                dropdownMenu.style.display = 'none';
+                dropdownMenu.style.opacity = '0';
+                dropdownMenu.style.visibility = 'hidden';
+                dropdownMenu.style.pointerEvents = 'none';
                 dropdownMenu.classList.remove('show');
+                
+                // Update state
+                isMenuOpen = false;
+                console.log('Menu closed by outside click');
             }
         });
     }
@@ -88,6 +131,40 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.href = '../notifications/notifications.html';
         });
     }
+
+    // Function to set up real-time notification counter
+    const setupNotificationListener = (userId) => {
+        // Clean up previous listener if it exists
+        if (notificationListener) {
+            notificationListener();
+        }
+
+        if (notificationCount) {
+            try {
+                const notificationsRef = collection(db, 'users', userId, 'notifications');
+                const unreadQuery = query(notificationsRef, where('read', '==', false));
+                
+                // Set up real-time listener for notifications
+                notificationListener = onSnapshot(unreadQuery, (snapshot) => {
+                    const count = snapshot.size;
+                    notificationCount.textContent = count;
+                    
+                    // Add visual feedback when notifications change
+                    if (count > 0) {
+                        notificationsBtn.classList.add('has-notifications');
+                    } else {
+                        notificationsBtn.classList.remove('has-notifications');
+                    }
+                }, (error) => {
+                    console.error('Error in notification listener:', error);
+                    notificationCount.textContent = '0';
+                });
+            } catch (error) {
+                console.error('Error setting up notification listener:', error);
+                notificationCount.textContent = '0';
+            }
+        }
+    };
 
     // Handle user authentication state
     onAuthStateChanged(auth, async (user) => {
@@ -182,20 +259,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
 
-                // Update notification count - moved outside the if/else blocks
-                if (notificationCount) {
-                    try {
-                        const notificationsRef = collection(db, 'users', user.uid, 'notifications');
-                        const unreadQuery = query(notificationsRef, where('read', '==', false));
-                        const unreadSnapshot = await getDocs(unreadQuery);
-                        const count = unreadSnapshot.size;
-                        
-                        notificationCount.textContent = count;
-                    } catch (error) {
-                        console.error('Error fetching notifications:', error);
-                        notificationCount.textContent = '0';
-                    }
-                }
+                // Setup real-time notification listener
+                setupNotificationListener(user.uid);
 
                 // Update menu sections for signed-in user
                 if (menuSections) {
@@ -317,6 +382,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 const guestIconDropdown = document.createElement('i');
                 guestIconDropdown.className = 'fa-solid fa-circle-user';
                 avatarInitialsDropdown.appendChild(guestIconDropdown);
+            }
+
+            // Clear notification count and unsubscribe from listener
+            if (notificationCount) {
+                notificationCount.textContent = '0';
+            }
+            
+            if (notificationListener) {
+                notificationListener();
+                notificationListener = null;
             }
 
             // Update menu sections for guest user

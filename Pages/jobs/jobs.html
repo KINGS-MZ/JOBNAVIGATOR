@@ -12,6 +12,17 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,0..200">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+    
+    <!-- Page-specific styles -->
+    <style>
+        /* Ensure dropdown menu works properly */
+        .dropdown-menu.show {
+            opacity: 1 !important;
+            visibility: visible !important;
+            transform: translateY(0) !important;
+            pointer-events: auto !important;
+        }
+    </style>
 </head>
 <body>
     <!-- Navigation Bar -->
@@ -26,7 +37,7 @@
                 <a href="../home/home.html" class="nav-icon-btn" aria-label="Home">
                     <span class="material-symbols-rounded">home</span>
                 </a>
-                <a href="../jobs/jobs.html" class="nav-icon-btn" aria-label="Jobs">
+                <a href="../jobs/jobs.html" class="nav-icon-btn active" aria-label="Jobs">
                     <span class="material-symbols-rounded">work</span>
                 </a>
                 <a href="../users/users.html" class="nav-icon-btn" aria-label="Users">
@@ -300,6 +311,8 @@
         </a>
     </div>
 
+    <!-- Navigation JS -->
+    <script type="module" src="../../Assets/navbar/nav.js"></script>
     <script type="module" src="jobs.js"></script>
     <!-- Script to manage navigation display based on screen size -->
     <script>
