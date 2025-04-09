@@ -455,9 +455,12 @@ footer p {
     }
     
     .salary-input-container {
-        width: 100%;
-        justify-content: center;
-        max-width: 350px;
+        max-width: 100%;
+        padding: 0 1rem;
+    }
+    
+    .salary-input-group {
+        max-width: 150px;
     }
 }
 
@@ -1188,12 +1191,17 @@ nav {
 
 .salary-input-container {
     display: flex;
-    gap: 0.5rem;
-    width: 350px;
+    gap: 1rem;
+    width: 100%;
+    max-width: 500px;
+    margin: 0 auto;
+    justify-content: center;
 }
 
 .salary-input-group {
     flex: 1;
+    min-width: 0;
+    max-width: 200px;
 }
 
 .salary-input-group input {
