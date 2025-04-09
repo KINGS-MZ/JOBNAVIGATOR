@@ -216,6 +216,7 @@ h1 {
     background-position: right 0.7rem center;
     background-size: 1em;
     transition: all 0.3s ease;
+    width: 250px;
 }
 
 .dark-mode .filters select {
@@ -437,10 +438,12 @@ footer p {
     .filters {
         flex-direction: column;
         padding: 0 1rem;
+        align-items: center;
     }
     
     .filters select {
         width: 100%;
+        max-width: 350px;
     }
     
     .search-box {
@@ -449,6 +452,12 @@ footer p {
     
     #search-btn {
         margin: 0 1rem;
+    }
+    
+    .salary-input-container {
+        width: 100%;
+        justify-content: center;
+        max-width: 350px;
     }
 }
 
@@ -566,32 +575,41 @@ nav {
     background: transparent;
     border: none;
     cursor: pointer;
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 8px;
+    width: 2.2rem !important;
+    height: 2.2rem !important;
+    border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--primary-grey);
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
+    position: relative;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 #theme-toggle:hover {
-    background: rgba(52, 152, 219, 0.1);
-    transform: translateY(-2px);
+    background-color: rgba(0, 0, 0, 0.05);
 }
 
 .dark-mode #theme-toggle:hover {
-    background: rgba(46, 204, 113, 0.1);
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
 #theme-toggle i {
-    font-size: 1.25rem;
-    color: var(--primary-blue);
+    position: absolute;
+    transition: all 0.3s ease;
+    color: var(--primary-grey);
+    font-size: 1.4rem !important;
+    width: 1.4rem !important;
+    height: 1.4rem !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .dark-mode #theme-toggle i {
-    color: var(--primary-green);
+    color: var(--text-light);
 }
 
 /* User Menu Styles */
@@ -1166,4 +1184,50 @@ nav {
 
 .bottom-nav-add span {
     display: none;
+}
+
+.salary-input-container {
+    display: flex;
+    gap: 0.5rem;
+    width: 350px;
+}
+
+.salary-input-group {
+    flex: 1;
+}
+
+.salary-input-group input {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    border: 2px solid var(--light-border);
+    background-color: var(--input-bg-light);
+    color: var(--input-text-light);
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+.dark-mode .salary-input-group input {
+    background-color: var(--input-bg-dark);
+    color: var(--input-text-dark);
+    border-color: var(--dark-border);
+}
+
+.salary-input-group input:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
+
+.dark-mode .salary-input-group input:focus {
+    border-color: var(--primary-green);
+    box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.2);
+}
+
+.salary-input-group input::placeholder {
+    color: var(--input-placeholder-light);
+}
+
+.dark-mode .salary-input-group input::placeholder {
+    color: var(--input-placeholder-dark);
 }

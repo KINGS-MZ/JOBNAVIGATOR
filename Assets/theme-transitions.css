@@ -1,0 +1,52 @@
+/* Theme transition styles */
+:root {
+    /* Default light theme */
+    --bg-color: #f5f7fb;
+    --surface-color: #ffffff;
+    --surface-color-hover: #f8f9fa;
+    --text-color: #333333;
+    --text-color-secondary: #666666;
+    --text-color-tertiary: #999999;
+    --border-color: #e0e0e0;
+    --border-color-light: #f0f0f0;
+    --hover-color: rgba(0, 0, 0, 0.05);
+    --shadow-color: rgba(0, 0, 0, 0.1);
+}
+
+/* Dark theme variables */
+html.dark-mode {
+    --bg-color: #121212;
+    --surface-color: #1e1e1e;
+    --surface-color-hover: #2a2a2a;
+    --text-color: #ffffff;
+    --text-color-secondary: #a0a0a0;
+    --text-color-tertiary: #6c6c6c;
+    --border-color: #383838;
+    --border-color-light: #303030;
+    --hover-color: rgba(255, 255, 255, 0.05);
+    --shadow-color: rgba(0, 0, 0, 0.4);
+}
+
+/* Base styles */
+html {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+body {
+    background-color: var(--bg-color);
+    color: var(--text-color);
+}
+
+/* Prevent transitions during initial page load */
+html.theme-loading * {
+    transition: none !important;
+}
+
+/* Apply smooth transitions after page load */
+html:not(.theme-loading) * {
+    transition: background-color 0.3s ease,
+                color 0.3s ease,
+                border-color 0.3s ease,
+                box-shadow 0.3s ease;
+} 

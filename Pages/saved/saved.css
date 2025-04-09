@@ -842,16 +842,16 @@ footer {
 
 @media (max-width: 768px) {
     .content-wrapper {
-        padding: 0;
+        padding: 0 1rem;
     }
     
     .posts-container {
         grid-template-columns: 1fr;
-        gap: 1rem;
+        gap: 1.5rem;
     }
     
     .post-header {
-        flex-direction: row;
+        flex-direction: column;
     }
     
     .post-content {
@@ -859,27 +859,27 @@ footer {
     }
     
     .post-footer {
-        padding: 0.75rem 1rem;
+        flex-direction: column;
     }
     
     .search-container {
-        flex-direction: row;
-        width: 100%;
+        flex-direction: column;
+        gap: 0.75rem;
     }
     
     .search-btn {
-        width: 2.8rem;
-        height: 2.8rem;
-        padding: 0.6rem;
+        width: 100%;
     }
     
     .header-section {
-        padding: 0;
+        text-align: center;
+        align-items: center;
     }
     
     .page-title,
     .page-description {
-        text-align: left;
+        text-align: center;
+        width: 100%;
     }
     
     .bottom-nav {
@@ -1261,18 +1261,20 @@ footer {
 
 /* Theme Toggle */
 #theme-toggle {
-    background: none;
+    background: transparent;
     border: none;
     cursor: pointer;
-    width: 40px;
-    height: 40px;
+    width: 2.2rem !important;
+    height: 2.2rem !important;
+    border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 50%;
-    color: var(--text-dark);
-    transition: background-color 0.3s ease;
-    margin-right: 1rem;
+    color: var(--primary-grey);
+    transition: all 0.2s ease;
+    position: relative;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 .dark-mode #theme-toggle {
@@ -1280,15 +1282,27 @@ footer {
 }
 
 #theme-toggle:hover {
-    background-color: var(--light-hover);
+    background-color: rgba(0, 0, 0, 0.05);
 }
 
 .dark-mode #theme-toggle:hover {
-    background-color: var(--dark-hover);
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
 #theme-toggle i {
-    font-size: 1.2rem;
+    position: absolute;
+    transition: all 0.3s ease;
+    color: var(--primary-grey);
+    font-size: 1.4rem !important;
+    width: 1.4rem !important;
+    height: 1.4rem !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dark-mode #theme-toggle i {
+    color: var(--text-light);
 }
 
 /* Bottom Navigation Bar */

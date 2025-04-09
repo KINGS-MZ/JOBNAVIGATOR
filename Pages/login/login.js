@@ -17,7 +17,9 @@ import {
 import { 
     db, 
     doc, 
-    setDoc 
+    setDoc,
+    getDoc,
+    updateDoc
 } from '../../Firebase/firebase-config.js';
 import { ensureUserInFirestore } from '../../Firebase/auth-helpers.js';
 
@@ -189,59 +191,55 @@ document.addEventListener('DOMContentLoaded', function() {
     signupForm?.addEventListener('submit', async function(e) {
         e.preventDefault();
         
-        // Clear previous errors
-        const errorElements = signupForm.querySelectorAll('.error-message');
-        errorElements.forEach(el => el.textContent = '');
+        const firstNameElement = document.getElementById('firstName');
+        const lastNameElement = document.getElementById('lastName');
+        const emailElement = document.getElementById('signupEmail');
+        const passwordElement = document.getElementById('signupPassword');
+        const confirmPasswordElement = document.getElementById('confirmPassword');
         
-        // Get form values
-        const firstName = document.getElementById('firstName').value.trim();
-        const lastName = document.getElementById('lastName').value.trim();
-        const email = document.getElementById('signupEmail').value.trim();
-        const password = document.getElementById('signupPassword').value;
-        const confirmPassword = document.getElementById('confirmPassword').value;
-        
-        // Validate form fields
-        if (!firstName) {
-            showError('firstNameError', 'Please enter your first name');
+        // Check if elements exist
+        if (!firstNameElement || !lastNameElement || !emailElement || !passwordElement || !confirmPasswordElement) {
+            console.error('Form elements not found:', {
+                firstName: !!firstNameElement,
+                lastName: !!lastNameElement,
+                email: !!emailElement,
+                password: !!passwordElement,
+                confirmPassword: !!confirmPasswordElement
+            });
+            alert('Form error: Some required fields are missing. Please refresh the page and try again.');
             return;
         }
         
-        if (!lastName) {
-            showError('lastNameError', 'Please enter your last name');
-            return;
-        }
+        const firstName = firstNameElement.value.trim();
+        const lastName = lastNameElement.value.trim();
+        const email = emailElement.value.trim();
+        const password = passwordElement.value;
+        const confirmPassword = confirmPasswordElement.value;
         
-        if (!email) {
-            showError('signupEmailError', 'Please enter your email address');
-            return;
-        }
-        
-        if (!password) {
-            showError('signupPasswordError', 'Please create a password');
-            return;
-        }
-        
-        if (password.length < 6) {
-            showError('signupPasswordError', 'Password must be at least 6 characters long');
+        // Validate form
+        if (!firstName || !lastName || !email || !password || !confirmPassword) {
+            alert('Please fill in all fields');
             return;
         }
         
         if (password !== confirmPassword) {
-            showError('confirmPasswordError', 'Passwords do not match');
+            alert('Passwords do not match');
             return;
         }
-
+        
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-            // Update user profile with display name
+            const fullName = `${firstName} ${lastName}`;
+            
+            // Update user profile with display name in Firebase Auth
             await updateProfile(userCredential.user, {
-                displayName: `${firstName} ${lastName}`
+                displayName: fullName
             });
             
-            // Create comprehensive user document using our helper function
+            // Create comprehensive user document in Firestore
             const userData = {
-                fullName: `${firstName} ${lastName}`,
-                name: `${firstName} ${lastName}`,
+                fullName: fullName,
+                name: fullName,
                 email: email,
                 createdAt: new Date(),
                 status: 'online',
@@ -255,12 +253,8 @@ document.addEventListener('DOMContentLoaded', function() {
             };
             
             try {
-                // Set the user data in Firestore directly
+                // Set the user data in Firestore
                 await setDoc(doc(db, 'users', userCredential.user.uid), userData);
-                
-                // Also use our helper to ensure consistency and handle any additional fields
-                await ensureUserInFirestore(userCredential.user);
-                
                 console.log('User document created successfully');
             } catch (firestoreError) {
                 console.error('Error creating user document:', firestoreError);
@@ -271,16 +265,8 @@ document.addEventListener('DOMContentLoaded', function() {
             window.location.href = '/Pages/home/home.html';
             return; // Stop execution here
         } catch (error) {
-            console.error('Signup error:', error);
-            if (error.code === 'auth/email-already-in-use') {
-                showError('signupEmailError', 'This email is already registered');
-            } else if (error.code === 'auth/invalid-email') {
-                showError('signupEmailError', 'Invalid email format');
-            } else if (error.code === 'auth/weak-password') {
-                showError('signupPasswordError', 'Password is too weak');
-            } else {
-                showError('signupEmailError', 'An error occurred. Please try again');
-            }
+            console.error('Error during signup:', error);
+            alert('Error during signup: ' + error.message);
         }
     });
 
@@ -299,8 +285,43 @@ document.addEventListener('DOMContentLoaded', function() {
                 provider.addScope('email');
                 const result = await signInWithPopup(auth, provider);
                 
-                // Ensure user is created in Firestore
-                await ensureUserInFirestore(result.user);
+                // Create a proper user document with the Google user's name
+                const userData = {
+                    fullName: result.user.displayName || 'User',
+                    name: result.user.displayName || 'User',
+                    email: result.user.email,
+                    photoURL: result.user.photoURL,
+                    createdAt: new Date(),
+                    status: 'online',
+                    following: [],
+                    followers: [],
+                    pendingFollowRequests: [],
+                    bio: '',
+                    skills: [],
+                    interests: [],
+                    uid: result.user.uid
+                };
+                
+                try {
+                    // First check if the user document already exists
+                    const userDocRef = doc(db, 'users', result.user.uid);
+                    const userDoc = await getDoc(userDocRef);
+                    
+                    if (!userDoc.exists()) {
+                        // Create a new user document
+                        await setDoc(userDocRef, userData);
+                        console.log('Google user document created successfully');
+                    } else {
+                        // Update relevant fields but keep existing data
+                        await updateDoc(userDocRef, {
+                            lastLogin: new Date(),
+                            status: 'online'
+                        });
+                    }
+                } catch (firestoreError) {
+                    console.error('Error creating Google user document:', firestoreError);
+                    // Continue even if Firestore creation fails
+                }
                 
                 console.log('Google sign-in successful');
                 window.location.href = '/Pages/home/home.html';

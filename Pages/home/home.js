@@ -13,6 +13,13 @@ import { ensureUserInFirestore } from '../../Firebase/auth-helpers.js';
 onAuthStateChanged(auth, async (user) => {
     const menuSections = document.querySelector('.menu-sections');
     
+    // Skip updating menu if it was handled by nav.js
+    // This flag will be set by nav.js when it updates the menu
+    if (window.navJsHandledMenu) {
+        console.log('Menu already handled by nav.js');
+        return;
+    }
+    
     if (user) {
         // Ensure user exists in Firestore first
         const userData = await ensureUserInFirestore(user);
@@ -148,6 +155,8 @@ onAuthStateChanged(auth, async (user) => {
             }
         }
 
+        // Carefully update menu content for signed-in users without overwriting it if already set by nav.js
+        window.homeJsHandledMenu = true;
         // Update menu content for signed-in users
         if (menuSections) {
             menuSections.innerHTML = `
@@ -276,48 +285,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Dropdown Menu
-    const userMenuBtn = document.getElementById('user-menu-btn');
-    const userDropdown = document.getElementById('user-dropdown');
-
-    if (!userMenuBtn || !userDropdown) {
-        console.error('Dropdown elements not found');
-    } else {
-        let isDropdownOpen = false;
-
-        function toggleDropdown(event) {
-            event.stopPropagation();
-            isDropdownOpen = !isDropdownOpen;
-            userDropdown.classList.toggle('show');
-            userMenuBtn.classList.toggle('active');
-        }
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', (event) => {
-            if (isDropdownOpen && !userMenuBtn.contains(event.target) && !userDropdown.contains(event.target)) {
-                isDropdownOpen = false;
-                userDropdown.classList.remove('show');
-                userMenuBtn.classList.remove('active');
-            }
-        });
-
-        userMenuBtn.addEventListener('click', toggleDropdown);
-
-        // Prevent dropdown from closing when clicking inside it
-        userDropdown.addEventListener('click', (event) => {
-            event.stopPropagation();
-        });
-
-        // Close dropdown when pressing Escape key
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape' && isDropdownOpen) {
-                isDropdownOpen = false;
-                userDropdown.classList.remove('show');
-                userMenuBtn.classList.remove('active');
-            }
-        });
-    }
-
     // Floating Menu
     const floatingMenuBtn = document.querySelector('.menu-btn');
     const menuItems = document.querySelector('.menu-items');
@@ -358,70 +325,76 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Search and Filter Functionality
+    // Function to handle search and filter
     const searchBtn = document.getElementById('search-btn');
     const jobSearch = document.getElementById('job-search');
     const locationSearch = document.getElementById('location-search');
     const jobType = document.getElementById('job-type');
-    const salaryRange = document.getElementById('salary-range');
+    const minSalary = document.getElementById('min-salary');
+    const maxSalary = document.getElementById('max-salary');
+    const tagButtons = document.querySelectorAll('.tag');
 
-    // Handle search button click
+    // Handle main search button click
     if (searchBtn) {
-        searchBtn.addEventListener('click', () => {
-            const searchParams = new URLSearchParams();
-            
-            // Add search query if present
-            if (jobSearch.value) {
-                searchParams.append('q', jobSearch.value);
-            }
-            
-            // Add location if present
-            if (locationSearch.value) {
-                searchParams.append('location', locationSearch.value);
-            }
-            
-            // Add filters if selected
-            if (jobType.value) {
-                searchParams.append('type', jobType.value);
-            }
-            if (salaryRange.value) {
-                searchParams.append('salary', salaryRange.value);
-            }
-            
-            // Redirect to jobs page with search parameters
-            window.location.href = `../jobs/jobs.html?${searchParams.toString()}`;
+        searchBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            performSearch();
         });
     }
 
-    // Handle Enter key in search inputs
+    // Handle popular search tag clicks
+    if (tagButtons) {
+        tagButtons.forEach(tag => {
+            tag.addEventListener('click', () => {
+                // Set the job search input to the tag text
+                if (jobSearch) {
+                    jobSearch.value = tag.textContent.trim();
+                }
+                // Perform the search
+                performSearch();
+            });
+        });
+    }
+
+    // Enable pressing Enter in search fields
     [jobSearch, locationSearch].forEach(input => {
         if (input) {
             input.addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') {
-                    searchBtn.click();
+                    e.preventDefault();
+                    performSearch();
                 }
             });
         }
     });
 
-    // Handle popular search tags
-    const tags = document.querySelectorAll('.tag');
-    tags.forEach(tag => {
-        tag.addEventListener('click', () => {
-            const searchParams = new URLSearchParams();
-            searchParams.append('q', tag.textContent);
-            window.location.href = `../jobs/jobs.html?${searchParams.toString()}`;
-        });
-    });
-
-    // Handle filter changes
-    [jobType, salaryRange].forEach(filter => {
-        if (filter) {
-            filter.addEventListener('change', () => {
-                searchBtn.click();
-            });
+    // Function to collect search params and redirect to jobs page
+    function performSearch() {
+        // Get values from form fields
+        const query = jobSearch ? jobSearch.value.trim() : '';
+        const location = locationSearch ? locationSearch.value.trim() : '';
+        const type = jobType ? jobType.value : '';
+        
+        // Build salary parameter if both min and max are provided
+        let salary = '';
+        if (minSalary && minSalary.value && maxSalary && maxSalary.value) {
+            salary = `${minSalary.value}-${maxSalary.value}`;
+        } else if (minSalary && minSalary.value) {
+            salary = `${minSalary.value}+`;
+        } else if (maxSalary && maxSalary.value) {
+            salary = `0-${maxSalary.value}`;
         }
-    });
+
+        // Build the URL with search parameters
+        const urlParams = new URLSearchParams();
+        if (query) urlParams.append('q', query);
+        if (location) urlParams.append('location', location);
+        if (type) urlParams.append('type', type);
+        if (salary) urlParams.append('salary', salary);
+
+        // Redirect to jobs page with search parameters
+        window.location.href = `../jobs/jobs.html?${urlParams.toString()}`;
+    }
 
     // Toast Dialog Functionality
     const toastDialog = document.getElementById('toastDialog');
@@ -521,7 +494,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add authentication check for bottom navigation protected items
     const bottomNavAddBtn = document.querySelector('.bottom-nav .bottom-nav-add');
     const bottomNavAlertsBtn = document.querySelector('.bottom-nav a[href="../notifications/notifications.html"]');
-    const bottomNavProfileBtn = document.querySelector('.bottom-nav a[href="../profile/profile.html"]');
+    const bottomNavProfileBtn = document.querySelector('.bottom-nav a[href="../account/account.html"]');
 
     // Add Post Button (bottom nav)
     if (bottomNavAddBtn) {
@@ -548,11 +521,42 @@ document.addEventListener('DOMContentLoaded', () => {
         bottomNavProfileBtn.addEventListener('click', (e) => {
             e.preventDefault();
             if (handleProtectedAction('profile')) {
-                window.location.href = '../profile/profile.html';
+                window.location.href = '../account/account.html';
             }
         });
     }
+
+    // Setup protected navigation links for Users and Chats
+    setupProtectedNavLinks();
 });
+
+// Function to setup protected navigation links
+function setupProtectedNavLinks() {
+    // Get bottom navigation links for Users and Chats
+    const usersLink = document.querySelector('.bottom-nav a[href="../users/users.html"]');
+    const chatsLink = document.querySelector('.bottom-nav a[href="../chats/chats.html"]');
+    
+    // Add click event handlers to check authentication
+    if (usersLink) {
+        usersLink.addEventListener('click', function(e) {
+            if (!isUserSignedIn()) {
+                e.preventDefault();
+                showToast(); // Show sign-in required toast
+                return false;
+            }
+        });
+    }
+    
+    if (chatsLink) {
+        chatsLink.addEventListener('click', function(e) {
+            if (!isUserSignedIn()) {
+                e.preventDefault();
+                showToast(); // Show sign-in required toast
+                return false;
+            }
+        });
+    }
+}
 
 // Update user profile
 function updateUserProfile(user) {

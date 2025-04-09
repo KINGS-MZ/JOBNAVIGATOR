@@ -16,6 +16,9 @@ export async function ensureUserInFirestore(user) {
     const userDocRef = doc(db, 'users', user.uid);
     const userDoc = await getDoc(userDocRef);
     
+    // Always update lastLogin on every authentication
+    const lastLogin = new Date().toISOString();
+    
     if (!userDoc.exists()) {
       // User document doesn't exist, create it with complete fields
       const userData = {
@@ -27,6 +30,7 @@ export async function ensureUserInFirestore(user) {
         photoURL: user.photoURL,
         status: 'online',
         lastActive: new Date(),
+        lastLogin: lastLogin, // Add lastLogin timestamp
         createdAt: new Date(),
         // Initialize empty arrays for social connections
         following: [],
@@ -55,7 +59,8 @@ export async function ensureUserInFirestore(user) {
       
       // Check for missing or outdated fields
       // Name fields
-      if (!userData.name && user.displayName) {
+      if (user.displayName) {
+        // Always update the name fields with the authentication displayName when available
         updates.name = user.displayName;
         updates.fullName = user.displayName;
         needsUpdate = true;
@@ -97,6 +102,10 @@ export async function ensureUserInFirestore(user) {
         updates.lastActive = new Date();
         needsUpdate = true;
       }
+      
+      // Always update lastLogin timestamp when user logs in
+      updates.lastLogin = lastLogin;
+      needsUpdate = true;
       
       // Apply updates if needed
       if (needsUpdate) {

@@ -75,7 +75,7 @@ body.dark-mode {
 main {
     max-width: 1280px;
     margin: 0 auto;
-    padding: 4rem 1rem;
+    padding: 1.5rem 1rem;
     width: 100%;
 }
 
@@ -152,32 +152,58 @@ nav {
     background: transparent;
     border: none;
     cursor: pointer;
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 8px;
+    width: 2.2rem !important;
+    height: 2.2rem !important;
+    border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--primary-grey);
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
+    position: relative;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 #theme-toggle:hover {
-    background: rgba(52, 152, 219, 0.1);
-    transform: translateY(-2px);
+    background-color: rgba(0, 0, 0, 0.05);
 }
 
 .dark-mode #theme-toggle:hover {
-    background: rgba(46, 204, 113, 0.1);
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
-#theme-toggle i {
-    font-size: 1.25rem;
-    color: var(--primary-blue);
+#theme-toggle .moon-icon,
+#theme-toggle .sun-icon {
+    position: absolute;
+    transition: all 0.3s ease;
+    color: var(--primary-grey);
+    font-size: 1.4rem !important;
+    width: 1.4rem !important;
+    height: 1.4rem !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-.dark-mode #theme-toggle i {
-    color: var(--primary-green);
+#theme-toggle .moon-icon {
+    opacity: 1;
+    transform: rotate(0) scale(1);
+}
+
+#theme-toggle .sun-icon {
+    opacity: 0;
+    transform: rotate(-180deg) scale(0);
+}
+
+.dark-mode #theme-toggle .moon-icon {
+    opacity: 0;
+    transform: rotate(180deg) scale(0);
+}
+
+.dark-mode #theme-toggle .sun-icon {
+    opacity: 1;
+    transform: rotate(0) scale(1);
 }
 
 /* User Menu Styles */
@@ -520,6 +546,10 @@ nav {
     .job-card {
         padding: 1rem 0.5rem;
     }
+
+    main {
+        padding: 4rem 1rem;
+    }
 }
 
 @media (min-width: 640px) and (max-width: 767px) {
@@ -621,10 +651,11 @@ nav {
 
 /* Main wrapper style to maintain consistency */
 .content-wrapper {
-    width: 100%;
-    max-width: 1200px;
+    display: flex;
+    gap: 2rem;
+    padding: 2rem;
+    max-width: 1400px;
     margin: 0 auto;
-    padding: 0 2rem;
 }
 
 /* Search Section Styles */
@@ -666,7 +697,8 @@ nav {
     width: 100%;
     padding: 0;
     align-items: center;
-    justify-content: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
 }
 
 .dark-mode .search-container {
@@ -743,6 +775,7 @@ nav {
     cursor: pointer;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     min-width: 120px;
+    height: 48px; /* Set explicit height for consistency */
 }
 
 .search-btn {
@@ -1006,6 +1039,27 @@ nav {
     width: 100%;
     margin: 3rem auto 0;
     position: relative;
+    min-height: 200px; /* Ensure minimum height even when empty */
+}
+
+/* When jobs container is showing message */
+.jobs-container.showing-message {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 3rem 1rem;
+}
+
+.jobs-container.showing-message p {
+    font-size: 1.2rem;
+    color: var(--text-dark);
+    margin-top: 1.5rem;
+}
+
+.dark-mode .jobs-container.showing-message p {
+    color: var(--text-light);
 }
 
 @media (max-width: 1024px) {
@@ -1247,6 +1301,7 @@ nav {
     margin-bottom: 1rem;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
@@ -1360,6 +1415,7 @@ nav {
     .job-description {
         font-size: 0.85rem;
         -webkit-line-clamp: 2;
+        line-clamp: 2;
     }
 
     .job-tag {
@@ -2256,4 +2312,743 @@ footer p {
 
 .bottom-nav-add span {
     display: none;
+}
+
+/* Sidebar Filters */
+.filters-sidebar {
+    width: 300px;
+    padding: 20px;
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border: 1px solid var(--border-color);
+    position: sticky;
+    top: 20px;
+    height: fit-content;
+}
+
+.filters-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.filters-header h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.clear-filters {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    font-size: 0.9rem;
+    cursor: pointer;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+.clear-filters:hover {
+    background-color: var(--hover-bg);
+}
+
+.filter-section {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.filter-section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.filter-section h4 {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-bottom: 1rem;
+}
+
+.filter-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.filter-option {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    user-select: none;
+    color: var(--text-secondary);
+    transition: color 0.2s;
+}
+
+.filter-option:hover {
+    color: var(--text-primary);
+}
+
+.filter-option input[type="checkbox"] {
+    display: none;
+}
+
+.checkmark {
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border-color);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.filter-option input[type="checkbox"]:checked + .checkmark {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.checkmark::after {
+    content: '';
+    width: 5px;
+    height: 10px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.filter-option input[type="checkbox"]:checked + .checkmark::after {
+    opacity: 1;
+}
+
+/* Price Range Slider */
+.price-range-container {
+    padding: 0.5rem 0;
+}
+
+.price-range-slider {
+    position: relative;
+    height: 4px;
+    background: var(--border-color);
+    border-radius: 2px;
+    margin: 1.5rem 0;
+}
+
+.price-range-track {
+    position: absolute;
+    height: 100%;
+    background: var(--primary-color);
+    border-radius: 2px;
+}
+
+.price-range-thumb {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    background: white;
+    border: 2px solid var(--primary-color);
+    border-radius: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+.price-range-thumb:hover {
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
+.price-range-values {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+/* Main Content Area */
+.main-content {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .content-wrapper {
+        flex-direction: column;
+    }
+
+    .filters-sidebar {
+        width: 100%;
+        position: static;
+    }
+}
+
+/* Dark Mode Support */
+[data-theme="dark"] .filters-sidebar {
+    background: var(--card-bg);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .price-range-thumb {
+    background: var(--card-bg);
+}
+
+.salary-input-container {
+    display: flex;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.salary-input-group {
+    flex: 1;
+}
+
+.salary-input-group label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.salary-input {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 0.375rem;
+    background-color: var(--input-bg);
+    color: var(--text-primary);
+    font-size: 0.875rem;
+    transition: border-color 0.2s;
+}
+
+.salary-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.salary-input::placeholder {
+    color: var(--text-tertiary);
+}
+
+@media (max-width: 768px) {
+    .filters-sidebar {
+        display: none;
+    }
+}
+
+@media (min-width: 769px) {
+    .filter-btn,
+    .filters {
+        display: none !important;
+    }
+}
+
+/* Pagination Styles */
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin: 2rem 0;
+    gap: 1rem;
+}
+
+.pagination-btn {
+    background-color: var(--primary-blue);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.dark-mode .pagination-btn {
+    background-color: var(--primary-green);
+}
+
+.pagination-btn:hover:not(:disabled) {
+    background-color: #2980b9;
+    transform: translateY(-2px);
+}
+
+.dark-mode .pagination-btn:hover:not(:disabled) {
+    background-color: #27ae60;
+}
+
+.pagination-btn:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+}
+
+.dark-mode .pagination-btn:disabled {
+    background-color: #34495e;
+}
+
+.page-indicator {
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-dark);
+}
+
+.dark-mode .page-indicator {
+    color: var(--text-light);
+}
+
+@media (max-width: 768px) {
+    .pagination {
+        margin: 1.5rem 0;
+    }
+}
+
+/* Active Filters Styles */
+.active-filters-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin: 1rem 0;
+    padding: 0.5rem 0;
+}
+
+.active-filter-tag {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    background-color: rgba(52, 152, 219, 0.1);
+    border: 1px solid var(--primary-blue);
+    border-radius: 6px;
+    color: var(--primary-blue);
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.dark-mode .active-filter-tag {
+    background-color: rgba(46, 204, 113, 0.1);
+    border-color: var(--primary-green);
+    color: var(--primary-green);
+}
+
+.active-filter-tag .filter-label {
+    font-weight: 500;
+}
+
+.active-filter-tag .filter-value {
+    font-weight: 600;
+}
+
+.active-filter-tag .remove-filter {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    font-size: 1rem;
+    color: var(--primary-blue);
+    margin-left: 0.25rem;
+}
+
+.dark-mode .active-filter-tag .remove-filter {
+    color: var(--primary-green);
+}
+
+.active-filter-tag .remove-filter:hover {
+    transform: scale(1.2);
+}
+
+.active-filter-tag.location-filter {
+    background-color: rgba(241, 196, 15, 0.1);
+    border-color: #f1c40f;
+    color: #f39c12;
+}
+
+.dark-mode .active-filter-tag.location-filter {
+    background-color: rgba(241, 196, 15, 0.1);
+    border-color: #f1c40f;
+    color: #f1c40f;
+}
+
+.active-filter-tag.location-filter .remove-filter {
+    color: #f39c12;
+}
+
+.dark-mode .active-filter-tag.location-filter .remove-filter {
+    color: #f1c40f;
+}
+
+@media (max-width: 768px) {
+    .active-filters-container {
+        padding: 0.5rem 1rem;
+        margin: 0.5rem 0;
+    }
+    
+    .active-filter-tag {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.85rem;
+    }
+}
+
+/* Location Input Styles */
+.location-input-container {
+    display: flex;
+    margin-bottom: 1rem;
+    gap: 0.5rem;
+    align-items: center; /* Center items vertically */
+    width: 100%; /* Constrain to parent width */
+    max-width: 100%; /* Ensure it doesn't exceed container */
+}
+
+.location-input {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    border: 1px solid var(--light-border);
+    background-color: var(--input-bg-light);
+    color: var(--input-text-light);
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    height: 42px; /* Set specific height to match button */
+    box-sizing: border-box;
+    max-width: calc(100% - 50px); /* Account for button width and gap */
+    min-width: 0; /* Allow text to truncate */
+    overflow: hidden; /* Prevent overflow */
+    text-overflow: ellipsis; /* Add ellipsis for overflow text */
+}
+
+.dark-mode .location-input {
+    background-color: var(--input-bg-dark);
+    color: var(--input-text-dark);
+    border-color: var(--dark-border);
+}
+
+.location-input:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+}
+
+.dark-mode .location-input:focus {
+    border-color: var(--primary-green);
+    box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.2);
+}
+
+.apply-location {
+    background-color: var(--primary-blue);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    width: 42px;
+    height: 42px; /* Match height with input */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0; /* Remove default padding */
+    flex-shrink: 0; /* Prevent button from shrinking */
+}
+
+.dark-mode .apply-location {
+    background-color: var(--primary-green);
+}
+
+.apply-location:hover {
+    background-color: #2980b9;
+    transform: translateY(-2px);
+}
+
+.dark-mode .apply-location:hover {
+    background-color: #27ae60;
+}
+
+/* Clear Filters Button Styles */
+.clear-filters-btn {
+    display: none; /* Hidden by default, shown in mobile view */
+    background-color: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    height: 48px; /* Match search button height */
+    width: 48px; /* Equal width for square shape */
+}
+
+.clear-filters-btn i {
+    font-size: 1rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Media adjustments for squared mobile clear button */
+@media (max-width: 768px) {
+    .clear-filters-btn i {
+        font-size: 1.2rem;
+        margin: 0;
+    }
+}
+
+.clear-filters-btn:hover {
+    background-color: #c0392b;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.dark-mode .clear-filters-btn {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.dark-mode .clear-filters-btn:hover {
+    background-color: #c0392b;
+}
+
+/* Media query for mobile view */
+@media (max-width: 768px) {
+    .search-container {
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .search-box {
+        flex: 1 1 100%;
+    }
+    
+    .search-btn {
+        flex: 1;
+        padding: 0.75rem 0.5rem;
+        height: 48px; /* Keep consistent height */
+    }
+    
+    /* Create a container for filter and clear buttons */
+    .search-container .filter-btn,
+    .search-container .clear-filters-btn {
+        display: inline-flex; /* Make sure they're displayed inline */
+    }
+    
+    .filter-btn {
+        flex: none;
+        padding: 0.75rem 0.5rem;
+        height: 48px; /* Match search button height */
+        display: flex;
+        align-items: center;
+    }
+    
+    .clear-filters-btn {
+        display: flex; /* Show in mobile view */
+        flex: none; /* Don't expand to fill space */
+        padding: 0;
+        margin-left: 0.5rem; /* Add space between filter and clear buttons */
+        aspect-ratio: 1/1; /* Make it square */
+        height: 48px; /* Match search button height */
+        width: 48px; /* Equal width to height for square shape */
+        justify-content: center;
+        align-items: center;
+    }
+}
+
+/* Specific adjustments for very small screens */
+@media (max-width: 480px) {
+    .clear-filters-btn span {
+        display: none;
+    }
+    
+    .clear-filters-btn i {
+        margin: 0;
+    }
+    
+    .search-btn, .filter-btn, .clear-filters-btn {
+        padding: 0.75rem;
+    }
+}
+
+/* Clear Filters Button Clicked State */
+.clear-filters-btn.clicked {
+    transform: scale(0.95);
+    background-color: #c0392b;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    transition: all 0.1s ease;
+}
+
+/* Filter Buttons Container */
+.filter-buttons-container {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+/* Media query for mobile view */
+@media (max-width: 768px) {
+    .search-container {
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .search-box {
+        flex: 1 1 100%;
+    }
+    
+    .search-btn {
+        flex: 1;
+        padding: 0.75rem 0.5rem;
+        height: 48px; /* Keep consistent height */
+    }
+    
+    .filter-buttons-container {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    /* Create a container for filter and clear buttons */
+    .search-container .filter-btn,
+    .search-container .clear-filters-btn {
+        display: inline-flex; /* Make sure they're displayed inline */
+    }
+    
+    .filter-btn {
+        flex: none;
+        padding: 0.75rem 0.5rem;
+        height: 48px; /* Match search button height */
+        display: flex;
+        align-items: center;
+    }
+    
+    .clear-filters-btn {
+        display: flex; /* Show in mobile view */
+        flex: none; /* Don't expand to fill space */
+        padding: 0;
+        margin-left: 0; /* Remove margin since we're using gap in the container */
+        aspect-ratio: 1/1; /* Make it square */
+        height: 48px; /* Match search button height */
+        width: 48px; /* Equal width to height for square shape */
+        justify-content: center;
+        align-items: center;
+    }
+}
+
+/* Specific adjustments for very small screens */
+@media (max-width: 480px) {
+    .clear-filters-btn span {
+        display: none;
+    }
+    
+    .clear-filters-btn i {
+        margin: 0;
+    }
+    
+    .search-btn, .filter-btn, .clear-filters-btn {
+        padding: 0.75rem;
+    }
+}
+
+/* Media query for mobile view */
+@media (max-width: 768px) {
+    .search-container {
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .search-box {
+        flex: 1 1 100%;
+    }
+    
+    .search-btn {
+        flex: 1;
+        padding: 0.75rem 0.5rem;
+        height: 48px; /* Keep consistent height */
+    }
+    
+    .filter-buttons-container {
+        display: flex;
+        gap: 0.5rem;
+        flex: 1;
+        width: 100%;
+    }
+    
+    /* Create a container for filter and clear buttons */
+    .search-container .filter-btn,
+    .search-container .clear-filters-btn {
+        display: inline-flex; /* Make sure they're displayed inline */
+    }
+    
+    .filter-btn {
+        flex: 1 1 auto; /* Make filter button match parent width */
+        padding: 0.75rem 0.5rem;
+        height: 48px; /* Match search button height */
+        display: flex;
+        align-items: center;
+    }
+    
+    .clear-filters-btn {
+        display: flex; /* Show in mobile view */
+        flex: none; /* Don't expand to fill space */
+        padding: 0;
+        margin-left: 0; /* Remove margin since we're using gap in the container */
+        aspect-ratio: 1/1; /* Make it square */
+        height: 48px; /* Match search button height */
+        width: 48px; /* Equal width to height for square shape */
+        justify-content: center;
+        align-items: center;
+    }
+}
+
+/* Specific style for the main filter button to match parent width in mobile view */
+@media (max-width: 768px) {
+    #mainFilterBtn {
+        flex: 1 1 auto !important;
+        width: 100%;
+        height: 48px; /* Ensure consistent height */
+    }
+}
+
+@media (min-width: 769px) {
+    .search-container {
+        flex-wrap: wrap;
+        display: flex;
+        width: 100%;
+    }
+    
+    .search-container > .search-box,
+    .search-container > .search-btn {
+        flex-basis: auto;
+        margin-bottom: 0.75rem;
+    }
+    
+    .search-box {
+        flex: 1 1 auto;
+        min-width: 70%;
+    }
+    
+    .search-btn {
+        flex: 0 0 auto;
+        min-width: 120px;
+    }
+    
+    .filter-buttons-container {
+        flex: 1 1 100%;
+        width: 100%;
+        margin-top: 0;
+    }
 }

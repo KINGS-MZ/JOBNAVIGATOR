@@ -6,9 +6,12 @@
     <title>Job Navigator | Your Career Companion</title>
     <!-- Theme loader script - must be first to prevent flickering -->
     <script src="Assets/theme-loader.js"></script>
+    <!-- Theme transitions CSS -->
+    <link rel="stylesheet" href="Assets/theme-transitions.css">
     <link rel="stylesheet" href="Assets/navbar/nav.css">
     <link rel="stylesheet" href="index.css">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,0..200">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 </head>
@@ -24,9 +27,13 @@
             </div>
             
             <div class="nav-right">
+                <button id="language-toggle" aria-label="Change language">
+                    <span class="material-symbols-rounded">language</span>
+                </button>
+                
                 <button id="theme-toggle" aria-label="Toggle dark mode">
-                    <i class="fas fa-sun"></i>
-                    <i class="fas fa-moon"></i>
+                    <span class="material-symbols-rounded moon-icon">dark_mode</span>
+                    <span class="material-symbols-rounded sun-icon">light_mode</span>
                 </button>
             </div>
         </div>
@@ -116,10 +123,10 @@
             <div class="about-content">
                 <h2 class="section-title">About Job Navigator</h2>
                 <p class="about-text">
-                    Job Navigator is a dedicated platform created specifically for OFPPT trainees to bridge the gap between education and professional employment. We understand the unique challenges faced by technical and vocational students in today's competitive job market.
+                    Job Navigator is your trusted partner in finding the perfect internship opportunities. We connect talented students with leading companies, making the internship search process seamless and efficient.
                 </p>
                 <p class="about-text">
-                    Our mission is to empower the next generation of professionals by connecting them directly with industry partners who value the hands-on skills and practical knowledge that OFPPT graduates bring to the workplace.
+                    Our platform is designed to bridge the gap between education and industry, helping you build a strong foundation for your career journey.
                 </p>
                 <div class="about-stats">
                     <div class="about-stat">
@@ -133,7 +140,14 @@
                 </div>
             </div>
             <div class="about-image">
-                <lottie-player src="https://assets8.lottiefiles.com/packages/lf20_bkmfzeqq.json" background="transparent" speed="1" style="width: 100%; height: 100%;" loop autoplay></lottie-player>
+                <lottie-player
+                    src="https://assets2.lottiefiles.com/packages/lf20_2cwDXD.json"
+                    background="transparent"
+                    speed="1"
+                    style="width: 100%; height: 400px;"
+                    loop
+                    autoplay>
+                </lottie-player>
             </div>
         </div>
     </section>
@@ -146,7 +160,7 @@
         </div>
     </footer>
 
-    <script src="Assets/navbar/nav.js"></script>
+    <script src="Assets/navbar/nav.js" type="module"></script>
     <script src="index.js"></script>
 </body>
 </html>

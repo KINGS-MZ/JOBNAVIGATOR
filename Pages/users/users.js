@@ -189,12 +189,42 @@ async function loadAllUsers() {
         const usersSnapshot = await getDocs(usersCollection);
         allUsers = [];
         
+        // Try to get subscriptions data, but handle permission errors gracefully
+        let userSubscriptions = {};
+        try {
+            const subscriptionsCollection = collection(db, 'subscriptions');
+            const subscriptionsSnapshot = await getDocs(
+                query(subscriptionsCollection, where('status', 'in', ['active', 'trial']))
+            );
+            
+            // Create a map of user IDs to their subscription data
+            subscriptionsSnapshot.forEach(doc => {
+                const subscriptionData = doc.data();
+                if (subscriptionData.userId) {
+                    userSubscriptions[subscriptionData.userId] = {
+                        plan: subscriptionData.plan,
+                        status: subscriptionData.status
+                    };
+                }
+            });
+        } catch (subscriptionError) {
+            console.warn('Could not load subscription data:', subscriptionError.message);
+            // Continue without subscription data
+        }
+        
         usersSnapshot.forEach(doc => {
             // Don't include current user in the list
             if (doc.id !== currentUserId) {
+                const userData = doc.data();
+                
+                // Add subscription data if available
+                if (userSubscriptions[doc.id]) {
+                    userData.subscription = userSubscriptions[doc.id];
+                }
+                
                 allUsers.push({
                     id: doc.id,
-                    ...doc.data()
+                    ...userData
                 });
             }
         });
@@ -285,9 +315,11 @@ function updateCounters() {
     }
 }
 
-// Apply filter (all, following, followers, etc.)
+// Apply filter to users list
 function applyFilter(filter) {
     currentFilter = filter;
+    usersList.innerHTML = '';
+    
     let filteredUsers = [];
     
     switch (filter) {
@@ -296,6 +328,25 @@ function applyFilter(filter) {
             break;
         case 'followers':
             filteredUsers = allUsers.filter(user => followersList.includes(user.id));
+            break;
+        case 'premium':
+            filteredUsers = allUsers.filter(user => 
+                user.subscription && 
+                user.subscription.plan && 
+                user.subscription.plan.toLowerCase() === 'premium'
+            );
+            break;
+        case 'professional':
+            filteredUsers = allUsers.filter(user => 
+                user.subscription && 
+                user.subscription.plan && 
+                user.subscription.plan.toLowerCase() === 'professional'
+            );
+            break;
+        case 'admin':
+            filteredUsers = allUsers.filter(user => 
+                user.role === 'admin' || user.isAdmin === true
+            );
             break;
         case 'recent':
             // Sort by last activity (if available) or creation date
@@ -334,7 +385,53 @@ function applyFilter(filter) {
             break;
     }
     
+    // Sort users - premium/professional first, then alphabetically if this is the all filter
+    if (filter === 'all') {
+        filteredUsers.sort((a, b) => {
+            // First by admin status
+            const aIsAdmin = a.role === 'admin' || a.isAdmin === true;
+            const bIsAdmin = b.role === 'admin' || b.isAdmin === true;
+            
+            if (aIsAdmin && !bIsAdmin) return -1;
+            if (!aIsAdmin && bIsAdmin) return 1;
+            
+            // Then by subscription status
+            const aHasSubscription = a.subscription && a.subscription.plan;
+            const bHasSubscription = b.subscription && b.subscription.plan;
+            
+            if (aHasSubscription && !bHasSubscription) return -1;
+            if (!aHasSubscription && bHasSubscription) return 1;
+            
+            // If both have subscriptions, sort by plan (professional > premium)
+            if (aHasSubscription && bHasSubscription) {
+                if (a.subscription.plan.toLowerCase() === 'professional' && 
+                    b.subscription.plan.toLowerCase() !== 'professional') {
+                    return -1;
+                }
+                if (a.subscription.plan.toLowerCase() !== 'professional' && 
+                    b.subscription.plan.toLowerCase() === 'professional') {
+                    return 1;
+                }
+            }
+            
+            // Then alphabetically by name
+            const aName = a.fullName || a.email || '';
+            const bName = b.fullName || b.email || '';
+            return aName.localeCompare(bName);
+        });
+    }
+    
     displayUsers(filteredUsers);
+    
+    // Update counters
+    allCountElement.textContent = allUsers.length;
+    followingCountElement.textContent = followingList.length;
+    followersCountElement.textContent = followersList.length;
+    
+    // Update badges
+    allCountBadge.textContent = allUsers.length;
+    followingCountBadge.textContent = followingList.length;
+    followersCountBadge.textContent = followersList.length;
 }
 
 // Get current user's industry (placeholder function)
@@ -395,6 +492,38 @@ function createUserElement(user, isFollowing) {
     userItem.className = 'user-item';
     userItem.dataset.userId = user.id;
     
+    // Check if user is an admin first (highest priority)
+    if (user.role === 'admin' || user.isAdmin === true) {
+        userItem.classList.add('admin-user');
+        
+        // Add creator badge
+        const creatorBadge = document.createElement('div');
+        creatorBadge.className = 'creator-badge';
+        creatorBadge.textContent = 'CREATOR';
+        userItem.appendChild(creatorBadge);
+    } 
+    // Then check subscription status
+    else if (user.subscription && user.subscription.plan) {
+        const plan = user.subscription.plan.toLowerCase();
+        if (plan === 'premium') {
+            userItem.classList.add('premium-user');
+            
+            // Add premium badge
+            const premiumBadge = document.createElement('div');
+            premiumBadge.className = 'premium-badge';
+            premiumBadge.textContent = 'PREMIUM';
+            userItem.appendChild(premiumBadge);
+        } else if (plan === 'professional') {
+            userItem.classList.add('professional-user');
+            
+            // Add professional badge
+            const professionalBadge = document.createElement('div');
+            professionalBadge.className = 'professional-badge';
+            professionalBadge.textContent = 'PRO';
+            userItem.appendChild(professionalBadge);
+        }
+    }
+    
     // ----- User Header -----
     const userHeader = document.createElement('div');
     userHeader.className = 'user-header';
@@ -404,9 +533,9 @@ function createUserElement(user, isFollowing) {
     avatarContainer.className = 'user-avatar';
     
     // Check if user has a profile picture
-    if (user.profilePicture) {
+    if (user.photoURL || user.profilePicture) {
         const avatar = document.createElement('img');
-        avatar.src = user.profilePicture;
+        avatar.src = user.photoURL || user.profilePicture;
         avatar.alt = `${user.fullName || 'User'}'s profile picture`;
         avatarContainer.appendChild(avatar);
     } else {
@@ -419,11 +548,17 @@ function createUserElement(user, isFollowing) {
     const userInfo = document.createElement('div');
     userInfo.className = 'user-info';
     
+    // Create name row to hold name and subscription badge
+    const userNameRow = document.createElement('div');
+    userNameRow.className = 'user-name-row';
+    
     // Name
     const userName = document.createElement('div');
     userName.className = 'user-name';
     userName.textContent = user.fullName || user.email || 'Anonymous User';
-    userInfo.appendChild(userName);
+    userNameRow.appendChild(userName);
+    
+    userInfo.appendChild(userNameRow);
     
     // Professional headline
     if (user.headline) {
@@ -479,11 +614,11 @@ function createUserElement(user, isFollowing) {
     const userBody = document.createElement('div');
     userBody.className = 'user-body';
     
-    // Bio
-    if (user.bio) {
+    // Bio - use user.about instead of user.bio
+    if (user.about) {
         const userBio = document.createElement('div');
         userBio.className = 'user-bio';
-        userBio.textContent = user.bio;
+        userBio.textContent = user.about;
         userBody.appendChild(userBio);
     } else {
         const userBio = document.createElement('div');
@@ -493,31 +628,59 @@ function createUserElement(user, isFollowing) {
         userBody.appendChild(userBio);
     }
     
-    // Skills
-    if (user.skills && user.skills.length > 0) {
+    // Skills - handle the skills object structure with categories
+    if (user.skills && typeof user.skills === 'object') {
         const skillsContainer = document.createElement('div');
         skillsContainer.className = 'user-skills';
         
-        // Limit to 4 skills for display
-        const displaySkills = user.skills.slice(0, 4);
-        
-        displaySkills.forEach(skill => {
-            const skillTag = document.createElement('div');
-            skillTag.className = 'skill-tag';
-            skillTag.textContent = skill;
-            skillsContainer.appendChild(skillTag);
-        });
-        
-        // Show +X more if there are additional skills
-        if (user.skills.length > 4) {
-            const moreSkills = document.createElement('div');
-            moreSkills.className = 'skill-tag';
-            moreSkills.textContent = `+${user.skills.length - 4} more`;
-            skillsContainer.appendChild(moreSkills);
+        // Extract all skills from categories into a single array
+        let allSkills = [];
+        for (const category in user.skills) {
+            if (Array.isArray(user.skills[category])) {
+                allSkills = allSkills.concat(user.skills[category]);
+            }
         }
         
-        userBody.appendChild(skillsContainer);
+        if (allSkills.length > 0) {
+            // We'll only show enough skills to fit in one line
+            // For simplicity, limit to max 3 visible skills + "more" indicator if needed
+            const visibleSkillsCount = allSkills.length > 3 ? 3 : allSkills.length;
+            const displaySkills = allSkills.slice(0, visibleSkillsCount);
+            
+            displaySkills.forEach(skill => {
+                const skillTag = document.createElement('div');
+                skillTag.className = 'skill-tag';
+                // Truncate skill name if too long (the CSS will handle this with ellipsis)
+                skillTag.textContent = skill;
+                skillTag.title = skill; // Show full skill on hover
+                skillsContainer.appendChild(skillTag);
+            });
+            
+            // Show +X more if there are additional skills
+            if (allSkills.length > visibleSkillsCount) {
+                const moreSkills = document.createElement('div');
+                moreSkills.className = 'skill-tag more-skills';
+                moreSkills.textContent = `+${allSkills.length - visibleSkillsCount} more`;
+                moreSkills.title = allSkills.slice(visibleSkillsCount).join(', ');
+                skillsContainer.appendChild(moreSkills);
+            }
+            
+            userBody.appendChild(skillsContainer);
+        } else {
+            // No skills in the object
+            const skillsContainer = document.createElement('div');
+            skillsContainer.className = 'user-skills';
+            
+            const skillTag = document.createElement('div');
+            skillTag.className = 'skill-tag';
+            skillTag.textContent = 'No skills listed';
+            skillTag.style.opacity = '0.7';
+            
+            skillsContainer.appendChild(skillTag);
+            userBody.appendChild(skillsContainer);
+        }
     } else {
+        // No skills property or not an object
         const skillsContainer = document.createElement('div');
         skillsContainer.className = 'user-skills';
         
@@ -750,13 +913,29 @@ async function cancelFollowRequest(userId) {
 
 // Navigate to user profile
 function navigateToUserProfile(userId) {
-    window.location.href = `../profile/profile.html?userId=${userId}`;
+    window.location.href = `../user-account/account.html?userId=${userId}`;
 }
 
 // Handle message action
 function handleMessageAction(userId) {
+    // Get the user info from allUsers array
+    const user = allUsers.find(u => u.id === userId);
+    if (!user) {
+        showToast('Error: User not found');
+        return;
+    }
+
+    // Store user info in localStorage for chat initialization
+    const pendingChatUser = {
+        id: user.id,
+        name: user.fullName || user.name || user.displayName || 'User',
+        photoURL: user.photoURL || null,
+        status: user.status || 'offline'
+    };
+    localStorage.setItem('pendingChatUser', JSON.stringify(pendingChatUser));
+
     // Navigate to chat with this user
-    window.location.href = `../chats/chats.html?userId=${userId}`;
+    window.location.href = `../chats/chats.html`;
 }
 
 // Show user options menu

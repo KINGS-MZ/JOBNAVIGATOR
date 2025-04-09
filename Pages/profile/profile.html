@@ -55,6 +55,11 @@
                 
                 <div class="nav-separator"></div>
                 
+                <a href="../subscription/subscription.html" class="upgrade-btn">
+                    <i class="fas fa-star"></i>
+                    Upgrade
+                </a>
+                
                 <button id="theme-toggle" aria-label="Toggle dark mode">
                     <span class="material-symbols-rounded moon-icon">dark_mode</span>
                     <span class="material-symbols-rounded sun-icon">light_mode</span>
@@ -118,7 +123,7 @@
                                 Settings
                             </a>
                             <div class="menu-divider"></div>
-                            <a href="#" id="logout-link" class="logout-link">
+                            <a href="../account/account.html" id="logout-link" class="logout-link">
                                 <i class="fas fa-sign-out-alt"></i>
                                 Sign Out
                             </a>
@@ -130,109 +135,48 @@
     </nav>
     
     <main>
-        <!-- Profile Header Section -->
-        <section class="profile-header">
-            <div class="profile-cover">
-                <button class="edit-cover">
-                    <i class="fas fa-camera"></i>
-                    Change Cover
-                </button>
-            </div>
-            <div class="profile-info">
-                <div class="profile-avatar">
-                    <div class="default-avatar">
-                        <div class="avatar-initials" id="profile-avatar-initials"></div>
-                        <img id="profile-avatar-image" class="avatar-image" style="display: none;" alt="Profile picture">
-                    </div>
-                    <button class="edit-avatar" title="Change profile picture">
-                        <i class="fas fa-camera"></i>
-                    </button>
-                </div>
-                <div class="profile-details">
-                    <h1>Your Name</h1>
-                    <p class="headline">Senior Software Engineer | Full Stack Developer</p>
-                    <p class="location"><i class="fas fa-map-marker-alt"></i> New York, NY</p>
-                    <div class="profile-actions">
-                        <button class="btn-edit own-profile-btn" id="edit-profile-button" title="Edit Profile">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn-follow other-profile-btn" id="follow-button">
-                            <i class="fas fa-user-plus"></i>
-                        </button>
-                        <button class="btn-message other-profile-btn" id="message-button">
-                            <i class="fas fa-comment"></i>
-                        </button>
-                        <button class="btn-share" id="share-button" title="Share Profile">
-                            <i class="fas fa-share-alt"></i>
+        <div class="profile-layout">
+            <!-- Left Column - Profile Header -->
+            <div class="profile-header-column">
+                <section class="profile-header">
+                    <div class="profile-cover">
+                        <button class="edit-cover">
+                            <i class="fas fa-camera"></i>
+                            Change Cover
                         </button>
                     </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- Profile Content Grid -->
-        <div class="profile-grid">
-            <!-- Left Column -->
-            <div class="profile-main">
-                <!-- About Section -->
-                <section class="profile-section">
-                    <div class="section-header">
-                        <h2>About</h2>
-                        <button class="edit-section">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                    </div>
-                    <div class="section-content">
-                        <p class="placeholder-text">Tell recruiters about your professional background and skills.</p>
-                    </div>
-                </section>
-
-                <!-- Experience Section -->
-                <section class="profile-section">
-                    <div class="section-header">
-                        <h2>Experience</h2>
-                        <button class="edit-section">
-                            <i class="fas fa-plus"></i>
-                            Add Experience
-                        </button>
-                    </div>
-                    <div class="section-content">
-                        <!-- Experience items will be added dynamically from Firebase -->
-                    </div>
-                </section>
-
-                <!-- Education Section -->
-                <section class="profile-section">
-                    <div class="section-header">
-                        <h2>Education</h2>
-                        <button class="edit-section">
-                            <i class="fas fa-plus"></i>
-                            Add Education
-                        </button>
-                    </div>
-                    <div class="section-content">
-                        <!-- Education items will be added dynamically from Firebase -->
-                    </div>
-                </section>
-
-                <!-- Skills Section (both mobile and desktop versions) -->
-                <section class="profile-section skills-section">
-                    <div class="section-header">
-                        <h2>Skills</h2>
-                        <button class="edit-section">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                    </div>
-                    <div class="section-content">
-                        <div class="skills-grid" id="skillsList">
-                            <!-- Skills will be dynamically added here -->
+                    <div class="profile-info">
+                        <div class="profile-avatar">
+                            <div class="default-avatar">
+                                <div class="avatar-initials" id="profile-avatar-initials"></div>
+                                <img id="profile-avatar-image" class="avatar-image" style="display: none;" alt="Profile picture">
+                            </div>
+                            <button class="edit-avatar" title="Change profile picture">
+                                <i class="fas fa-camera"></i>
+                            </button>
+                        </div>
+                        <div class="profile-details">
+                            <h1>Your Name</h1>
+                            <p class="headline">Senior Software Engineer | Full Stack Developer</p>
+                            <p class="location"><i class="fas fa-map-marker-alt"></i> New York, NY</p>
+                            <div class="profile-actions">
+                                <button class="btn-edit own-profile-btn" id="edit-profile-button" title="Edit Profile">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn-follow other-profile-btn" id="follow-button">
+                                    <i class="fas fa-user-plus"></i>
+                                </button>
+                                <button class="btn-message other-profile-btn" id="message-button">
+                                    <i class="fas fa-comment"></i>
+                                </button>
+                                <button class="btn-share" id="share-button" title="Share Profile">
+                                    <i class="fas fa-share-alt"></i>
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </section>
-            </div>
 
-            <!-- Right Column -->
-            <div class="profile-sidebar">
                 <!-- Profile Stats -->
                 <section class="profile-section stats-section">
                     <h2>Profile Stats</h2>
@@ -267,7 +211,20 @@
                     </div>
                 </section>
 
-                <!-- Skills Section (both mobile and desktop versions) -->
+                <!-- Education Section -->
+                <section class="profile-section education-section">
+                    <div class="section-header">
+                        <h2>Education</h2>
+                        <button class="edit-section">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                    <div class="section-content">
+                        <!-- Education items will be added dynamically from Firebase -->
+                    </div>
+                </section>
+
+                <!-- Skills Section -->
                 <section class="profile-section skills-section">
                     <div class="section-header">
                         <h2>Skills</h2>
@@ -279,6 +236,35 @@
                         <div class="skills-grid" id="skillsList">
                             <!-- Skills will be dynamically added here -->
                         </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right Column - About and Experience -->
+            <div class="about-column">
+                <section class="profile-section">
+                    <div class="section-header">
+                        <h2>About</h2>
+                        <button class="edit-section">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                    </div>
+                    <div class="section-content">
+                        <p class="placeholder-text">Tell recruiters about your professional background and skills.</p>
+                    </div>
+                </section>
+
+                <!-- Experience Section -->
+                <section class="profile-section">
+                    <div class="section-header">
+                        <h2>Experience</h2>
+                        <button class="edit-section">
+                            <i class="fas fa-plus"></i>
+                            Add Experience
+                        </button>
+                    </div>
+                    <div class="section-content">
+                        <!-- Experience items will be added dynamically from Firebase -->
                     </div>
                 </section>
             </div>

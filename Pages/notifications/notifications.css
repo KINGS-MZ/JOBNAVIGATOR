@@ -137,32 +137,41 @@ nav {
     background: transparent;
     border: none;
     cursor: pointer;
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 8px;
+    width: 2.2rem !important;
+    height: 2.2rem !important;
+    border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--primary-grey);
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
+    position: relative;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 #theme-toggle:hover {
-    background: rgba(52, 152, 219, 0.1);
-    transform: translateY(-2px);
+    background-color: rgba(0, 0, 0, 0.05);
 }
 
 .dark-mode #theme-toggle:hover {
-    background: rgba(46, 204, 113, 0.1);
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
 #theme-toggle i {
-    font-size: 1.25rem;
-    color: var(--primary-blue);
+    position: absolute;
+    transition: all 0.3s ease;
+    color: var(--primary-grey);
+    font-size: 1.4rem !important;
+    width: 1.4rem !important;
+    height: 1.4rem !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .dark-mode #theme-toggle i {
-    color: var(--primary-green);
+    color: var(--text-light);
 }
 
 /* User Menu Styles */

@@ -21,6 +21,20 @@
             visibility: visible !important;
             transform: translateY(0) !important;
             pointer-events: auto !important;
+            display: block !important;
+        }
+        
+        /* Ensure dropdown doesn't get hidden by other elements */
+        .user-menu {
+            position: relative;
+            z-index: 1100;
+        }
+        
+        /* General fix for transitions */
+        .dropdown-menu {
+            transition-property: opacity, visibility, transform;
+            transition-duration: 0.3s;
+            transition-timing-function: ease-in-out;
         }
     </style>
 </head>
@@ -48,6 +62,11 @@
                 </a>
                 
                 <div class="nav-separator"></div>
+                
+                <a href="../subscription/subscription.html" class="upgrade-btn">
+                    <i class="fas fa-star"></i>
+                    Upgrade
+                </a>
                 
                 <button id="theme-toggle" aria-label="Toggle dark mode">
                     <span class="material-symbols-rounded moon-icon">dark_mode</span>
@@ -103,7 +122,7 @@
                                 <i class="fas fa-users"></i>
                                 Users
                             </a>
-                            <a href="../profile/profile.html">
+                            <a href="../account/account.html">
                                 <i class="fas fa-user"></i>
                                 My Profile
                             </a>
@@ -150,13 +169,14 @@
                     <option value="remote">Remote</option>
                 </select>
 
-                <select id="salary-range" class="filter-select">
-                    <option value="">Salary Range</option>
-                    <option value="0-30">$0-30k</option>
-                    <option value="30-60">$30-60k</option>
-                    <option value="60-90">$60-90k</option>
-                    <option value="90+">$90k+</option>
-                </select>
+                <div class="salary-input-container">
+                    <div class="salary-input-group">
+                        <input type="number" id="min-salary" class="filter-select" placeholder="Min (MAD)" min="0">
+                    </div>
+                    <div class="salary-input-group">
+                        <input type="number" id="max-salary" class="filter-select" placeholder="Max (MAD)" min="0">
+                    </div>
+                </div>
             </div>
         </section>
 
@@ -237,6 +257,7 @@
     <!-- <script src="../Firebase/firebase-config.js"></script> -->
     <!-- Navigation JS -->
     <script type="module" src="../../Assets/navbar/nav.js"></script>
+    <script src="../../Assets/dropdown-fix.js"></script>
     <!-- Main JavaScript -->
     <script type="module" src="home.js"></script>
     <!-- Script to manage navigation display based on screen size -->

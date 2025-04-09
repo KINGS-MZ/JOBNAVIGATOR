@@ -137,32 +137,41 @@ nav {
     background: transparent;
     border: none;
     cursor: pointer;
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 8px;
+    width: 2.2rem !important;
+    height: 2.2rem !important;
+    border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--primary-grey);
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
+    position: relative;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 #theme-toggle:hover {
-    background: rgba(52, 152, 219, 0.1);
-    transform: translateY(-2px);
+    background-color: rgba(0, 0, 0, 0.05);
 }
 
 .dark-mode #theme-toggle:hover {
-    background: rgba(46, 204, 113, 0.1);
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
 #theme-toggle i {
-    font-size: 1.25rem;
-    color: var(--primary-blue);
+    position: absolute;
+    transition: all 0.3s ease;
+    color: var(--primary-grey);
+    font-size: 1.4rem !important;
+    width: 1.4rem !important;
+    height: 1.4rem !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .dark-mode #theme-toggle i {
-    color: var(--primary-green);
+    color: var(--text-light);
 }
 
 /* User Menu Styles */
@@ -1304,4 +1313,483 @@ body.settings-page {
         margin-bottom: 1.5rem;
         margin-top: 1.25rem;
     }
+}
+
+/* Theme loading state */
+html.theme-loading {
+    visibility: hidden;
+}
+
+/* Base styles */
+html {
+    height: 100%;
+    overflow-x: hidden;
+    background-color: var(--bg-light);
+    transition: background-color 0.3s ease;
+}
+
+html.dark-mode {
+    background-color: var(--bg-dark);
+}
+
+body {
+    min-height: 100%;
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    background-color: var(--bg-light);
+    color: var(--text-dark);
+    transition: background-color 0.3s ease, color 0.3s ease;
+    line-height: 1.5;
+    padding-top: 3.7rem;
+    display: flex;
+    flex-direction: column;
+}
+
+body.dark-mode {
+    background-color: var(--bg-dark);
+    color: var(--text-light);
+}
+
+/* Ensure all theme-dependent elements have smooth transitions */
+.settings-container,
+.settings-section,
+.settings-card,
+.settings-form,
+.dropdown-menu,
+.toast {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Subscription Info Styles */
+.subscription-info {
+    padding: 0.5rem 0;
+}
+
+.subscription-limitations {
+    color: #777;
+    margin: 0.75rem 0;
+    font-size: 0.9rem;
+}
+
+.dark-mode .subscription-limitations {
+    color: #aaa;
+}
+
+.upgrade-info {
+    margin: 1.5rem 0;
+}
+
+.feature-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 1rem 0;
+}
+
+.feature-list li {
+    display: flex;
+    align-items: center;
+    margin-bottom: 0.75rem;
+    font-size: 0.9rem;
+}
+
+.feature-list li i {
+    color: var(--primary-green);
+    margin-right: 0.75rem;
+    font-size: 0.8rem;
+}
+
+.dark-mode .feature-list li i {
+    color: var(--primary-green);
+}
+
+.upgrade-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem 1.5rem;
+    background-color: var(--primary-blue);
+    color: var(--text-light);
+    border-radius: 6px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    margin-top: 1rem;
+    border: none;
+    cursor: pointer;
+}
+
+.upgrade-btn:hover {
+    background-color: #2980b9;
+    transform: translateY(-2px);
+}
+
+.dark-mode .upgrade-btn {
+    background-color: var(--primary-green);
+}
+
+.dark-mode .upgrade-btn:hover {
+    background-color: #27ae60;
+}
+
+.upgrade-btn i {
+    margin-right: 0.5rem;
+}
+
+/* Plan Status */
+.plan-status {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-right: 1rem;
+    background-color: var(--primary-green);
+    color: var(--text-light);
+}
+
+.status-badge.trial {
+    background-color: #f39c12;
+}
+
+.status-badge.cancelled {
+    background-color: #e74c3c;
+}
+
+#subscription-period-text {
+    font-size: 0.9rem;
+    color: #777;
+}
+
+.dark-mode #subscription-period-text {
+    color: #aaa;
+}
+
+/* Subscription Details */
+.subscription-details {
+    background-color: rgba(0, 0, 0, 0.02);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.dark-mode .subscription-details {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.detail-item {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.detail-item:last-child {
+    margin-bottom: 0;
+}
+
+.detail-label {
+    font-weight: 500;
+    font-size: 0.9rem;
+    color: #777;
+}
+
+.dark-mode .detail-label {
+    color: #aaa;
+}
+
+.detail-value {
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+/* Subscription Actions */
+.subscription-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.5rem;
+}
+
+.btn-outline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    background-color: transparent;
+    color: var(--primary-blue);
+    border: 1px solid var(--primary-blue);
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+
+.btn-outline:hover {
+    background-color: rgba(52, 152, 219, 0.1);
+}
+
+.dark-mode .btn-outline {
+    color: var(--primary-green);
+    border-color: var(--primary-green);
+}
+
+.dark-mode .btn-outline:hover {
+    background-color: rgba(46, 204, 113, 0.1);
+}
+
+.btn-outline i {
+    margin-right: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.btn-danger-outline {
+    color: #e74c3c;
+    border-color: #e74c3c;
+}
+
+.btn-danger-outline:hover {
+    background-color: rgba(231, 76, 60, 0.1);
+}
+
+.dark-mode .btn-danger-outline {
+    color: #e74c3c;
+    border-color: #e74c3c;
+}
+
+/* Payment History */
+.payment-history-container {
+    padding: 0.5rem 0;
+}
+
+.empty-state-message {
+    color: #777;
+    text-align: center;
+    padding: 2rem 0;
+    font-style: italic;
+}
+
+.dark-mode .empty-state-message {
+    color: #aaa;
+}
+
+.payment-history-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 1rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+.dark-mode .payment-history-item {
+    border-bottom-color: #444;
+}
+
+.payment-history-item:last-child {
+    border-bottom: none;
+}
+
+.payment-date {
+    font-size: 0.9rem;
+    color: #777;
+}
+
+.dark-mode .payment-date {
+    color: #aaa;
+}
+
+.payment-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.payment-plan {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+
+.payment-id {
+    font-size: 0.8rem;
+    color: #777;
+}
+
+.dark-mode .payment-id {
+    color: #aaa;
+}
+
+.payment-amount {
+    font-weight: 500;
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    background-color: var(--bg-light);
+    border-radius: 12px;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 5px 30px rgba(0, 0, 0, 0.3);
+    z-index: 1100;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.dark-mode .modal {
+    background-color: var(--card-bg-dark);
+    box-shadow: 0 5px 30px rgba(0, 0, 0, 0.5);
+}
+
+.modal.active {
+    opacity: 1;
+    visibility: visible;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.modal-content {
+    width: 100%;
+}
+
+.modal-header {
+    padding: 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--light-border);
+}
+
+.dark-mode .modal-header {
+    border-bottom-color: var(--dark-border);
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.close-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    color: var(--primary-grey);
+    transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+    color: var(--primary-blue);
+}
+
+.dark-mode .close-btn:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--primary-green);
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1050;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* Card Input Wrapper */
+.card-input-wrapper {
+    position: relative;
+}
+
+.card-icons {
+    position: absolute;
+    top: 50%;
+    right: 10px;
+    transform: translateY(-50%);
+    display: flex;
+    gap: 5px;
+}
+
+.card-icons i {
+    font-size: 1.25rem;
+    opacity: 0.5;
+    transition: opacity 0.2s ease;
+}
+
+.card-icons i.active {
+    opacity: 1;
+}
+
+/* Form Row for Card Details */
+.form-row {
+    display: flex;
+    gap: 1rem;
+}
+
+.form-group.half {
+    flex: 1;
+}
+
+/* Secure Notice */
+.secure-notice {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    font-size: 0.85rem;
+    color: #777;
+}
+
+.dark-mode .secure-notice {
+    color: #aaa;
+}
+
+.secure-notice i {
+    color: var(--primary-green);
+    margin-right: 0.5rem;
+}
+
+/* Form Footer */
+.form-footer {
+    margin-top: 1.5rem;
+}
+
+/* Update Button */
+#update-card-btn {
+    width: 100%;
+    padding: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+/* Payment Update Message */
+#payment-update-message {
+    margin-top: 1rem;
 }

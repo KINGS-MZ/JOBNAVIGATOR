@@ -3,13 +3,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const html = document.documentElement;
     const body = document.body;
     const themeToggle = document.getElementById('theme-toggle');
-    const sunIcon = themeToggle.querySelector('.fa-sun');
-    const moonIcon = themeToggle.querySelector('.fa-moon');
+    const sunIcon = themeToggle.querySelector('.sun-icon');
+    const moonIcon = themeToggle.querySelector('.moon-icon');
+    const languageToggle = document.getElementById('language-toggle');
 
-    // Theme toggle functionality (using the same implementation as in nav.js)
+    // Theme toggle functionality
     themeToggle.addEventListener('click', () => {
+        // Toggle dark mode class on html element only (body will inherit from CSS)
         html.classList.toggle('dark-mode');
-        body.classList.toggle('dark-mode');
         
         // Save theme preference
         const isDarkMode = html.classList.contains('dark-mode');
@@ -21,10 +22,72 @@ document.addEventListener('DOMContentLoaded', () => {
     const savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'dark') {
         html.classList.add('dark-mode');
-        body.classList.add('dark-mode');
     } else {
         html.classList.remove('dark-mode');
-        body.classList.remove('dark-mode');
+    }
+
+    // Language toggle functionality
+    let currentLanguage = localStorage.getItem('language') || 'en';
+    
+    languageToggle.addEventListener('click', () => {
+        // Toggle between English and French (or add more languages as needed)
+        currentLanguage = currentLanguage === 'en' ? 'fr' : 'en';
+        localStorage.setItem('language', currentLanguage);
+        
+        // Show language change notification
+        const languageText = currentLanguage === 'en' ? 'English' : 'Français';
+        
+        // Create or update toast notification
+        showToast(`Language changed to ${languageText}`);
+        
+        // In a real application, you would update UI text here
+        // updatePageLanguage(currentLanguage);
+    });
+
+    // Simple toast notification function
+    function showToast(message) {
+        // Check if toast container exists, if not create it
+        let toast = document.querySelector('.language-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.className = 'language-toast';
+            document.body.appendChild(toast);
+            
+            // Add toast styles if not already in CSS
+            const style = document.createElement('style');
+            style.textContent = `
+                .language-toast {
+                    position: fixed;
+                    bottom: 20px;
+                    left: 50%;
+                    transform: translateX(-50%);
+                    background: var(--primary-blue);
+                    color: white;
+                    padding: 10px 20px;
+                    border-radius: 4px;
+                    z-index: 1000;
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+                }
+                .dark-mode .language-toast {
+                    background: var(--primary-green);
+                }
+                .language-toast.show {
+                    opacity: 1;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        // Set message and show toast
+        toast.textContent = message;
+        toast.classList.add('show');
+        
+        // Hide toast after delay
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
     }
 
     // Sponsors section - pause carousel on hover

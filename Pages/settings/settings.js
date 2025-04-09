@@ -21,6 +21,34 @@ const changePasswordBtn = document.getElementById('changePasswordBtn');
 const passwordMessage = document.getElementById('passwordMessage');
 const forgotPasswordLink = document.getElementById('forgotPasswordLink');
 
+// Subscription Elements
+const freeSubscriptionCard = document.getElementById('free-subscription-card');
+const activeSubscriptionCard = document.getElementById('active-subscription-card');
+const paymentHistoryCard = document.getElementById('payment-history-card');
+const currentPlanName = document.getElementById('current-plan-name');
+const subscriptionStatusBadge = document.getElementById('subscription-status-badge');
+const subscriptionPeriodText = document.getElementById('subscription-period-text');
+const nextPaymentDate = document.getElementById('next-payment-date');
+const paymentAmount = document.getElementById('payment-amount');
+const paymentMethod = document.getElementById('payment-method');
+const changePlanBtn = document.getElementById('change-plan-btn');
+const updatePaymentBtn = document.getElementById('update-payment-btn');
+const cancelSubscriptionBtn = document.getElementById('cancel-subscription-btn');
+const noPaymentHistory = document.getElementById('no-payment-history');
+const paymentHistoryList = document.getElementById('payment-history-list');
+
+// Modal Elements
+const paymentUpdateModal = document.getElementById('payment-update-modal');
+const modalOverlay = document.getElementById('modal-overlay');
+const closeModalBtn = document.getElementById('close-modal-btn');
+const paymentUpdateForm = document.getElementById('payment-update-form');
+const cardHolderUpdate = document.getElementById('card-holder-update');
+const cardNumberUpdate = document.getElementById('card-number-update');
+const expiryDateUpdate = document.getElementById('expiry-date-update');
+const cvvUpdate = document.getElementById('cvv-update');
+const updateCardBtn = document.getElementById('update-card-btn');
+const paymentUpdateMessage = document.getElementById('payment-update-message');
+
 // User Menu Functionality
 function toggleUserMenu(event) {
     event.stopPropagation();
@@ -30,15 +58,14 @@ function toggleUserMenu(event) {
 
 // Theme Toggle Functionality
 function toggleTheme() {
-    const currentTheme = localStorage.getItem('theme') || 'system';
-    const newTheme = document.body.classList.contains('dark-mode') ? 'light' : 'dark';
-    setTheme(newTheme);
+    const currentTheme = localStorage.getItem('theme') || 'light';
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    window.setTheme(newTheme);
 }
 
-// Theme management
-function setTheme(theme) {
+// Theme management - update theme buttons only
+function updateThemeButtons(theme) {
     const themeButtons = document.querySelectorAll('.theme-btn');
-    const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
     
     // Remove active class from all buttons
     themeButtons.forEach(btn => btn.classList.remove('active'));
@@ -48,33 +75,6 @@ function setTheme(theme) {
     if (activeButton) {
         activeButton.classList.add('active');
     }
-    
-    // Apply theme
-    if (isDark) {
-        document.documentElement.classList.add('dark-mode');
-        document.body.classList.add('dark-mode');
-    } else {
-        document.documentElement.classList.remove('dark-mode');
-        document.body.classList.remove('dark-mode');
-    }
-    
-    // Update icon if theme toggle exists
-    if (themeToggle) {
-        const moonIcon = themeToggle.querySelector('.moon-icon');
-        const sunIcon = themeToggle.querySelector('.sun-icon');
-        
-        if (moonIcon && sunIcon) {
-            if (isDark) {
-                moonIcon.style.opacity = '0';
-                sunIcon.style.opacity = '1';
-            } else {
-                moonIcon.style.opacity = '1'; 
-                sunIcon.style.opacity = '0';
-            }
-        }
-    }
-    
-    localStorage.setItem('theme', theme);
 }
 
 // Update user info in UI
@@ -333,6 +333,491 @@ function handleForgotPassword(event) {
         });
 }
 
+// Subscription related functions
+async function loadSubscriptionData(userId) {
+    if (!userId) {
+        console.log('No user ID provided, defaulting to free plan');
+        showFreeSubscription();
+        return;
+    }
+
+    try {
+        console.log('Checking subscription for user:', userId);
+        // Query Firestore for active subscription
+        const subscriptionsRef = firebase.firestore().collection('subscriptions');
+        const snapshot = await subscriptionsRef
+            .where('userId', '==', userId)
+            .where('status', 'in', ['active', 'trial'])
+            .get();
+
+        if (snapshot.empty) {
+            console.log('No active subscription found for user');
+            showFreeSubscription();
+            return;
+        }
+
+        // Get the active subscription data
+        const subscription = snapshot.docs[0].data();
+        const subscriptionId = snapshot.docs[0].id;
+        console.log('Found active subscription:', subscription);
+
+        // Load payment history
+        loadPaymentHistory(userId, subscriptionId);
+
+        // Display active subscription
+        displayActiveSubscription(subscription);
+    } catch (error) {
+        console.error('Error loading subscription data:', error);
+        showFreeSubscription(); // Default to free plan view on error
+    }
+}
+
+function showFreeSubscription() {
+    if (freeSubscriptionCard) freeSubscriptionCard.style.display = 'block';
+    if (activeSubscriptionCard) activeSubscriptionCard.style.display = 'none';
+    if (paymentHistoryCard) paymentHistoryCard.style.display = 'none';
+}
+
+function displayActiveSubscription(subscription) {
+    if (!activeSubscriptionCard) return;
+
+    // Show active subscription card, hide free subscription card
+    freeSubscriptionCard.style.display = 'none';
+    activeSubscriptionCard.style.display = 'block';
+    paymentHistoryCard.style.display = 'block';
+
+    // Update plan name with proper capitalization
+    const planDisplayName = subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1);
+    currentPlanName.textContent = planDisplayName;
+
+    // Update status badge
+    subscriptionStatusBadge.textContent = subscription.status === 'trial' ? 'Trial' : 'Active';
+    if (subscription.status === 'trial') {
+        subscriptionStatusBadge.classList.add('trial');
+    } else {
+        subscriptionStatusBadge.classList.remove('trial');
+    }
+
+    // Update subscription period
+    const periodText = subscription.billingPeriod === 'annually' ? 'Annual billing' : 'Monthly billing';
+    subscriptionPeriodText.textContent = periodText;
+
+    // Calculate and display next payment date
+    let nextPaymentDateObj;
+    if (subscription.status === 'trial') {
+        // If in trial, next payment is when trial ends
+        nextPaymentDateObj = subscription.trialEnds.toDate();
+    } else {
+        // If active, calculate from last payment date + period
+        const lastPayment = subscription.lastBillingDate 
+            ? subscription.lastBillingDate.toDate() 
+            : subscription.createdAt.toDate();
+        
+        nextPaymentDateObj = new Date(lastPayment);
+        if (subscription.billingPeriod === 'annually') {
+            nextPaymentDateObj.setFullYear(nextPaymentDateObj.getFullYear() + 1);
+        } else {
+            nextPaymentDateObj.setMonth(nextPaymentDateObj.getMonth() + 1);
+        }
+    }
+    
+    // Format the date for display
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    nextPaymentDate.textContent = nextPaymentDateObj.toLocaleDateString(undefined, options);
+
+    // Set payment amount
+    const isAnnual = subscription.billingPeriod === 'annually';
+    const priceDisplayValue = isAnnual 
+        ? (subscription.plan === 'premium' ? '290 MAD' : '690 MAD')
+        : (subscription.plan === 'premium' ? '29 MAD' : '69 MAD');
+    paymentAmount.textContent = priceDisplayValue;
+
+    // Set payment method if available
+    if (subscription.paymentMethod) {
+        const method = subscription.paymentMethod;
+        if (method.type === 'credit_card' && method.last4) {
+            paymentMethod.textContent = `Card ending in ${method.last4}`;
+        } else {
+            paymentMethod.textContent = 'Credit/Debit Card';
+        }
+    } else {
+        paymentMethod.textContent = 'Credit/Debit Card';
+    }
+}
+
+async function loadPaymentHistory(userId, subscriptionId) {
+    if (!paymentHistoryList || !noPaymentHistory) return;
+
+    try {
+        const paymentsRef = firebase.firestore().collection('payments');
+        const snapshot = await paymentsRef
+            .where('userId', '==', userId)
+            .where('subscriptionId', '==', subscriptionId)
+            .orderBy('timestamp', 'desc')
+            .limit(5)
+            .get();
+
+        if (snapshot.empty) {
+            noPaymentHistory.style.display = 'block';
+            paymentHistoryList.innerHTML = '';
+            return;
+        }
+
+        // Hide the no history message
+        noPaymentHistory.style.display = 'none';
+
+        // Clear existing payment history
+        paymentHistoryList.innerHTML = '';
+
+        // Add payment history items
+        snapshot.forEach(doc => {
+            const payment = doc.data();
+            const paymentDate = payment.timestamp.toDate();
+            const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+            
+            const historyItem = document.createElement('div');
+            historyItem.className = 'payment-history-item';
+            historyItem.innerHTML = `
+                <div class="payment-details">
+                    <span class="payment-plan">${payment.plan.charAt(0).toUpperCase() + payment.plan.slice(1)} Plan</span>
+                    <span class="payment-date">${paymentDate.toLocaleDateString(undefined, dateOptions)}</span>
+                    <span class="payment-id">ID: ${doc.id.slice(-8)}</span>
+                </div>
+                <span class="payment-amount">${payment.amount} ${payment.currency}</span>
+            `;
+            
+            paymentHistoryList.appendChild(historyItem);
+        });
+    } catch (error) {
+        console.error('Error loading payment history:', error);
+        noPaymentHistory.style.display = 'block';
+        paymentHistoryList.innerHTML = '';
+    }
+}
+
+// Function to handle subscription cancellation
+async function cancelSubscription() {
+    if (!confirm('Are you sure you want to cancel your subscription? You will lose access to premium features at the end of your current billing period.')) {
+        return;
+    }
+
+    const user = firebase.auth().currentUser;
+    if (!user) {
+        alert('You must be logged in to cancel your subscription');
+        return;
+    }
+
+    try {
+        // First get the active subscription
+        const subscriptionsRef = firebase.firestore().collection('subscriptions');
+        const snapshot = await subscriptionsRef
+            .where('userId', '==', user.uid)
+            .where('status', 'in', ['active', 'trial'])
+            .get();
+
+        if (snapshot.empty) {
+            alert('No active subscription found to cancel');
+            return;
+        }
+
+        const subscriptionDoc = snapshot.docs[0];
+        const subscription = subscriptionDoc.data();
+        
+        // Update subscription status to cancelled
+        await subscriptionDoc.ref.update({
+            status: 'cancelled',
+            cancelledAt: firebase.firestore.FieldValue.serverTimestamp(),
+            autoRenew: false,
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+
+        // Update the UI to reflect cancellation
+        subscriptionStatusBadge.textContent = 'Cancelled';
+        subscriptionStatusBadge.classList.add('cancelled');
+        
+        // Update user record
+        await firebase.firestore().collection('users').doc(user.uid).update({
+            'currentSubscription.status': 'cancelled'
+        });
+
+        alert('Your subscription has been cancelled. You will have access to premium features until the end of your current billing period.');
+    } catch (error) {
+        console.error('Error cancelling subscription:', error);
+        alert('Error cancelling subscription: ' + error.message);
+    }
+}
+
+// Function to redirect to subscription page to change plan
+function changePlan() {
+    window.location.href = '../subscription/subscription.html';
+}
+
+// Function to show payment update form
+function updatePaymentMethod() {
+    // Show the modal
+    openModal();
+    
+    // Get a fresh reference to the DOM element
+    const cardHolderUpdate = document.getElementById('card-holder-update');
+    
+    // Pre-populate cardholder name if available
+    const user = firebase.auth().currentUser;
+    if (user && cardHolderUpdate) {
+        firebase.firestore().collection('users').doc(user.uid).get()
+            .then(doc => {
+                if (doc.exists) {
+                    const userData = doc.data();
+                    if (userData.fullName) {
+                        cardHolderUpdate.value = userData.fullName;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching user data:', error);
+            });
+    }
+}
+
+// Function to open the modal
+function openModal() {
+    // Get fresh references to DOM elements
+    const paymentUpdateModal = document.getElementById('payment-update-modal');
+    const modalOverlay = document.getElementById('modal-overlay');
+    
+    if (paymentUpdateModal && modalOverlay) {
+        paymentUpdateModal.classList.add('active');
+        modalOverlay.classList.add('active');
+        document.body.style.overflow = 'hidden'; // Prevent scrolling
+    } else {
+        console.error('Modal elements not found');
+    }
+}
+
+// Function to close the modal
+function closeModal() {
+    // Get fresh references to DOM elements
+    const paymentUpdateModal = document.getElementById('payment-update-modal');
+    const modalOverlay = document.getElementById('modal-overlay');
+    
+    console.log('Closing modal, elements found:', !!paymentUpdateModal, !!modalOverlay);
+    
+    if (paymentUpdateModal && modalOverlay) {
+        paymentUpdateModal.classList.remove('active');
+        modalOverlay.classList.remove('active');
+        document.body.style.overflow = ''; // Restore scrolling
+        
+        // Reset form and messages
+        const paymentUpdateForm = document.getElementById('payment-update-form');
+        const paymentUpdateMessage = document.getElementById('payment-update-message');
+        
+        if (paymentUpdateForm) {
+            paymentUpdateForm.reset();
+        }
+        if (paymentUpdateMessage) {
+            paymentUpdateMessage.className = 'message-container';
+            paymentUpdateMessage.textContent = '';
+        }
+    }
+}
+
+// Format card number input (add spaces after every 4 digits)
+function formatCardNumber(e) {
+    let value = e.target.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+    let formattedValue = '';
+    
+    for (let i = 0; i < value.length; i++) {
+        if (i > 0 && i % 4 === 0) {
+            formattedValue += ' ';
+        }
+        formattedValue += value[i];
+    }
+    
+    e.target.value = formattedValue;
+    
+    // Highlight card type icon based on first digit
+    updateCardTypeIcon(value);
+}
+
+// Format expiry date as MM/YY
+function formatExpiryDate(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    
+    if (value.length > 0) {
+        if (value.length <= 2) {
+            e.target.value = value;
+        } else {
+            e.target.value = value.slice(0, 2) + '/' + value.slice(2, 4);
+        }
+    }
+}
+
+// Only allow numbers in CVV
+function formatCVV(e) {
+    e.target.value = e.target.value.replace(/\D/g, '');
+}
+
+// Validate and update card icon based on first digits
+function updateCardTypeIcon(number) {
+    // Remove all active classes first
+    document.querySelectorAll('.card-icons i').forEach(icon => {
+        icon.classList.remove('active');
+    });
+    
+    // Get first digit
+    const firstDigit = number.charAt(0);
+    
+    // Simple card type detection
+    if (firstDigit === '4') {
+        // Visa
+        document.querySelector('.card-icons .fa-cc-visa').classList.add('active');
+    } else if (['5', '2'].includes(firstDigit)) {
+        // Mastercard
+        document.querySelector('.card-icons .fa-cc-mastercard').classList.add('active');
+    } else if (['3'].includes(firstDigit)) {
+        // Amex
+        document.querySelector('.card-icons .fa-cc-amex').classList.add('active');
+    }
+}
+
+// Show message in payment update modal
+function showPaymentUpdateMessage(message, type) {
+    // Get fresh reference to the message element
+    const paymentUpdateMessage = document.getElementById('payment-update-message');
+    
+    if (paymentUpdateMessage) {
+        paymentUpdateMessage.className = `message-container ${type}`;
+        paymentUpdateMessage.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'}"></i>${message}`;
+    } else {
+        console.error('Payment update message element not found');
+    }
+}
+
+// Handle payment form submission
+async function handlePaymentUpdateSubmission(e) {
+    e.preventDefault();
+    
+    // Get fresh references to DOM elements
+    const cardHolderUpdate = document.getElementById('card-holder-update');
+    const cardNumberUpdate = document.getElementById('card-number-update');
+    const expiryDateUpdate = document.getElementById('expiry-date-update');
+    const cvvUpdate = document.getElementById('cvv-update');
+    const updateCardBtn = document.getElementById('update-card-btn');
+    const paymentMethod = document.getElementById('payment-method');
+    
+    // Verify elements exist
+    if (!cardHolderUpdate || !cardNumberUpdate || !expiryDateUpdate || !cvvUpdate || !updateCardBtn) {
+        showPaymentUpdateMessage('Error: Form elements not found', 'error');
+        return;
+    }
+    
+    // Basic validation
+    const cardholderName = cardHolderUpdate.value.trim();
+    const cardNumber = cardNumberUpdate.value.replace(/\s/g, '');
+    const expiryDate = expiryDateUpdate.value;
+    const cvv = cvvUpdate.value;
+    
+    // Simple validation
+    if (!cardholderName || cardholderName.length < 3) {
+        showPaymentUpdateMessage('Please enter a valid cardholder name', 'error');
+        return;
+    }
+    
+    if (!cardNumber || cardNumber.length < 15) {
+        showPaymentUpdateMessage('Please enter a valid card number', 'error');
+        return;
+    }
+    
+    if (!expiryDate || !expiryDate.includes('/')) {
+        showPaymentUpdateMessage('Please enter a valid expiry date (MM/YY)', 'error');
+        return;
+    }
+    
+    // Parse expiry date
+    const [month, year] = expiryDate.split('/');
+    const expiryMonth = parseInt(month, 10);
+    const expiryYear = parseInt('20' + year, 10);
+    
+    // Check if card is expired
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1; // JavaScript months are 0-indexed
+    
+    if (
+        isNaN(expiryMonth) || 
+        isNaN(expiryYear) || 
+        expiryMonth < 1 || 
+        expiryMonth > 12 ||
+        expiryYear < currentYear || 
+        (expiryYear === currentYear && expiryMonth < currentMonth)
+    ) {
+        showPaymentUpdateMessage('Card is expired or expiry date is invalid', 'error');
+        return;
+    }
+    
+    if (!cvv || cvv.length < 3) {
+        showPaymentUpdateMessage('Please enter a valid CVV code', 'error');
+        return;
+    }
+    
+    // Get user
+    const user = firebase.auth().currentUser;
+    if (!user) {
+        showPaymentUpdateMessage('You must be logged in to update payment method', 'error');
+        return;
+    }
+    
+    // Show loading state
+    updateCardBtn.disabled = true;
+    updateCardBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+    
+    try {
+        // Get the current subscription
+        const subscriptionsRef = firebase.firestore().collection('subscriptions');
+        const snapshot = await subscriptionsRef
+            .where('userId', '==', user.uid)
+            .where('status', 'in', ['active', 'trial'])
+            .get();
+        
+        if (snapshot.empty) {
+            throw new Error('No active subscription found');
+        }
+        
+        const subscriptionDoc = snapshot.docs[0];
+        
+        // In a real app, you would validate the card with a payment processor here
+        // For this demo, we'll just update the payment method record in Firestore
+        await subscriptionDoc.ref.update({
+            paymentMethod: {
+                type: 'credit_card',
+                last4: cardNumber.slice(-4),
+                holderName: cardholderName,
+                expiryMonth: expiryMonth,
+                expiryYear: expiryYear,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            },
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        
+        // Update displayed card info in the UI
+        paymentMethod.textContent = `Card ending in ${cardNumber.slice(-4)}`;
+        
+        // Show success message
+        showPaymentUpdateMessage('Payment method updated successfully!', 'success');
+        
+        // Close modal after delay
+        setTimeout(() => {
+            closeModal();
+        }, 2000);
+    } catch (error) {
+        console.error('Error updating payment method:', error);
+        showPaymentUpdateMessage(error.message || 'Failed to update payment method', 'error');
+    } finally {
+        // Reset button state
+        updateCardBtn.disabled = false;
+        updateCardBtn.textContent = 'Update Payment Method';
+    }
+}
+
 // Document Ready
 document.addEventListener('DOMContentLoaded', () => {
     // Close dropdown when clicking outside
@@ -399,6 +884,9 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('User photo URL:', user.photoURL);
             loadUserProfile();
             
+            // Load subscription data
+            loadSubscriptionData(user.uid);
+            
             // Update menu content for signed-in users
             const menuSections = document.querySelector('.menu-sections');
             if (menuSections) {
@@ -426,7 +914,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         Chats
                     </a>
                     <div class="menu-divider"></div>
-                    <a href="../profile/profile.html">
+                    <a href="../user-account/account.html">
                         <i class="fas fa-user"></i>
                         My Profile
                     </a>
@@ -468,4 +956,81 @@ document.addEventListener('DOMContentLoaded', () => {
     if (forgotPasswordLink) {
         forgotPasswordLink.addEventListener('click', handleForgotPassword);
     }
+    
+    // Add event listeners for subscription management
+    if (changePlanBtn) {
+        changePlanBtn.addEventListener('click', changePlan);
+    }
+    
+    if (updatePaymentBtn) {
+        updatePaymentBtn.addEventListener('click', updatePaymentMethod);
+    }
+    
+    if (cancelSubscriptionBtn) {
+        cancelSubscriptionBtn.addEventListener('click', cancelSubscription);
+    }
+    
+    // Add event listeners for payment update modal - using document delegation
+    document.addEventListener('click', function(e) {
+        // Check if the close button was clicked
+        if (e.target.closest('#close-modal-btn') || e.target.id === 'close-modal-btn') {
+            console.log('Close button clicked');
+            closeModal();
+            return;
+        }
+        
+        // Check if clicked outside the modal content
+        const modalContent = document.querySelector('.modal-content');
+        const modal = document.getElementById('payment-update-modal');
+        
+        if (modal && modal.classList.contains('active')) {
+            if (e.target === modal || e.target.id === 'modal-overlay') {
+                console.log('Clicked outside modal content');
+                closeModal();
+            }
+        }
+    });
+    
+    // Add event listeners for payment form inputs
+    if (cardNumberUpdate) {
+        cardNumberUpdate.addEventListener('input', formatCardNumber);
+    }
+    
+    if (expiryDateUpdate) {
+        expiryDateUpdate.addEventListener('input', formatExpiryDate);
+    }
+    
+    if (cvvUpdate) {
+        cvvUpdate.addEventListener('input', formatCVV);
+    }
+    
+    // Add event listener for payment form submission
+    if (paymentUpdateForm) {
+        paymentUpdateForm.addEventListener('submit', handlePaymentUpdateSubmission);
+    }
+    
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && paymentUpdateModal && paymentUpdateModal.classList.contains('active')) {
+            closeModal();
+        }
+    });
+
+    // Close button direct function
+    document.body.addEventListener('click', function(e) {
+        const closeBtn = document.getElementById('close-modal-btn');
+        if (closeBtn && (e.target === closeBtn || closeBtn.contains(e.target))) {
+            console.log('Close button clicked directly');
+            e.preventDefault();
+            e.stopPropagation();
+            closeModal();
+        }
+        
+        // Also handle overlay clicks
+        const overlay = document.getElementById('modal-overlay');
+        if (overlay && e.target === overlay) {
+            console.log('Overlay clicked directly');
+            closeModal();
+        }
+    }, true); // Use capture phase to ensure this runs first
 });

@@ -250,7 +250,7 @@ onAuthStateChanged(auth, (user) => {
                 Chats
             </a>
             <div class="menu-divider"></div>
-            <a href="../profile/profile.html">
+            <a href="../user-account/account.html">
                 <i class="fas fa-user"></i>
                 My Profile
             </a>
@@ -592,7 +592,7 @@ function addCreatorInfoToPage(creatorData) {
     
     // Create a link to the user's profile
     const userLink = document.createElement('a');
-    userLink.href = `../profile/profile.html?id=${creatorData.uid}`;
+    userLink.href = `../user-account/account.html?id=${creatorData.uid}`;
     userLink.className = 'user-link';
     
     // Add user avatar

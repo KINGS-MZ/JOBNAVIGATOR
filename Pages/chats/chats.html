@@ -50,6 +50,11 @@
                 
                 <div class="nav-separator"></div>
                 
+                <a href="../subscription/subscription.html" class="upgrade-btn">
+                    <i class="fas fa-star"></i>
+                    Upgrade
+                </a>
+                
                 <button id="theme-toggle" aria-label="Toggle dark mode">
                     <span class="material-symbols-rounded moon-icon">dark_mode</span>
                     <span class="material-symbols-rounded sun-icon">light_mode</span>
@@ -104,7 +109,7 @@
                                 <i class="fas fa-users"></i>
                                 Users
                             </a>
-                            <a href="../profile/profile.html">
+                            <a href="../account/account.html">
                                 <i class="fas fa-user"></i>
                                 My Profile
                             </a>
@@ -158,6 +163,26 @@
                 <div class="search-box">
                     <i class="fas fa-search"></i>
                     <input type="text" placeholder="Search contacts...">
+                </div>
+            </div>
+            
+            <!-- Mobile Chat Sidebar -->
+            <div class="mobile-chat-sidebar">
+                <div class="mobile-sidebar-icon active" data-tab="chats">
+                    <i class="material-symbols-rounded">chat</i>
+                    <span>Chats</span>
+                </div>
+                <div class="mobile-sidebar-icon" data-tab="add">
+                    <i class="material-symbols-rounded">add</i>
+                    <span>New</span>
+                </div>
+                <div class="mobile-sidebar-icon" data-tab="blocked">
+                    <i class="material-symbols-rounded">block</i>
+                    <span>Blocked</span>
+                </div>
+                <div class="mobile-sidebar-icon" data-tab="archived">
+                    <i class="material-symbols-rounded">archive</i>
+                    <span>Archive</span>
                 </div>
             </div>
             
@@ -238,9 +263,27 @@
                     <button class="chat-action-btn show-details-btn" id="show-details-btn">
                         <i class="fas fa-info-circle"></i>
                     </button>
-                    <button class="chat-action-btn">
+                    <button class="chat-action-btn" id="chat-options-btn">
                         <i class="fas fa-ellipsis-v"></i>
                     </button>
+                    <div class="chat-options-menu" id="chat-options-menu">
+                        <div class="chat-options-item" id="block-user-btn">
+                            <i class="fas fa-ban"></i>
+                            Block User
+                        </div>
+                        <div class="chat-options-item">
+                            <i class="fas fa-user"></i>
+                            View Profile
+                        </div>
+                        <div class="chat-options-item">
+                            <i class="fas fa-bell-slash"></i>
+                            Mute Notifications
+                        </div>
+                        <div class="chat-options-item delete">
+                            <i class="fas fa-trash"></i>
+                            Delete Conversation
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -475,6 +518,75 @@
                 <div class="image-preview-actions">
                     <button class="btn btn-secondary" id="cancelImageBtn">Cancel</button>
                     <button class="btn btn-primary" id="sendImageBtn">Send</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- Block User Confirmation Modal -->
+    <div class="modal-overlay" id="blockUserModal">
+        <div class="modal-content block-user-modal">
+            <div class="modal-header">
+                <h3>Block User</h3>
+                <button class="modal-close" id="closeBlockModalBtn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="block-user-icon">
+                    <i class="material-symbols-rounded">do_not_disturb</i>
+                </div>
+                <h4 class="block-user-title">Are you sure you want to block <span id="blockUserName"></span>?</h4>
+                
+                <p class="block-user-description">When you block someone:</p>
+                
+                <ul class="block-user-effects">
+                    <li><i class="fas fa-check"></i> They won't be able to message you</li>
+                    <li><i class="fas fa-check"></i> You won't see their messages</li>
+                    <li><i class="fas fa-check"></i> They won't be notified that you blocked them</li>
+                </ul>
+                
+                <p class="block-user-note">You can unblock them anytime from the Blocked Users section.</p>
+                
+                <div class="block-user-actions">
+                    <button class="btn btn-secondary" id="cancelBlockBtn">Cancel</button>
+                    <button class="btn btn-danger" id="confirmBlockBtn">Block User</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Unblock User Confirmation Modal -->
+    <div class="modal-overlay" id="unblockUserModal">
+        <div class="modal-content unblock-user-modal">
+            <div class="modal-header">
+                <h3>Unblock User</h3>
+                <button class="modal-close" id="closeUnblockModalBtn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="unblock-user-icon">
+                    <i class="material-symbols-rounded">person_add</i>
+                </div>
+                <h4 class="unblock-user-title">Are you sure you want to unblock <span id="unblockUserName"></span>?</h4>
+                
+                <p class="unblock-user-description">When you unblock someone:</p>
+                
+                <ul class="unblock-user-effects">
+                    <li><i class="fas fa-check"></i> They will be able to message you again</li>
+                    <li><i class="fas fa-check"></i> Their previous messages will become visible</li>
+                    <li><i class="fas fa-check"></i> They won't be notified that you unblocked them</li>
+                </ul>
+                
+                <p class="unblock-user-note">You can always block them again if needed.</p>
+                
+                <div class="unblock-user-actions">
+                    <button class="btn btn-secondary" id="cancelUnblockBtn">Cancel</button>
+                    <button class="btn btn-primary" id="confirmUnblockBtn">Unblock User</button>
                 </div>
             </div>
         </div>

@@ -7,6 +7,9 @@ import { ensureUserInFirestore } from '../../Firebase/auth-helpers.js';
 let notificationListener = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+    // Set flag indicating nav.js will handle the dropdown menu
+    window.navJsHandledMenu = true;
+    
     const themeToggle = document.getElementById('theme-toggle');
     const userMenuBtn = document.getElementById('user-menu-btn');
     const dropdownMenu = document.getElementById('user-dropdown');
@@ -20,121 +23,54 @@ document.addEventListener('DOMContentLoaded', () => {
     const signInLink = document.querySelector('.sign-in-link');
     const notificationsBtn = document.getElementById('notifications-btn');
     const notificationCount = document.getElementById('notification-count');
+    const upgradeBtn = document.querySelector('.upgrade-btn');
 
-    // Debug logging - check if dropdown elements are found
-    console.log('Dropdown menu element:', dropdownMenu);
-    console.log('User menu button element:', userMenuBtn);
-
-    // Initialize guest state - only if elements exist
-    if (avatarImage) avatarImage.style.display = 'none';
-    if (avatarImageDropdown) avatarImageDropdown.style.display = 'none';
-    
+    // Show loading state immediately
+    if (userName) userName.textContent = 'Loading...';
+    if (userEmail) userEmail.textContent = 'Please wait...';
     if (avatarInitials) {
         avatarInitials.style.display = 'flex';
-        avatarInitials.textContent = '';  // Clear any existing content
-        const guestIcon = document.createElement('i');
-        guestIcon.className = 'fa-solid fa-circle-user';
-        avatarInitials.appendChild(guestIcon);
+        avatarInitials.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     }
-    
     if (avatarInitialsDropdown) {
         avatarInitialsDropdown.style.display = 'flex';
-        avatarInitialsDropdown.textContent = '';  // Clear any existing content
-        const guestIconDropdown = document.createElement('i');
-        guestIconDropdown.className = 'fa-solid fa-circle-user';
-        avatarInitialsDropdown.appendChild(guestIconDropdown);
-    }
-    
-    if (userName) userName.textContent = 'Welcome';
-    if (userEmail) userEmail.textContent = 'Sign in to access your account';
-
-    // Theme toggle functionality
-    if (themeToggle) {
-        themeToggle.addEventListener('click', () => {
-            const savedTheme = localStorage.getItem('theme') || 'auto';
-            const newTheme = savedTheme === 'dark' ? 'light' : 'dark';
-            
-            // Update theme using the global function from theme-loader.js
-            window.updateTheme(newTheme);
-        });
+        avatarInitialsDropdown.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
     }
 
-    // Apply theme preference - this is now redundant as theme is applied earlier
-    // but we keep it for backward compatibility
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    if (savedTheme === 'dark') {
-        document.documentElement.classList.add('dark-theme');
-        document.documentElement.classList.remove('light-theme');
-    } else {
-        document.documentElement.classList.add('light-theme');
-        document.documentElement.classList.remove('dark-theme');
+    // Hide upgrade button initially
+    if (upgradeBtn) {
+        upgradeBtn.style.visibility = 'hidden';
     }
 
-    // User menu dropdown toggle
-    if (userMenuBtn && dropdownMenu) {
-        // Create a simple state tracker
-        let isMenuOpen = false;
-
-        // Remove any existing inline styles
-        dropdownMenu.removeAttribute('style');
-
-        userMenuBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            
-            console.log('User menu button clicked, current state:', isMenuOpen);
-            
-            // Toggle state
-            isMenuOpen = !isMenuOpen;
-            
-            // Apply the appropriate state
-            if (isMenuOpen) {
-                // Show dropdown
-                dropdownMenu.style.display = 'block';
-                dropdownMenu.style.opacity = '1';
-                dropdownMenu.style.visibility = 'visible';
-                dropdownMenu.style.transform = 'translateY(0)';
-                dropdownMenu.style.pointerEvents = 'auto';
-                dropdownMenu.classList.add('show');
-            } else {
-                // Hide dropdown
-                dropdownMenu.style.display = 'none';
-                dropdownMenu.style.opacity = '0';
-                dropdownMenu.style.visibility = 'hidden';
-                dropdownMenu.style.pointerEvents = 'none';
-                dropdownMenu.classList.remove('show');
+    // Function to highlight current page in the dropdown menu
+    const highlightCurrentPage = () => {
+        const currentPath = window.location.pathname;
+        let currentPage = '';
+        const pathParts = currentPath.split('/');
+        
+        for (const part of pathParts) {
+            if (['home', 'jobs', 'posts', 'chats', 'saved', 'account', 'settings', 'users', 'notifications'].includes(part)) {
+                currentPage = part;
+                break;
             }
-            
-            console.log('Menu state after click:', isMenuOpen);
-        });
-
-        // Close dropdown when clicking outside
-        document.addEventListener('click', (e) => {
-            if (isMenuOpen && !userMenuBtn.contains(e.target) && !dropdownMenu.contains(e.target)) {
-                // Hide dropdown
-                dropdownMenu.style.display = 'none';
-                dropdownMenu.style.opacity = '0';
-                dropdownMenu.style.visibility = 'hidden';
-                dropdownMenu.style.pointerEvents = 'none';
-                dropdownMenu.classList.remove('show');
-                
-                // Update state
-                isMenuOpen = false;
-                console.log('Menu closed by outside click');
+        }
+        
+        if (!currentPage) return;
+        
+        const menuLinks = document.querySelectorAll('.menu-sections a');
+        if (!menuLinks.length) return;
+        
+        menuLinks.forEach(link => {
+            link.classList.remove('active');
+            const href = link.getAttribute('href');
+            if (href && href.includes(`/${currentPage}/`)) {
+                link.classList.add('active');
             }
         });
-    }
-
-    // Add notification button functionality
-    if (notificationsBtn) {
-        notificationsBtn.addEventListener('click', () => {
-            window.location.href = '../notifications/notifications.html';
-        });
-    }
+    };
 
     // Function to set up real-time notification counter
     const setupNotificationListener = (userId) => {
-        // Clean up previous listener if it exists
         if (notificationListener) {
             notificationListener();
         }
@@ -144,12 +80,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const notificationsRef = collection(db, 'users', userId, 'notifications');
                 const unreadQuery = query(notificationsRef, where('read', '==', false));
                 
-                // Set up real-time listener for notifications
                 notificationListener = onSnapshot(unreadQuery, (snapshot) => {
                     const count = snapshot.size;
                     notificationCount.textContent = count;
                     
-                    // Add visual feedback when notifications change
                     if (count > 0) {
                         notificationsBtn.classList.add('has-notifications');
                     } else {
@@ -166,21 +100,175 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // Handle user authentication state
+    // Function to handle displaying of the upgrade button based on subscription status
+    const manageUpgradeButton = async (userId) => {
+        try {
+            if (!upgradeBtn) return;
+            
+            if (!userId) {
+                upgradeBtn.style.display = 'none';
+                return;
+            }
+            
+            const userDocRef = doc(db, 'users', userId);
+            const userDoc = await getDoc(userDocRef);
+            
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                if (userData.role === 'admin') {
+                    upgradeBtn.innerHTML = '<i class="fas fa-pen-fancy"></i>Creator';
+                    upgradeBtn.classList.remove('premium-badge');
+                    upgradeBtn.classList.add('admin-badge');
+                    upgradeBtn.style.visibility = 'visible';
+                    upgradeBtn.style.display = 'flex';
+                    return;
+                }
+                
+                if (userData.subscription && userData.subscription.status === 'active' && 
+                    userData.subscription.plan === 'premium') {
+                    upgradeBtn.innerHTML = '<i class="fas fa-crown"></i>Premium';
+                    upgradeBtn.classList.remove('admin-badge');
+                    upgradeBtn.classList.add('premium-badge');
+                    upgradeBtn.href = '../subscription/subscription.html';
+                    upgradeBtn.style.visibility = 'visible';
+                    upgradeBtn.style.display = 'flex';
+                    return;
+                }
+            }
+            
+            upgradeBtn.innerHTML = '<i class="fas fa-star"></i>Upgrade';
+            upgradeBtn.classList.remove('premium-badge', 'admin-badge');
+            upgradeBtn.href = '../subscription/subscription.html';
+            upgradeBtn.style.visibility = 'visible';
+            upgradeBtn.style.display = 'flex';
+            
+        } catch (error) {
+            console.error('Error checking subscription status:', error);
+            if (upgradeBtn && userId) {
+                upgradeBtn.innerHTML = '<i class="fas fa-star"></i>Upgrade';
+                upgradeBtn.classList.remove('premium-badge', 'admin-badge');
+                upgradeBtn.style.visibility = 'visible';
+                upgradeBtn.style.display = 'flex';
+            } else if (upgradeBtn) {
+                upgradeBtn.style.display = 'none';
+            }
+        }
+    };
+
+    // Set up auth state listener
     onAuthStateChanged(auth, async (user) => {
         if (user) {
+            // Immediately update with basic user info from auth
+            if (userName) userName.textContent = user.displayName || 'User';
+            if (userEmail) userEmail.textContent = user.email;
+            
+            // Update avatar with auth data first
+            if (user.photoURL) {
+                if (avatarImage) {
+                    avatarImage.style.display = 'block';
+                    avatarImage.src = user.photoURL;
+                }
+                if (avatarImageDropdown) {
+                    avatarImageDropdown.style.display = 'block';
+                    avatarImageDropdown.src = user.photoURL;
+                }
+                if (avatarInitials) avatarInitials.style.display = 'none';
+                if (avatarInitialsDropdown) avatarInitialsDropdown.style.display = 'none';
+            } else {
+                if (avatarImage) avatarImage.style.display = 'none';
+                if (avatarImageDropdown) avatarImageDropdown.style.display = 'none';
+                
+                const initials = (user.displayName || '').split(' ').map(n => n[0]).join('').toUpperCase();
+                
+                if (avatarInitials) {
+                    avatarInitials.style.display = 'flex';
+                    avatarInitials.textContent = initials || 'JN';
+                }
+                if (avatarInitialsDropdown) {
+                    avatarInitialsDropdown.style.display = 'flex';
+                    avatarInitialsDropdown.textContent = initials || 'JN';
+                }
+            }
+
+            // Show basic menu immediately
+            if (menuSections) {
+                menuSections.innerHTML = `
+                    <a href="../home/home.html">
+                        <i class="fas fa-home"></i>
+                        Home
+                    </a>
+                    <a href="../jobs/jobs.html">
+                        <i class="fas fa-briefcase"></i>
+                        Jobs
+                    </a>
+                    <a href="../posts/posts.html">
+                        <i class="fas fa-newspaper"></i>
+                        Posts
+                    </a>
+                    <div class="menu-divider"></div>
+                    <a href="../saved/saved.html">
+                        <i class="fas fa-heart"></i>
+                        Saved Jobs
+                        <span class="badge">0</span>
+                    </a>
+                    <a href="../chats/chats.html">
+                        <i class="fas fa-comments"></i>
+                        Chats
+                    </a>
+                    <div class="menu-divider"></div>
+                    <a href="../users/users.html">
+                        <i class="fas fa-users"></i>
+                        Users
+                    </a>
+                    <a href="../user-account/account.html">
+                        <i class="fas fa-user"></i>
+                        My Profile
+                    </a>
+                    <a href="../settings/settings.html">
+                        <i class="fas fa-cog"></i>
+                        Settings
+                    </a>
+                    <div class="menu-divider"></div>
+                    <a href="#" id="logout-link" class="logout-link">
+                        <i class="fas fa-sign-out-alt"></i>
+                        Sign Out
+                    </a>
+                `;
+
+                // Add logout functionality immediately
+                const logoutLink = document.getElementById('logout-link');
+                if (logoutLink) {
+                    logoutLink.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        auth.signOut().then(() => {
+                            window.location.href = '../login/login.html';
+                        }).catch((error) => {
+                            console.error('Error signing out:', error);
+                        });
+                    });
+                }
+                
+                highlightCurrentPage();
+            }
+
+            // Set up notifications and upgrade button in parallel
+            Promise.all([
+                setupNotificationListener(user.uid),
+                manageUpgradeButton(user.uid)
+            ]).catch(error => {
+                console.error('Error setting up notifications or upgrade button:', error);
+            });
+
+            // Load Firestore data in the background
             try {
-                // Ensure user is in Firestore first - this is the key change
                 const userData = await ensureUserInFirestore(user);
                 
                 if (userData) {
-                    // Use user data from our helper function
+                    // Update with Firestore data if available
                     if (userName) userName.textContent = userData.fullName || user.displayName || 'User';
-                    if (userEmail) userEmail.textContent = user.email;
                     
-                    // Update avatar - check for custom avatar first
+                    // Update avatar with Firestore data if available
                     if (userData.photoURL) {
-                        // User has profile picture
                         if (avatarImage) {
                             avatarImage.style.display = 'block';
                             avatarImage.src = userData.photoURL;
@@ -191,186 +279,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                         if (avatarInitials) avatarInitials.style.display = 'none';
                         if (avatarInitialsDropdown) avatarInitialsDropdown.style.display = 'none';
-                    } else if (user.photoURL) {
-                        // Fallback to auth profile picture
-                        if (avatarImage) {
-                            avatarImage.style.display = 'block';
-                            avatarImage.src = user.photoURL;
-                        }
-                        if (avatarImageDropdown) {
-                            avatarImageDropdown.style.display = 'block';
-                            avatarImageDropdown.src = user.photoURL;
-                        }
-                        if (avatarInitials) avatarInitials.style.display = 'none';
-                        if (avatarInitialsDropdown) avatarInitialsDropdown.style.display = 'none';
-                    } else {
-                        // No profile picture, show initials
-                        if (avatarImage) avatarImage.style.display = 'none';
-                        if (avatarImageDropdown) avatarImageDropdown.style.display = 'none';
-                        
-                        // Use custom name for initials if available
-                        const fullName = userData.fullName || user.displayName || '';
-                        const initials = fullName.split(' ').map(n => n[0]).join('').toUpperCase();
-                        
-                        if (avatarInitials) {
-                            avatarInitials.style.display = 'flex';
-                            avatarInitials.textContent = initials || 'JN';
-                        }
-                        if (avatarInitialsDropdown) {
-                            avatarInitialsDropdown.style.display = 'flex';
-                            avatarInitialsDropdown.textContent = initials || 'JN';
-                        }
-                    }
-                } else {
-                    // Fallback if our helper failed
-                    const displayName = user.displayName || 'User';
-                    const email = user.email;
-                    const photoURL = user.photoURL;
-                    const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase();
-
-                    // Update user info
-                    if (userName) userName.textContent = displayName;
-                    if (userEmail) userEmail.textContent = email;
-
-                    // Update avatar
-                    if (photoURL) {
-                        if (avatarImage) {
-                            avatarImage.style.display = 'block';
-                            avatarImage.src = photoURL;
-                        }
-                        if (avatarImageDropdown) {
-                            avatarImageDropdown.style.display = 'block';
-                            avatarImageDropdown.src = photoURL;
-                        }
-                        if (avatarInitials) avatarInitials.style.display = 'none';
-                        if (avatarInitialsDropdown) avatarInitialsDropdown.style.display = 'none';
-                    } else {
-                        if (avatarImage) avatarImage.style.display = 'none';
-                        if (avatarImageDropdown) avatarImageDropdown.style.display = 'none';
-                        
-                        if (avatarInitials) {
-                            avatarInitials.style.display = 'flex';
-                            avatarInitials.textContent = initials;
-                        }
-                        if (avatarInitialsDropdown) {
-                            avatarInitialsDropdown.style.display = 'flex';
-                            avatarInitialsDropdown.textContent = initials;
-                        }
-                    }
-                }
-
-                // Setup real-time notification listener
-                setupNotificationListener(user.uid);
-
-                // Update menu sections for signed-in user
-                if (menuSections) {
-                    menuSections.innerHTML = `
-                        <a href="../home/home.html">
-                            <i class="fas fa-home"></i>
-                            Home
-                        </a>
-                        <a href="../jobs/jobs.html">
-                            <i class="fas fa-briefcase"></i>
-                            Jobs
-                        </a>
-                        <a href="../posts/posts.html">
-                            <i class="fas fa-newspaper"></i>
-                            Posts
-                        </a>
-                        <div class="menu-divider"></div>
-                        <a href="../saved/saved.html">
-                            <i class="fas fa-heart"></i>
-                            Saved Jobs
-                            <span class="badge">0</span>
-                        </a>
-                        <a href="../chats/chats.html">
-                            <i class="fas fa-comments"></i>
-                            Chats
-                        </a>
-                        <div class="menu-divider"></div>
-                        <a href="../users/users.html">
-                            <i class="fas fa-users"></i>
-                            Users
-                        </a>
-                        <a href="../profile/profile.html">
-                            <i class="fas fa-user"></i>
-                            My Profile
-                        </a>
-                        <a href="../settings/settings.html">
-                            <i class="fas fa-cog"></i>
-                            Settings
-                        </a>
-                        <div class="menu-divider"></div>
-                        <a href="#" id="logout-link" class="logout-link">
-                            <i class="fas fa-sign-out-alt"></i>
-                            Sign Out
-                        </a>
-                    `;
-
-                    // Add logout functionality
-                    const logoutLink = document.getElementById('logout-link');
-                    if (logoutLink) {
-                        logoutLink.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            auth.signOut().then(() => {
-                                window.location.href = '../login/login.html';
-                            }).catch((error) => {
-                                console.error('Error signing out:', error);
-                            });
-                        });
                     }
                 }
             } catch (error) {
-                console.error('Error fetching user profile:', error);
-                // Fallback to auth data if Firestore fetch fails
-                const displayName = user.displayName || 'User';
-                const email = user.email;
-                const photoURL = user.photoURL;
-                const initials = displayName.split(' ').map(n => n[0]).join('').toUpperCase();
-
-                // Update user info
-                if (userName) userName.textContent = displayName;
-                if (userEmail) userEmail.textContent = email;
-
-                // Update avatar
-                if (photoURL) {
-                    if (avatarImage) {
-                        avatarImage.style.display = 'block';
-                        avatarImage.src = photoURL;
-                    }
-                    if (avatarImageDropdown) {
-                        avatarImageDropdown.style.display = 'block';
-                        avatarImageDropdown.src = photoURL;
-                    }
-                    if (avatarInitials) avatarInitials.style.display = 'none';
-                    if (avatarInitialsDropdown) avatarInitialsDropdown.style.display = 'none';
-                } else {
-                    if (avatarImage) avatarImage.style.display = 'none';
-                    if (avatarImageDropdown) avatarImageDropdown.style.display = 'none';
-                    
-                    if (avatarInitials) {
-                        avatarInitials.style.display = 'flex';
-                        avatarInitials.textContent = initials;
-                    }
-                    if (avatarInitialsDropdown) {
-                        avatarInitialsDropdown.style.display = 'flex';
-                        avatarInitialsDropdown.textContent = initials;
-                    }
-                }
+                console.error('Error loading Firestore data:', error);
             }
         } else {
-            // User is signed out
+            // User is signed out - show guest state immediately
             if (userName) userName.textContent = 'Welcome';
             if (userEmail) userEmail.textContent = 'Sign in to access your account';
             
-            // Reset avatar images
             if (avatarImage) avatarImage.style.display = 'none';
             if (avatarImageDropdown) avatarImageDropdown.style.display = 'none';
             
-            // Show avatar initials containers with user icon
             if (avatarInitials) {
                 avatarInitials.style.display = 'flex';
-                avatarInitials.textContent = '';  // Clear any existing content
+                avatarInitials.textContent = '';
                 const guestIcon = document.createElement('i');
                 guestIcon.className = 'fa-solid fa-circle-user';
                 avatarInitials.appendChild(guestIcon);
@@ -378,13 +302,12 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (avatarInitialsDropdown) {
                 avatarInitialsDropdown.style.display = 'flex';
-                avatarInitialsDropdown.textContent = '';  // Clear any existing content
+                avatarInitialsDropdown.textContent = '';
                 const guestIconDropdown = document.createElement('i');
                 guestIconDropdown.className = 'fa-solid fa-circle-user';
                 avatarInitialsDropdown.appendChild(guestIconDropdown);
             }
 
-            // Clear notification count and unsubscribe from listener
             if (notificationCount) {
                 notificationCount.textContent = '0';
             }
@@ -394,9 +317,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 notificationListener = null;
             }
 
-            // Update menu sections for guest user
+            if (upgradeBtn) {
+                upgradeBtn.style.display = 'none';
+            }
+
             if (menuSections) {
                 menuSections.innerHTML = `
+                    <div class="guest-welcome">
+                        <p>Please sign in to access all features</p>
+                    </div>
+                    <div class="menu-divider"></div>
                     <a href="../login/login.html" class="sign-in-link">
                         <i class="fas fa-sign-in-alt"></i>
                         Sign In
@@ -405,4 +335,90 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
+
+    // User menu dropdown toggle
+    if (userMenuBtn && dropdownMenu) {
+        let isMenuOpen = false;
+        dropdownMenu.removeAttribute('style');
+        dropdownMenu.classList.remove('show');
+        
+        window.navMenuFunctions = {
+            isOpen: () => isMenuOpen,
+            open: () => {
+                dropdownMenu.style.display = 'block';
+                dropdownMenu.style.opacity = '1';
+                dropdownMenu.style.visibility = 'visible';
+                dropdownMenu.style.transform = 'translateY(0)';
+                dropdownMenu.style.pointerEvents = 'auto';
+                dropdownMenu.classList.add('show');
+                isMenuOpen = true;
+            },
+            close: () => {
+                dropdownMenu.classList.remove('show');
+                setTimeout(() => {
+                    if (!isMenuOpen) {
+                        dropdownMenu.style.display = 'none';
+                        dropdownMenu.style.visibility = 'hidden';
+                    }
+                }, 300);
+                isMenuOpen = false;
+            }
+        };
+
+        userMenuBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            isMenuOpen = !isMenuOpen;
+            
+            if (isMenuOpen) {
+                dropdownMenu.style.display = 'block';
+                dropdownMenu.style.opacity = '1';
+                dropdownMenu.style.visibility = 'visible';
+                dropdownMenu.style.transform = 'translateY(0)';
+                dropdownMenu.style.pointerEvents = 'auto';
+                dropdownMenu.classList.add('show');
+            } else {
+                dropdownMenu.classList.remove('show');
+                setTimeout(() => {
+                    if (!isMenuOpen) {
+                        dropdownMenu.style.display = 'none';
+                        dropdownMenu.style.visibility = 'hidden';
+                    }
+                }, 300);
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (isMenuOpen && !userMenuBtn.contains(e.target) && !dropdownMenu.contains(e.target)) {
+                isMenuOpen = false;
+                dropdownMenu.classList.remove('show');
+                setTimeout(() => {
+                    if (!isMenuOpen) {
+                        dropdownMenu.style.display = 'none';
+                        dropdownMenu.style.visibility = 'hidden';
+                    }
+                }, 300);
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && isMenuOpen) {
+                isMenuOpen = false;
+                dropdownMenu.classList.remove('show');
+                setTimeout(() => {
+                    if (!isMenuOpen) {
+                        dropdownMenu.style.display = 'none';
+                        dropdownMenu.style.visibility = 'hidden';
+                    }
+                }, 300);
+            }
+        });
+    }
+
+    // Add notification button functionality
+    if (notificationsBtn) {
+        notificationsBtn.addEventListener('click', () => {
+            window.location.href = '../notifications/notifications.html';
+        });
+    }
 });

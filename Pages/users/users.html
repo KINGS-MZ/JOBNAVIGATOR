@@ -28,6 +28,7 @@
             visibility: visible !important;
             transform: translateY(0) !important;
             pointer-events: auto !important;
+            display: block !important;
         }
 
         /* Theme toggle button improvements */
@@ -458,6 +459,8 @@
             margin-left: 300px;
             transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             padding: 24px;
+            padding-bottom: 40px;
+            overflow-y: visible;
         }
         
         .content-header {
@@ -616,9 +619,11 @@
         /* Modern card styles for users list */
         .users-list {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
             gap: 16px;
             width: 100%;
+            max-width: 100%;
+            overflow: visible;
         }
         
         .user-item {
@@ -634,6 +639,7 @@
             min-height: 220px;
             align-items: flex-start;
             text-align: left;
+            overflow: visible;
         }
         
         .dark-mode .user-item {
@@ -715,6 +721,8 @@
             overflow: hidden;
             text-overflow: ellipsis;
             text-align: left;
+            width: 100%;
+            max-width: 100%;
         }
         
         .dark-mode .user-headline {
@@ -753,6 +761,10 @@
             overflow: hidden;
             opacity: 0.85;
             text-align: left;
+            max-width: 100%;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            box-sizing: border-box;
         }
         
         .user-skills {
@@ -1023,6 +1035,130 @@
         @media (max-width: 767px) {
             .users-list {
                 grid-template-columns: 1fr;
+                padding: 0 4px;
+                margin-bottom: 20px;
+                overflow: visible;
+                width: 100%;
+            }
+            
+            .content-area {
+                padding: 16px 12px;
+                padding-bottom: 40px;
+                overflow: visible;
+                width: 100%;
+            }
+            
+            .user-item {
+                width: 100%;
+                max-width: 100%;
+                box-sizing: border-box;
+                overflow: hidden;
+            }
+            
+            .user-body {
+                width: 100%;
+                overflow: hidden;
+            }
+            
+            .user-bio {
+                width: 100%;
+                max-width: 100%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                word-wrap: break-word;
+                word-break: break-word;
+                overflow-wrap: break-word;
+                box-sizing: border-box;
+                white-space: normal;
+                hyphens: auto;
+                display: -webkit-box;
+                -webkit-box-orient: vertical;
+            }
+            
+            .user-info {
+                max-width: 70%;
+            }
+            
+            .user-header {
+                max-width: 100%;
+            }
+            
+            .user-headline {
+                width: auto;
+                max-width: 100%;
+            }
+            
+            .users-list.list-view .user-header {
+                max-width: 70%; 
+            }
+            
+            .users-list.list-view .user-headline {
+                max-width: 100%;
+                text-overflow: ellipsis;
+            }
+
+            /* Specific fixes for grid view bio to prevent horizontal overflow */
+            .users-list:not(.list-view) .user-bio {
+                width: 100%;
+                max-width: 100%;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                word-wrap: break-word;
+                word-break: break-word;
+                overflow-wrap: break-word;
+                box-sizing: border-box;
+                white-space: normal;
+                hyphens: auto;
+                display: -webkit-box;
+                -webkit-box-orient: vertical;
+                -webkit-line-clamp: 2;
+                line-clamp: 2;
+            }
+
+            .users-list:not(.list-view) .user-item {
+                width: 100%;
+                max-width: 100%;
+                overflow: hidden;
+                box-sizing: border-box;
+            }
+
+            .users-list:not(.list-view) .user-body {
+                width: 100%;
+                max-width: 100%;
+                overflow: hidden;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .users-list.list-view .user-item {
+                flex-direction: column;
+                align-items: flex-start;
+                padding: 16px;
+                width: 100%;
+                box-sizing: border-box;
+            }
+            
+            .users-list.list-view .user-header {
+                max-width: 100%;
+                margin-bottom: 12px;
+            }
+            
+            .users-list.list-view .user-info {
+                max-width: 80%;
+            }
+            
+            .users-list.list-view .user-actions {
+                width: 100%;
+                justify-content: flex-start;
+            }
+            
+            /* Fix horizontal scrolling due to bio overflow */
+            .user-bio {
+                width: 100%;
+                max-width: 100%;
+                overflow-wrap: break-word;
+                word-break: break-word;
+                hyphens: auto;
             }
         }
         
@@ -1134,6 +1270,44 @@
                 opacity: 0.6;
             }
         }
+
+        /* Bottom Navigation Bar Adjustments */
+        .bottom-nav {
+            z-index: 100;
+        }
+
+        .page-container {
+            padding-bottom: 30px;
+            overflow: visible;
+        }
+
+        @media (max-width: 480px) {
+            /* Additional adjustment for smallest screens */
+            .content-area {
+                padding-bottom: 50px !important;
+            }
+            
+            .users-list {
+                margin-bottom: 30px !important;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .user-item {
+                width: 100%;
+                max-width: 100%;
+                overflow: visible;
+            }
+        }
+
+        /* Fix scrolling issues */
+        html, body {
+            overflow-x: hidden;
+            overflow-y: auto;
+            height: 100%;
+            width: 100%;
+            position: relative;
+        }
     </style>
 </head>
 <body>
@@ -1160,6 +1334,11 @@
                 </a>
                 
                 <div class="nav-separator"></div>
+                
+                <a href="../subscription/subscription.html" class="upgrade-btn">
+                    <i class="fas fa-star"></i>
+                    Upgrade
+                </a>
                 
                 <button id="theme-toggle" aria-label="Toggle dark mode">
                     <span class="material-symbols-rounded moon-icon">dark_mode</span>
@@ -1215,7 +1394,7 @@
                                 <i class="fas fa-users"></i>
                                 Users
                             </a>
-                            <a href="../profile/profile.html">
+                            <a href="../account/account.html">
                                 <i class="fas fa-user"></i>
                                 My Profile
                             </a>
@@ -1236,13 +1415,13 @@
     </nav>
 
     <!-- Main Content -->
-    <div class="page-container">
+    <div class="page-container" style="padding-bottom: 80px !important; overflow: visible !important;">
         <!-- Left Sidebar -->
         <aside class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <h2 class="sidebar-title">
-                    <span class="material-symbols-rounded">group</span>
-                    User Directory
+                    <span class="material-symbols-rounded" style="color: var(--primary-blue)">tune</span>
+                    Filters
                 </h2>
                 <button class="sidebar-toggle" id="sidebar-collapse">
                     <span class="material-symbols-rounded">menu_open</span>
@@ -1304,6 +1483,18 @@
                         <span class="material-symbols-rounded">business</span>
                         Same Industry
                     </div>
+                    <div class="filter-option" data-filter="premium">
+                        <span class="material-symbols-rounded">workspace_premium</span>
+                        Premium Users
+                    </div>
+                    <div class="filter-option" data-filter="professional">
+                        <span class="material-symbols-rounded">verified</span>
+                        Professional Users
+                    </div>
+                    <div class="filter-option" data-filter="admin">
+                        <span class="material-symbols-rounded">shield</span>
+                        Creators/Admins
+                    </div>
                 </div>
                 
                 <div class="sidebar-divider"></div>
@@ -1338,10 +1529,10 @@
         </button>
 
         <!-- Main Content Area -->
-        <main class="content-area">
+        <main class="content-area" style="padding-bottom: 100px !important; /* Ensure enough space at bottom */">
             <div class="content-header">
-                <span class="material-symbols-rounded" style="font-size: 2rem; color: var(--primary-blue)">people_outline</span>
-                <h1>Professional Network</h1>
+                <span class="material-symbols-rounded" style="font-size: 1.5rem; color: var(--primary-blue)">people_outline</span>
+                <h1 style="font-size: 1.25rem; font-weight: 600;">Users</h1>
                 
                 <div class="content-header-actions">
                     <button class="action-button" title="Refresh">
@@ -1356,7 +1547,7 @@
                 </div>
             </div>
 
-            <div class="users-list" id="users-list">
+            <div class="users-list" id="users-list" style="padding-bottom: 85px !important; /* Ensure enough space for bottom nav */">
                 <!-- Loading skeletons -->
                 <div class="skeleton-user">
                     <div class="skeleton-avatar"></div>
@@ -1412,6 +1603,9 @@
                 <h3>No users found</h3>
                 <p>Try adjusting your filter criteria</p>
             </div>
+            
+            <!-- Invisible spacer to provide extra scroll space on mobile -->
+            <div class="mobile-spacer" style="height: 100px !important; display: block !important; width: 100% !important; margin-top: 20px !important;"></div>
         </main>
     </div>
 
@@ -1441,7 +1635,8 @@
 
     <!-- JavaScript -->
     <script src="../../Assets/navbar/nav.js" type="module"></script>
-    <script src="users.js" type="module"></script>
+    <script src="../../Assets/dropdown-fix.js"></script>
+    <script type="module" src="users.js"></script>
     <script>
         // Sidebar toggle functionality for mobile
         document.addEventListener('DOMContentLoaded', function() {
@@ -1457,23 +1652,12 @@
             // Theme toggle functionality
             const themeToggle = document.getElementById('theme-toggle');
             if (themeToggle) {
-                // Check if dark mode is stored in localStorage
-                const isDarkMode = localStorage.getItem('darkMode') === 'true';
-                
-                // Apply dark mode if it's set in localStorage
-                if (isDarkMode) {
-                    document.documentElement.classList.add('dark-mode');
-                    document.body.classList.add('dark-mode');
-                }
-                
-                // Toggle dark mode when button is clicked
+                // Toggle theme when button is clicked
                 themeToggle.addEventListener('click', function() {
-                    document.documentElement.classList.toggle('dark-mode');
-                    document.body.classList.toggle('dark-mode');
-                    
-                    // Store preference in localStorage
-                    const currentMode = document.body.classList.contains('dark-mode');
-                    localStorage.setItem('darkMode', currentMode);
+                    const currentTheme = localStorage.getItem('theme') || 'light';
+                    const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+                    localStorage.setItem('theme', newTheme);
+                    window.setTheme(newTheme);
                 });
             }
         });

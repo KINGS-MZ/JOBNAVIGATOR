@@ -882,7 +882,7 @@ function navigateToUserProfile(userId) {
     console.log("Navigating to user profile:", userId);
     
     // Navigate to the profile page with the user ID as a parameter
-    window.location.href = `../profile/profile.html?userId=${userId}`;
+    window.location.href = `../account/account.html?userId=${userId}`;
 }
 
 // Get notification icon based on type

@@ -3,6 +3,8 @@
 <head>
     <!-- Theme loader script - must be first to prevent flickering -->
     <script src="/Assets/theme-loader.js"></script>
+    <!-- Theme transitions CSS -->
+    <link rel="stylesheet" href="/Assets/theme-transitions.css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Job Navigator - Jobs</title>
@@ -21,6 +23,20 @@
             visibility: visible !important;
             transform: translateY(0) !important;
             pointer-events: auto !important;
+            display: block !important;
+        }
+        
+        /* Ensure dropdown doesn't get hidden by other elements */
+        .user-menu {
+            position: relative;
+            z-index: 1100;
+        }
+        
+        /* General fix for transitions */
+        .dropdown-menu {
+            transition-property: opacity, visibility, transform;
+            transition-duration: 0.3s;
+            transition-timing-function: ease-in-out;
         }
     </style>
 </head>
@@ -48,6 +64,11 @@
                 </a>
                 
                 <div class="nav-separator"></div>
+                
+                <a href="../subscription/subscription.html" class="upgrade-btn">
+                    <i class="fas fa-star"></i>
+                    Upgrade
+                </a>
                 
                 <button id="theme-toggle" aria-label="Toggle dark mode">
                     <span class="material-symbols-rounded moon-icon">dark_mode</span>
@@ -103,7 +124,7 @@
                                 <i class="fas fa-users"></i>
                                 Users
                             </a>
-                            <a href="../profile/profile.html">
+                            <a href="../account/account.html">
                                 <i class="fas fa-user"></i>
                                 My Profile
                             </a>
@@ -126,135 +147,275 @@
     <!-- Main Content -->
     <main>
         <div class="content-wrapper">
-            <!-- Search Section -->
-            <section class="search-section">
-                <h1 class="page-title">Find Your Dream Job</h1>
-                
-                <div class="search-container">
-                    <div class="search-box">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="job-search" placeholder="Job title, keywords, or company">
-                    </div>
-                    
-                    <button class="search-btn">
-                        <i class="fas fa-search"></i>
-                        Search
-                    </button>
-                    
-                    <button class="filter-btn" type="button">
-                        <i class="fas fa-filter"></i>
-                        Filters
-                    </button>
+            <!-- Sidebar Filters -->
+            <aside class="filters-sidebar">
+                <div class="filters-header">
+                    <h3>Filters</h3>
+                    <button class="clear-filters">Clear All</button>
                 </div>
                 
-                <div class="filters" style="display: none;">
-                    <select id="job-type" class="filter-select">
-                        <option value="">Job Type</option>
-                        <option value="full-time">Full Time</option>
-                        <option value="part-time">Part Time</option>
-                        <option value="contract">Contract</option>
-                        <option value="remote">Remote</option>
-                    </select>
-
-                    <select id="salary-range" class="filter-select">
-                        <option value="">Salary Range</option>
-                        <option value="0-30">$0-30k</option>
-                        <option value="30-60">$30-60k</option>
-                        <option value="60-90">$60-90k</option>
-                        <option value="90+">$90k+</option>
-                    </select>
+                <div class="filter-section">
+                    <h4>Job Type</h4>
+                    <div class="filter-options">
+                        <label class="filter-option">
+                            <input type="checkbox" name="job-type" value="full-time">
+                            <span class="checkmark"></span>
+                            Full Time
+                        </label>
+                        <label class="filter-option">
+                            <input type="checkbox" name="job-type" value="part-time">
+                            <span class="checkmark"></span>
+                            Part Time
+                        </label>
+                        <label class="filter-option">
+                            <input type="checkbox" name="job-type" value="contract">
+                            <span class="checkmark"></span>
+                            Contract
+                        </label>
+                        <label class="filter-option">
+                            <input type="checkbox" name="job-type" value="remote">
+                            <span class="checkmark"></span>
+                            Remote
+                        </label>
+                    </div>
                 </div>
-            </section>
-            
-            <!-- Loading Container -->
-            <div class="loading-container">
-                <div class="skeleton-grid">
-                    <div class="skeleton-card">
-                        <div class="skeleton-header">
-                            <div class="skeleton-icon"></div>
-                            <div class="skeleton-info">
-                                <div class="skeleton-title"></div>
-                                <div class="skeleton-details"></div>
-                            </div>
-                            <div class="skeleton-actions">
-                                <div class="skeleton-action"></div>
-                            </div>
-                        </div>
-                        <div class="skeleton-content">
-                            <div class="skeleton-description"></div>
-                            <div class="skeleton-description"></div>
-                            <div class="skeleton-tags">
-                                <div class="skeleton-tag"></div>
-                                <div class="skeleton-tag"></div>
-                                <div class="skeleton-tag"></div>
-                            </div>
-                        </div>
-                        <div class="skeleton-footer">
-                            <div class="skeleton-date"></div>
-                            <div class="skeleton-button"></div>
-                        </div>
+
+                <div class="filter-section">
+                    <h4>Experience Level</h4>
+                    <div class="filter-options">
+                        <label class="filter-option">
+                            <input type="checkbox" name="experience" value="entry">
+                            <span class="checkmark"></span>
+                            Entry Level
+                        </label>
+                        <label class="filter-option">
+                            <input type="checkbox" name="experience" value="mid">
+                            <span class="checkmark"></span>
+                            Mid Level
+                        </label>
+                        <label class="filter-option">
+                            <input type="checkbox" name="experience" value="senior">
+                            <span class="checkmark"></span>
+                            Senior Level
+                        </label>
                     </div>
-                    <div class="skeleton-card">
-                        <div class="skeleton-header">
-                            <div class="skeleton-icon"></div>
-                            <div class="skeleton-info">
-                                <div class="skeleton-title"></div>
-                                <div class="skeleton-details"></div>
-                            </div>
-                            <div class="skeleton-actions">
-                                <div class="skeleton-action"></div>
-                            </div>
+                </div>
+
+                <div class="filter-section">
+                    <h4>Salary Range</h4>
+                    <div class="salary-input-container">
+                        <div class="salary-input-group">
+                            <label for="min-salary">Min (MAD)</label>
+                            <input type="number" id="min-salary" class="salary-input" placeholder="e.g. 50000" min="0">
                         </div>
-                        <div class="skeleton-content">
-                            <div class="skeleton-description"></div>
-                            <div class="skeleton-description"></div>
-                            <div class="skeleton-tags">
-                                <div class="skeleton-tag"></div>
-                                <div class="skeleton-tag"></div>
-                                <div class="skeleton-tag"></div>
-                            </div>
-                        </div>
-                        <div class="skeleton-footer">
-                            <div class="skeleton-date"></div>
-                            <div class="skeleton-button"></div>
-                        </div>
-                    </div>
-                    <div class="skeleton-card">
-                        <div class="skeleton-header">
-                            <div class="skeleton-icon"></div>
-                            <div class="skeleton-info">
-                                <div class="skeleton-title"></div>
-                                <div class="skeleton-details"></div>
-                            </div>
-                            <div class="skeleton-actions">
-                                <div class="skeleton-action"></div>
-                            </div>
-                        </div>
-                        <div class="skeleton-content">
-                            <div class="skeleton-description"></div>
-                            <div class="skeleton-description"></div>
-                            <div class="skeleton-tags">
-                                <div class="skeleton-tag"></div>
-                                <div class="skeleton-tag"></div>
-                                <div class="skeleton-tag"></div>
-                            </div>
-                        </div>
-                        <div class="skeleton-footer">
-                            <div class="skeleton-date"></div>
-                            <div class="skeleton-button"></div>
+                        <div class="salary-input-group">
+                            <label for="max-salary">Max (MAD)</label>
+                            <input type="number" id="max-salary" class="salary-input" placeholder="e.g. 100000" min="0">
                         </div>
                     </div>
                 </div>
-            </div>
-            
-            <!-- Job Listings -->
-            <div class="jobs-container">
-                <!-- Jobs will be loaded dynamically from Firestore -->
-            </div>
 
-            <button id="see-more-btn" class="see-more-btn" onclick="loadMoreJobs()">
-                See More Jobs
-            </button>
+                <div class="filter-section">
+                    <h4>Location</h4>
+                    <!-- Add location input field -->
+                    <div class="location-input-container">
+                        <input type="text" id="location-filter" class="location-input" placeholder="Enter city or region">
+                        <button class="apply-location" id="applyLocation">
+                            <i class="fas fa-check"></i>
+                        </button>
+                    </div>
+                    <div class="filter-options">
+                        <label class="filter-option">
+                            <input type="checkbox" name="location" value="remote">
+                            <span class="checkmark"></span>
+                            Remote
+                        </label>
+                        <label class="filter-option">
+                            <input type="checkbox" name="location" value="onsite">
+                            <span class="checkmark"></span>
+                            On-site
+                        </label>
+                        <label class="filter-option">
+                            <input type="checkbox" name="location" value="hybrid">
+                            <span class="checkmark"></span>
+                            Hybrid
+                        </label>
+                    </div>
+                </div>
+
+                <div class="filter-section">
+                    <h4>Posted Date</h4>
+                    <div class="filter-options">
+                        <label class="filter-option">
+                            <input type="checkbox" name="date" value="24h">
+                            <span class="checkmark"></span>
+                            Last 24 hours
+                        </label>
+                        <label class="filter-option">
+                            <input type="checkbox" name="date" value="3d">
+                            <span class="checkmark"></span>
+                            Last 3 days
+                        </label>
+                        <label class="filter-option">
+                            <input type="checkbox" name="date" value="7d">
+                            <span class="checkmark"></span>
+                            Last 7 days
+                        </label>
+                        <label class="filter-option">
+                            <input type="checkbox" name="date" value="30d">
+                            <span class="checkmark"></span>
+                            Last 30 days
+                        </label>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Main Content Area -->
+            <div class="main-content">
+                <!-- Search Section -->
+                <section class="search-section">
+                    <h1 class="page-title">Find Your Dream Job</h1>
+                    
+                    <div class="search-container" style="width: 100%;">
+                        <div class="search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="job-search" placeholder="Job title, keywords, or company">
+                        </div>
+                        
+                        <button class="search-btn">
+                            <i class="fas fa-search"></i>
+                            Search
+                        </button>
+                        
+                        <div class="filter-buttons-container">
+                            <button class="filter-btn" id="mainFilterBtn" type="button">
+                                <i class="fas fa-filter"></i>
+                                Filters
+                            </button>
+                            
+                            <button class="clear-filters-btn" type="button" id="mobileClearFilters">
+                                <i class="fas fa-times-circle"></i>
+                                <span>Clear</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="filters" style="display: none;">
+                        <select id="job-type" class="filter-select">
+                            <option value="">Job Type</option>
+                            <option value="full-time">Full Time</option>
+                            <option value="part-time">Part Time</option>
+                            <option value="contract">Contract</option>
+                            <option value="remote">Remote</option>
+                        </select>
+
+                        <div class="salary-input-container">
+                            <div class="salary-input-group">
+                                <input type="number" id="min-salary-search" class="salary-input" placeholder="Min (MAD)" min="0">
+                            </div>
+                            <div class="salary-input-group">
+                                <input type="number" id="max-salary-search" class="salary-input" placeholder="Max (MAD)" min="0">
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- Active Filters Section -->
+                <div class="active-filters-container" id="activeFilters">
+                    <!-- Active filters will be populated dynamically -->
+                </div>
+                
+                <!-- Loading Container -->
+                <div class="loading-container">
+                    <div class="skeleton-grid">
+                        <div class="skeleton-card">
+                            <div class="skeleton-header">
+                                <div class="skeleton-icon"></div>
+                                <div class="skeleton-info">
+                                    <div class="skeleton-title"></div>
+                                    <div class="skeleton-details"></div>
+                                </div>
+                                <div class="skeleton-actions">
+                                    <div class="skeleton-action"></div>
+                                </div>
+                            </div>
+                            <div class="skeleton-content">
+                                <div class="skeleton-description"></div>
+                                <div class="skeleton-description"></div>
+                                <div class="skeleton-tags">
+                                    <div class="skeleton-tag"></div>
+                                    <div class="skeleton-tag"></div>
+                                    <div class="skeleton-tag"></div>
+                                </div>
+                            </div>
+                            <div class="skeleton-footer">
+                                <div class="skeleton-date"></div>
+                                <div class="skeleton-button"></div>
+                            </div>
+                        </div>
+                        <div class="skeleton-card">
+                            <div class="skeleton-header">
+                                <div class="skeleton-icon"></div>
+                                <div class="skeleton-info">
+                                    <div class="skeleton-title"></div>
+                                    <div class="skeleton-details"></div>
+                                </div>
+                                <div class="skeleton-actions">
+                                    <div class="skeleton-action"></div>
+                                </div>
+                            </div>
+                            <div class="skeleton-content">
+                                <div class="skeleton-description"></div>
+                                <div class="skeleton-description"></div>
+                                <div class="skeleton-tags">
+                                    <div class="skeleton-tag"></div>
+                                    <div class="skeleton-tag"></div>
+                                    <div class="skeleton-tag"></div>
+                                </div>
+                            </div>
+                            <div class="skeleton-footer">
+                                <div class="skeleton-date"></div>
+                                <div class="skeleton-button"></div>
+                            </div>
+                        </div>
+                        <div class="skeleton-card">
+                            <div class="skeleton-header">
+                                <div class="skeleton-icon"></div>
+                                <div class="skeleton-info">
+                                    <div class="skeleton-title"></div>
+                                    <div class="skeleton-details"></div>
+                                </div>
+                                <div class="skeleton-actions">
+                                    <div class="skeleton-action"></div>
+                                </div>
+                            </div>
+                            <div class="skeleton-content">
+                                <div class="skeleton-description"></div>
+                                <div class="skeleton-description"></div>
+                                <div class="skeleton-tags">
+                                    <div class="skeleton-tag"></div>
+                                    <div class="skeleton-tag"></div>
+                                    <div class="skeleton-tag"></div>
+                                </div>
+                            </div>
+                            <div class="skeleton-footer">
+                                <div class="skeleton-date"></div>
+                                <div class="skeleton-button"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Job Listings -->
+                <div class="jobs-container">
+                    <!-- Jobs will be loaded dynamically from Firestore -->
+                </div>
+
+                <!-- Pagination -->
+                <div class="pagination">
+                    <!-- Pagination controls will be added dynamically -->
+                </div>
+            </div>
         </div>
     </main>
 
@@ -313,6 +474,7 @@
 
     <!-- Navigation JS -->
     <script type="module" src="../../Assets/navbar/nav.js"></script>
+    <script src="../../Assets/dropdown-fix.js"></script>
     <script type="module" src="jobs.js"></script>
     <!-- Script to manage navigation display based on screen size -->
     <script>

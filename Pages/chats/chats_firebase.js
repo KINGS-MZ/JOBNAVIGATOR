@@ -117,6 +117,84 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize messages section with empty state
     showEmptyMessagesState();
     
+    // Add search functionality for contacts
+    function setupContactSearch() {
+        const searchInput = document.querySelector('.search-container .search-box input');
+        if (!searchInput) return;
+        
+        searchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase().trim();
+            const contactItems = document.querySelectorAll('.contact-item');
+            
+            if (contactItems.length === 0) return;
+            
+            // Show loading-chats if it exists
+            const loadingChats = document.querySelector('.loading-chats');
+            const emptyContactsState = document.querySelector('.empty-contacts-state');
+            
+            // Hide these elements while searching
+            if (loadingChats) loadingChats.style.display = 'none';
+            if (emptyContactsState) emptyContactsState.style.display = 'none';
+            
+            let anyVisible = false;
+            
+            contactItems.forEach(contact => {
+                const nameElement = contact.querySelector('.contact-name');
+                const previewElement = contact.querySelector('.contact-preview p');
+                
+                if (!nameElement) return;
+                
+                const name = nameElement.textContent.toLowerCase();
+                const preview = previewElement ? previewElement.textContent.toLowerCase() : '';
+                
+                if (query === '' || name.includes(query) || preview.includes(query)) {
+                    contact.style.display = '';
+                    anyVisible = true;
+                } else {
+                    contact.style.display = 'none';
+                }
+            });
+            
+            // Show empty state if no results
+            if (!anyVisible && query !== '') {
+                // Create or show no results message
+                let noResults = document.querySelector('.no-search-results');
+                if (!noResults) {
+                    noResults = document.createElement('div');
+                    noResults.className = 'no-search-results empty-state';
+                    noResults.innerHTML = `
+                        <i class="material-symbols-rounded">search_off</i>
+                        <p>No chats found matching "${query}"</p>
+                        <p class="subtext">Try a different search term</p>
+                    `;
+                    contactsList.appendChild(noResults);
+                    
+                    // Add styling to center it vertically
+                    noResults.style.position = 'absolute';
+                    noResults.style.top = '50%';
+                    noResults.style.left = '50%';
+                    noResults.style.transform = 'translate(-50%, -50%)';
+                    noResults.style.width = '100%';
+                    noResults.style.textAlign = 'center';
+                } else {
+                    noResults.querySelector('p').textContent = `No chats found matching "${query}"`;
+                    noResults.style.display = '';
+                }
+            } else {
+                // Hide no results message if there are results or empty query
+                const noResults = document.querySelector('.no-search-results');
+                if (noResults) {
+                    noResults.style.display = 'none';
+                }
+                
+                // Show empty state if query is empty and no contacts
+                if (query === '' && contactItems.length === 0 && emptyContactsState) {
+                    emptyContactsState.style.display = '';
+                }
+            }
+        });
+    }
+    
     // Firebase Authentication Listener
     firebase.auth().onAuthStateChanged(async (user) => {
         if (!user) {
@@ -734,7 +812,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
         `;
         
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             try {
                 // Clean up previous listener if it exists
                 if (window.chatsListener) {
@@ -742,11 +820,46 @@ document.addEventListener('DOMContentLoaded', async () => {
                     window.chatsListener = null;
                 }
                 
+                // First, get list of archived chat IDs to filter them out
+                let archivedChatIds = new Set();
+                try {
+                    const archivedSnapshot = await firebase.firestore()
+                        .collection('users')
+                        .doc(userId)
+                        .collection('archivedChats')
+                        .get();
+                    
+                    archivedSnapshot.forEach(doc => {
+                        archivedChatIds.add(doc.id);
+                    });
+                    console.log(`Found ${archivedChatIds.size} archived chats to filter out`);
+                } catch (error) {
+                    console.error("Error fetching archived chats:", error);
+                    showToast("Couldn't load archived chats list", "error");
+                }
+                
+                // Get list of blocked user IDs to filter them out from contacts
+                let blockedUserIds = new Set();
+                try {
+                    const blockedSnapshot = await firebase.firestore()
+                        .collection('users')
+                        .doc(userId)
+                        .collection('blockedUsers')
+                        .get();
+                    
+                    blockedSnapshot.forEach(doc => {
+                        blockedUserIds.add(doc.id);
+                    });
+                    console.log(`Found ${blockedUserIds.size} blocked users to filter out from contacts`);
+                } catch (error) {
+                    console.error("Error fetching blocked users:", error);
+                }
+                
                 // Set up real-time listener for chat updates
                 window.chatsListener = firebase.firestore().collection('chats')
                     .where('participants', 'array-contains', userId)
                     .orderBy('lastUpdated', 'desc')
-                    .limit(10) // Limit to recent 10 chats for faster loading
+                    .limit(20) // Increased limit to account for archived chats
                     .onSnapshot(async (snapshot) => {
                         // Clear loading skeleton on first load
                         if (contactsList.querySelector('.loading-chats')) {
@@ -771,16 +884,41 @@ document.addEventListener('DOMContentLoaded', async () => {
                         });
                         
                         try {
+                            // Track displayed chats count
+                            let displayedChatsCount = 0;
+                            
                             // Process each chat
                             for (const doc of snapshot.docs) {
                                 try {
                                     const chatData = doc.data();
                                     const chatId = doc.id;
                                     
+                                    // Skip archived chats in normal view
+                                    if (currentViewState === 'chats' && archivedChatIds.has(chatId)) {
+                                        console.log(`Skipping archived chat: ${chatId}`);
+                                        // Remove this chat element if it exists
+                                        if (currentChatElements[chatId]) {
+                                            currentChatElements[chatId].remove();
+                                            delete currentChatElements[chatId];
+                                        }
+                                        continue;
+                                    }
+                                    
                                     // Get the other participant (not current user)
                                     const otherUserId = chatData.participants.find(id => id !== userId);
                                     if (!otherUserId) {
                                         console.error("Could not find other user ID in participants", chatData.participants);
+                                        continue;
+                                    }
+                                    
+                                    // Skip blocked users in normal view
+                                    if (currentViewState === 'chats' && blockedUserIds.has(otherUserId)) {
+                                        console.log(`Skipping blocked user chat: ${chatId} with user ${otherUserId}`);
+                                        // Remove this chat element if it exists
+                                        if (currentChatElements[chatId]) {
+                                            currentChatElements[chatId].remove();
+                                            delete currentChatElements[chatId];
+                                        }
                                         continue;
                                     }
                                     
@@ -844,6 +982,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                                             contactsList.appendChild(contactElement);
                                         }
                                     }
+                                    
+                                    displayedChatsCount++;
                                 } catch (error) {
                                     console.error("Error processing individual chat:", error);
                                 }
@@ -974,20 +1114,42 @@ document.addEventListener('DOMContentLoaded', async () => {
             </div>
         `;
         
-        // Add empty state to contacts list
-        contactsList.innerHTML = `
-            <div class="empty-contacts-state">
-                <span class="material-symbols-rounded" style="font-size: 48px; margin-bottom: 12px;">group</span>
-                <p>No friends yet</p>
-                <p>Click the + button to start chatting</p>
-            </div>
-        `;
+        // Add empty state to contacts list based on current view
+        let emptyStateHTML = '';
+        
+        if (currentViewState === 'archived') {
+            emptyStateHTML = `
+                <div class="empty-contacts-state" data-archive="true">
+                    <span class="material-symbols-rounded" style="font-size: 48px; margin-bottom: 12px;">archive</span>
+                    <p>No archived conversations</p>
+                    <p>Archived conversations will appear here</p>
+                </div>
+            `;
+        } else if (currentViewState === 'blocked') {
+            emptyStateHTML = `
+                <div class="empty-contacts-state" data-blocked="true">
+                    <span class="material-symbols-rounded" style="font-size: 48px; margin-bottom: 12px;">block</span>
+                    <p>No blocked users</p>
+                    <p>Blocked users will appear here</p>
+                </div>
+            `;
+        } else {
+            emptyStateHTML = `
+                <div class="empty-contacts-state">
+                    <span class="material-symbols-rounded" style="font-size: 48px; margin-bottom: 12px;">group</span>
+                    <p>No friends yet</p>
+                    <p>Click the + button to start chatting</p>
+                </div>
+            `;
+        }
+        
+        contactsList.innerHTML = emptyStateHTML;
     }
     
     // Function to create a contact element
     function createContactElement(chat, currentUserId) {
         try {
-        // Check if chat object is valid
+            // Check if chat object is valid
             if (!chat) {
                 console.error("No chat object provided to createContactElement");
                 return null;
@@ -1015,6 +1177,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             contactItem.dataset.chatId = chat.id;
             contactItem.dataset.userId = chat.otherUser.id;
             contactItem.dataset.status = chat.otherUser.status || 'offline';
+            contactItem.style.position = 'relative'; // Add relative positioning for menu
             
             // Set timestamp for sorting (important for real-time updates)
             if (chat.lastMessage && chat.lastMessage.timestamp) {
@@ -1066,26 +1229,189 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Set HTML content
         contactItem.innerHTML = `
             <div class="contact-avatar">
-                    <img src="${avatarSrc}" alt="${userName}">
-                    <span class="status-indicator ${chat.otherUser.status || 'offline'}"></span>
+                <img src="${avatarSrc}" alt="${userName}">
+                <span class="status-indicator ${chat.otherUser.status || 'offline'}"></span>
             </div>
             <div class="contact-info">
                 <div class="contact-name-time">
-                        <h3 class="contact-name">${userName}</h3>
+                    <h3 class="contact-name">${userName}</h3>
                     <span class="contact-time">${timestamp}</span>
                 </div>
                 <div class="contact-preview">
                     <p>${previewText}</p>
-                        ${unreadBadge}
+                    ${unreadBadge}
+                </div>
+            </div>
+            <button class="contact-menu-btn">
+                <i class="fas fa-ellipsis-v"></i>
+            </button>
+            <div class="contact-menu">
+                <div class="contact-menu-item">
+                    <i class="fas fa-user"></i>
+                    View Profile
+                </div>
+                <div class="contact-menu-item">
+                    <i class="fas fa-star"></i>
+                    Add to Favorites
+                </div>
+                <div class="contact-menu-item divider">
+                    <i class="fas fa-${chat.isArchived ? 'inbox' : 'archive'}"></i>
+                    ${chat.isArchived ? 'Unarchive Chat' : 'Archive Chat'}
+                </div>
+                <div class="contact-menu-item">
+                    <i class="fas fa-ban"></i>
+                    Block User
+                </div>
+                <div class="contact-menu-item delete">
+                    <i class="fas fa-trash"></i>
+                    Delete Conversation
                 </div>
             </div>
         `;
         
-            console.log("Contact element created for chat:", chat.id);
+        // Add event listener for menu button
+        const menuBtn = contactItem.querySelector('.contact-menu-btn');
+        const menu = contactItem.querySelector('.contact-menu');
+        
+        menuBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent chat from opening
+            
+            // Get menu and viewport dimensions
+            const menu = contactItem.querySelector('.contact-menu');
+            const buttonRect = menuBtn.getBoundingClientRect();
+            const windowHeight = window.innerHeight;
+            
+            // Calculate approximate menu height (6 items at ~40px each)
+            const approximateMenuHeight = 240;
+            
+            // Clear previous positioning classes
+            menu.classList.remove('position-above', 'position-below');
+            
+            // Position the menu at the button's location
+            menu.style.right = (window.innerWidth - buttonRect.right) + 'px';
+            
+            // Check if menu would appear off-screen at the bottom
+            if (buttonRect.bottom + approximateMenuHeight > windowHeight) {
+                // Not enough space below, position above
+                menu.classList.add('position-above');
+                menu.style.top = (buttonRect.top - approximateMenuHeight + 55) + 'px'; // Increased offset to move down more
+            } else {
+                // Enough space below, position below
+                menu.classList.add('position-below');
+                menu.style.top = buttonRect.bottom + 'px';
+            }
+            
+            menu.classList.toggle('show');
+            
+            // Close other open menus
+            document.querySelectorAll('.contact-menu.show').forEach(m => {
+                if (m !== menu) m.classList.remove('show');
+            });
+        });
+        
+        // Add event listeners for menu items
+        const menuItems = contactItem.querySelectorAll('.contact-menu-item');
+        menuItems.forEach(item => {
+            item.addEventListener('click', async (e) => {
+                e.stopPropagation(); // Prevent chat from opening
+                menu.classList.remove('show');
+                
+                // Handle menu item clicks
+                const text = item.textContent.trim();
+                if (text === 'View Profile') {
+                    navigateToUserProfile(chat.otherUser.id);
+                } else if (text === 'Block User') {
+                    showBlockUserModal(chat.otherUser.id, chat.otherUser.name);
+                } else if (text === 'Delete Conversation') {
+                    // Show confirmation dialog before deleting
+                    if (confirm('Are you sure you want to delete this conversation?')) {
+                        deleteChat(chat.id);
+                    }
+                } else if (text === 'Mute Notifications') {
+                    // Toggle mute state
+                    toggleMuteChat(chat.id);
+                    item.innerHTML = `
+                        <i class="fas fa-bell${item.classList.contains('muted') ? '' : '-slash'}"></i>
+                        ${item.classList.contains('muted') ? 'Unmute Notifications' : 'Mute Notifications'}
+                    `;
+                    item.classList.toggle('muted');
+                } else if (text === 'Archive Chat') {
+                    // Archive the chat
+                    archiveChat(chat.id, chat.otherUser.id);
+                } else if (text === 'Unarchive Chat') {
+                    // Unarchive the chat
+                    unarchiveChat(chat.id);
+                } else if (text === 'Add to Favorites') {
+                    // Toggle favorite state
+                    item.innerHTML = `
+                        <i class="fas fa-star${item.classList.contains('favorited') ? '' : ''}"></i>
+                        ${item.classList.contains('favorited') ? 'Remove from Favorites' : 'Add to Favorites'}
+                    `;
+                    item.classList.toggle('favorited');
+                    // Implement favorite functionality here
+                } else if (text === 'Search in Chat') {
+                    // Implement search functionality
+                } else if (text === 'Share Contact') {
+                    // Implement share functionality
+                }
+            });
+        });
+        
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!menu.contains(e.target) && !menuBtn.contains(e.target)) {
+                menu.classList.remove('show');
+            }
+        });
+        
+        console.log("Contact element created for chat:", chat.id);
         return contactItem;
         } catch (error) {
             console.error("Error creating contact element:", error);
             return null;
+        }
+    }
+    
+    // Function to delete a chat
+    async function deleteChat(chatId) {
+        try {
+            // Delete chat document and all subcollections
+            await firebase.firestore().collection('chats').doc(chatId).delete();
+            console.log('Chat deleted successfully');
+            
+            // Remove chat element from UI
+            const chatElement = document.querySelector(`.contact-item[data-chat-id="${chatId}"]`);
+            if (chatElement) {
+                chatElement.remove();
+            }
+            
+            // Show empty state if no more chats
+            const contactsList = document.querySelector('.contacts-list');
+            if (contactsList && !contactsList.querySelector('.contact-item')) {
+                showEmptyChatsState(contactsList);
+            }
+        } catch (error) {
+            console.error('Error deleting chat:', error);
+            alert('Failed to delete chat. Please try again.');
+        }
+    }
+
+    // Function to toggle chat mute state
+    async function toggleMuteChat(chatId) {
+        try {
+            const chatRef = firebase.firestore().collection('chats').doc(chatId);
+            const chatDoc = await chatRef.get();
+            
+            if (chatDoc.exists) {
+                const currentMuteState = chatDoc.data().muted || false;
+                await chatRef.update({
+                    muted: !currentMuteState
+                });
+                console.log('Chat mute state toggled successfully');
+            }
+        } catch (error) {
+            console.error('Error toggling chat mute state:', error);
+            alert('Failed to update notification settings. Please try again.');
         }
     }
     
@@ -3332,8 +3658,20 @@ service cloud.firestore {
         // Set up the new chat button
         setupNewChatButton();
         
+        // Set up contact search
+        setupContactSearch();
+        
+        // Setup sidebar tabs (chats, add, blocked, etc.)
+        initializeSidebarTabs();
+        
+        // Setup sidebar avatar
+        initializeSidebarAvatar();
+        
         // Show the empty state UI initially
         showEmptyMessagesState();
+        
+        // Check for pending chat requests first
+        checkPendingChatRequests();
         
         // Check for URL parameters to load a specific chat
         const urlParams = new URLSearchParams(window.location.search);
@@ -3381,9 +3719,6 @@ service cloud.firestore {
                 }
             }
         });
-        
-        // Initialize sidebar functionality
-        initializeSidebarTabs();
     }
     
     // ... rest of existing code ...
@@ -3435,7 +3770,7 @@ service cloud.firestore {
                                 showMessages();
                             }
                             
-                            showToast('Chat conversation loaded successfully', 'success');
+                            // Removed the success toast message
                         } else {
                             // Try to create the chat again
                             await createNewChat(otherUser);
@@ -4436,60 +4771,475 @@ service cloud.firestore {
     // Initialize the sidebar tabs functionality
     function initializeSidebarTabs() {
         const sidebarIcons = document.querySelectorAll('.sidebar-icon');
+        const mobileSidebarIcons = document.querySelectorAll('.mobile-sidebar-icon');
         
         // Initialize sidebar avatar
         initializeSidebarAvatar();
         
+        // Common function to handle tab changes
+        function handleTabChange(tab, clickedIcon) {
+            // Don't change active state for the profile icon
+            if (tab !== 'profile') {
+                // Remove active class from all icons except profile
+                document.querySelectorAll('.sidebar-icon:not([data-tab="profile"])').forEach(i => {
+                    i.classList.remove('active');
+                });
+                
+                document.querySelectorAll('.mobile-sidebar-icon:not([data-tab="profile"])').forEach(i => {
+                    i.classList.remove('active');
+                });
+                
+                // Add active class to clicked icon
+                clickedIcon.classList.add('active');
+                
+                // Sync the active state between desktop and mobile
+                document.querySelector(`.sidebar-icon[data-tab="${tab}"]`)?.classList.add('active');
+                document.querySelector(`.mobile-sidebar-icon[data-tab="${tab}"]`)?.classList.add('active');
+            }
+            
+            // Handle different tab actions
+            switch(tab) {
+                case 'chats':
+                    // Default view - Show normal chats
+                    showNormalChats();
+                    break;
+                case 'add':
+                    // Open new chat modal
+                    const newChatBtn = document.querySelector('.new-chat-btn');
+                    if (newChatBtn) {
+                        newChatBtn.click();
+                    }
+                    break;
+                case 'blocked':
+                    // Show blocked users
+                    showBlockedUsers();
+                    break;
+                case 'archived':
+                    // Show archived chats
+                    showArchivedChats();
+                    break;
+                case 'profile':
+                    // Navigate to profile page
+                    window.location.href = '../profile/profile.html';
+                    break;
+            }
+        }
+        
+        // Desktop sidebar click events
         sidebarIcons.forEach(icon => {
             icon.addEventListener('click', () => {
                 const tab = icon.getAttribute('data-tab');
-                
-                // Don't change active state for the profile icon
-                if (tab !== 'profile') {
-                    // Remove active class from all icons except profile
-                    sidebarIcons.forEach(i => {
-                        if (i.getAttribute('data-tab') !== 'profile') {
-                            i.classList.remove('active');
-                        }
-                    });
-                    
-                    // Add active class to clicked icon
-                    icon.classList.add('active');
-                }
-                
-                // Handle different tab actions
-                switch(tab) {
-                    case 'chats':
-                        // Default view, do nothing special
-                        break;
-                    case 'add':
-                        // Open new chat modal
-                        const newChatBtn = document.querySelector('.new-chat-btn');
-                        if (newChatBtn) {
-                            newChatBtn.click();
-                        }
-                        break;
-                    case 'blocked':
-                        // Show blocked users (placeholder)
-                        showToast('Blocked contacts feature coming soon', 'info');
-                        break;
-                    case 'archived':
-                        // Show archived chats (placeholder)
-                        showToast('Archived chats feature coming soon', 'info');
-                        break;
-                    case 'profile':
-                        // Navigate to profile page
-                        window.location.href = '../profile/profile.html';
-                        break;
-                }
+                handleTabChange(tab, icon);
             });
         });
+        
+        // Mobile sidebar click events
+        mobileSidebarIcons.forEach(icon => {
+            icon.addEventListener('click', () => {
+                const tab = icon.getAttribute('data-tab');
+                handleTabChange(tab, icon);
+            });
+        });
+    }
+
+    // Global variables to track current view state
+    let currentViewState = 'chats'; // Can be 'chats' or 'archived'
+    
+    // Function to show archived chats
+    async function showArchivedChats() {
+        // Update current view state immediately
+        currentViewState = 'archived';
+        
+        // Update the UI to show we're in archived mode
+        const contactsHeader = document.querySelector('.contacts-header h2');
+        if (contactsHeader) {
+            contactsHeader.textContent = 'Archive';
+        }
+        
+        const contactsList = document.querySelector('.contacts-list');
+        if (!contactsList) return;
+        
+        // Show loading state
+        const loadingElement = contactsList.querySelector('.loading-chats');
+        if (loadingElement) {
+            loadingElement.style.display = 'block';
+        }
+        
+        // Hide any existing contacts and empty state
+        contactsList.querySelectorAll('.contact-item').forEach(item => item.remove());
+        
+        const emptyElement = contactsList.querySelector('.empty-contacts-state');
+        if (emptyElement) {
+            emptyElement.style.display = 'none';
+        }
+        
+        try {
+            // Fetch archived chat IDs from Firestore
+            const archivedChatsSnapshot = await firebase.firestore()
+                .collection('users')
+                .doc(currentUserID)
+                .collection('archivedChats')
+                .get();
+            
+            // Hide loading state
+            if (loadingElement) {
+                loadingElement.style.display = 'none';
+            }
+            
+            if (archivedChatsSnapshot.empty) {
+                // Show empty state for archived chats
+                if (emptyElement) {
+                    emptyElement.style.display = 'flex';
+                    emptyElement.setAttribute('data-archive', 'true');
+                    
+                    // Update empty state with archive message
+                    const iconElement = emptyElement.querySelector('.material-symbols-rounded');
+                    if (iconElement) {
+                        iconElement.textContent = 'archive';
+                    }
+                    
+                    const textElements = emptyElement.querySelectorAll('p');
+                    if (textElements.length > 0) {
+                        textElements[0].textContent = 'No archived conversations';
+                        if (textElements.length > 1) {
+                            textElements[1].textContent = 'Archived conversations will appear here';
+                        }
+                    }
+                } else {
+                    // Create empty state element if it doesn't exist
+                    contactsList.innerHTML = `
+                        <div class="empty-contacts-state" data-archive="true">
+                            <span class="material-symbols-rounded" style="font-size: 48px; margin-bottom: 12px;">archive</span>
+                            <p>No archived conversations</p>
+                            <p>Archived conversations will appear here</p>
+                        </div>
+                    `;
+                }
+            } else {
+                // Process each archived chat
+                const archivedChatIds = archivedChatsSnapshot.docs.map(doc => doc.id);
+                
+                for (const chatId of archivedChatIds) {
+                    try {
+                        // Get the chat document
+                        const chatDoc = await firebase.firestore().collection('chats').doc(chatId).get();
+                        
+                        if (!chatDoc.exists) continue;
+                        
+                        const chatData = chatDoc.data();
+                        
+                        // Get the other user's ID
+                        const otherUserId = chatData.participants.find(id => id !== currentUserID);
+                        if (!otherUserId) continue;
+                        
+                        // Get the other user's data
+                        const otherUserDoc = await firebase.firestore().collection('users').doc(otherUserId).get();
+                        if (!otherUserDoc.exists) continue;
+                        
+                        const otherUserData = otherUserDoc.data();
+                        
+                        // Get last message
+                        let lastMessage = null;
+                        let unreadCount = 0;
+                        
+                        const messagesQuery = await firebase.firestore()
+                            .collection('chats')
+                            .doc(chatId)
+                            .collection('messages')
+                            .orderBy('timestamp', 'desc')
+                            .limit(1)
+                            .get();
+                        
+                        if (!messagesQuery.empty) {
+                            const lastMessageDoc = messagesQuery.docs[0];
+                            const lastMessageData = lastMessageDoc.data();
+                            
+                            lastMessage = {
+                                id: lastMessageDoc.id,
+                                text: lastMessageData.text || '',
+                                senderId: lastMessageData.senderId,
+                                timestamp: lastMessageData.timestamp.toDate()
+                            };
+                            
+                            // Count unread messages
+                            unreadCount = chatData.unreadCounts && chatData.unreadCounts[currentUserID] 
+                                ? chatData.unreadCounts[currentUserID] 
+                                : 0;
+                        }
+                        
+                        // Create the chat preview object
+                        const chatPreview = {
+                            id: chatId,
+                            otherUser: {
+                                id: otherUserId,
+                                name: otherUserData.fullName || otherUserData.name || otherUserData.displayName || 'User',
+                                photoURL: otherUserData.photoURL || null,
+                                status: otherUserData.status || 'offline'
+                            },
+                            lastMessage: lastMessage,
+                            unreadCount: unreadCount,
+                            isArchived: true
+                        };
+                        
+                        // Create and add the contact element
+                        const contactElement = createContactElement(chatPreview, currentUserID);
+                        if (contactElement) {
+                            contactsList.appendChild(contactElement);
+                        }
+                    } catch (error) {
+                        console.error(`Error loading archived chat ${chatId}:`, error);
+                    }
+                }
+                
+                // If no chats were added (all failed), show empty state
+                if (contactsList.querySelectorAll('.contact-item').length === 0) {
+                    if (emptyElement) {
+                        emptyElement.style.display = 'flex';
+                        
+                        const textElements = emptyElement.querySelectorAll('p');
+                        if (textElements.length > 0) {
+                            textElements[0].textContent = 'Error loading archived chats';
+                            if (textElements.length > 1) {
+                                textElements[1].textContent = 'Please try again later';
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Update current view state
+            currentViewState = 'archived';
+            
+        } catch (error) {
+            console.error("Error loading archived chats:", error);
+            
+            // Hide loading state
+            if (loadingElement) {
+                loadingElement.style.display = 'none';
+            }
+            
+            // Show empty state with error message
+            if (emptyElement) {
+                emptyElement.style.display = 'flex';
+                
+                const iconElement = emptyElement.querySelector('.material-symbols-rounded');
+                if (iconElement) {
+                    iconElement.textContent = 'error';
+                }
+                
+                const textElements = emptyElement.querySelectorAll('p');
+                if (textElements.length > 0) {
+                    textElements[0].textContent = 'Failed to load archived chats';
+                    if (textElements.length > 1) {
+                        textElements[1].textContent = 'Please try again later';
+                    }
+                }
+            }
+        }
+    }
+    
+    // Function to switch back to normal chats view
+    function showNormalChats() {
+        const contactsHeader = document.querySelector('.contacts-header h2');
+        if (contactsHeader) {
+            contactsHeader.textContent = 'Chats';
+        }
+        
+        // Reset empty state text
+        const emptyElement = document.querySelector('.empty-contacts-state');
+        if (emptyElement) {
+            // Remove the archive attribute
+            emptyElement.removeAttribute('data-archive');
+            emptyElement.removeAttribute('data-blocked');
+            
+            const iconElement = emptyElement.querySelector('.material-symbols-rounded');
+            const textElements = emptyElement.querySelectorAll('p');
+            
+            if (iconElement) {
+                iconElement.textContent = 'group';
+            }
+            
+            if (textElements.length > 0) {
+                textElements[0].textContent = 'No friends yet';
+                if (textElements.length > 1) {
+                    textElements[1].textContent = 'Click the + button to start chatting';
+                }
+            }
+        }
+        
+        // Check if we already have chat elements before reloading
+        const contactsList = document.querySelector('.contacts-list');
+        const existingContacts = contactsList.querySelectorAll('.contact-item');
+        
+        // Only reload if there are no existing contacts or we're switching from archived/blocked view
+        if (existingContacts.length === 0 || currentViewState !== 'chats') {
+            // Reload chats from Firebase
+            loadUserChats(currentUserID);
+        }
+        
+        // Update current view state
+        currentViewState = 'chats';
+    }
+
+    // Function to show blocked users
+    async function showBlockedUsers() {
+        // Update current view state immediately
+        currentViewState = 'blocked';
+        
+        // Update the UI to show we're in blocked mode
+        const contactsHeader = document.querySelector('.contacts-header h2');
+        if (contactsHeader) {
+            contactsHeader.textContent = 'Blocked Users';
+        }
+        
+        const contactsList = document.querySelector('.contacts-list');
+        if (!contactsList) return;
+        
+        // Show loading state
+        const loadingElement = contactsList.querySelector('.loading-chats');
+        if (loadingElement) {
+            loadingElement.style.display = 'block';
+        }
+        
+        // Hide any existing contacts and empty state
+        contactsList.querySelectorAll('.contact-item').forEach(item => item.remove());
+        
+        const emptyElement = contactsList.querySelector('.empty-contacts-state');
+        if (emptyElement) {
+            emptyElement.style.display = 'none';
+        }
+        
+        try {
+            // Fetch blocked user IDs from Firestore
+            const blockedUsersSnapshot = await firebase.firestore()
+                .collection('users')
+                .doc(currentUserID)
+                .collection('blockedUsers')
+                .get();
+            
+            // Hide loading state
+            if (loadingElement) {
+                loadingElement.style.display = 'none';
+            }
+            
+            if (blockedUsersSnapshot.empty) {
+                // Show empty state for blocked users
+                if (emptyElement) {
+                    emptyElement.style.display = 'flex';
+                    emptyElement.setAttribute('data-blocked', 'true');
+                    
+                    // Update empty state with blocked message
+                    const iconElement = emptyElement.querySelector('.material-symbols-rounded');
+                    if (iconElement) {
+                        iconElement.textContent = 'block';
+                    }
+                    
+                    const textElements = emptyElement.querySelectorAll('p');
+                    if (textElements.length > 0) {
+                        textElements[0].textContent = 'No blocked users';
+                        if (textElements.length > 1) {
+                            textElements[1].textContent = 'Blocked users will appear here';
+                        }
+                    }
+                } else {
+                    // Create empty state element if it doesn't exist
+                    contactsList.innerHTML = `
+                        <div class="empty-contacts-state" data-blocked="true">
+                            <span class="material-symbols-rounded" style="font-size: 48px; margin-bottom: 12px;">block</span>
+                            <p>No blocked users</p>
+                            <p>Blocked users will appear here</p>
+                        </div>
+                    `;
+                }
+            } else {
+                // Process each blocked user
+                const blockedUserIds = blockedUsersSnapshot.docs.map(doc => doc.id);
+                
+                for (const userId of blockedUserIds) {
+                    try {
+                        // Get the user document
+                        const userDoc = await firebase.firestore().collection('users').doc(userId).get();
+                        
+                        if (!userDoc.exists) continue;
+                        
+                        const userData = userDoc.data();
+                        
+                        // Create a contact element for the blocked user
+                        const contactElement = document.createElement('div');
+                        contactElement.className = 'contact-item';
+                        contactElement.setAttribute('data-user-id', userId);
+                        
+                        // Get the display name from available fields
+                        const displayName = userData.name || userData.fullName || userDoc.displayName || 'Unknown User';
+                        
+                        // Get user profile photo or default avatar
+                        const photoURL = userData.photoURL || getDefaultAvatar(userId, displayName);
+                        
+                        // Set the HTML content
+                        contactElement.innerHTML = `
+                            <div class="contact-avatar">
+                                <img src="${photoURL}" alt="${displayName}">
+                                <span class="status-indicator offline"></span>
+                            </div>
+                            <div class="contact-info">
+                                <div class="contact-name-time">
+                                    <h3 class="contact-name">${displayName}</h3>
+                                    <span class="contact-time">Blocked</span>
+                                </div>
+                                <div class="contact-preview">
+                                    <p>Tap to unblock this user</p>
+                                </div>
+                            </div>
+                        `;
+                        
+                        // Add click handler to unblock user
+                        contactElement.addEventListener('click', async () => {
+                            // Show the unblock modal instead of a simple confirm dialog
+                            showUnblockUserModal(userId, displayName);
+                        });
+                        
+                        // Add to contacts list
+                        contactsList.appendChild(contactElement);
+                    } catch (error) {
+                        console.error("Error processing blocked user:", error);
+                    }
+                }
+            }
+        } catch (error) {
+            console.error("Error loading blocked users:", error);
+            
+            // Hide loading state
+            if (loadingElement) {
+                loadingElement.style.display = 'none';
+            }
+            
+            // Show error state
+            if (emptyElement) {
+                emptyElement.style.display = 'flex';
+                emptyElement.setAttribute('data-blocked', 'true');
+                
+                const iconElement = emptyElement.querySelector('.material-symbols-rounded');
+                if (iconElement) {
+                    iconElement.textContent = 'error';
+                }
+                
+                const textElements = emptyElement.querySelectorAll('p');
+                if (textElements.length > 0) {
+                    textElements[0].textContent = 'Failed to load blocked users';
+                    if (textElements.length > 1) {
+                        textElements[1].textContent = 'Please try again later';
+                    }
+                }
+            }
+        }
     }
 
     // Initialize the sidebar avatar with user info
     function initializeSidebarAvatar() {
         const sidebarAvatar = document.getElementById('avatar-initials-sidebar');
-        if (!sidebarAvatar) return;
+        const mobileSidebarAvatar = document.getElementById('avatar-initials-sidebar-mobile');
+        
+        if (!sidebarAvatar && !mobileSidebarAvatar) return;
         
         const currentUser = firebase.auth().currentUser;
         
@@ -4497,20 +5247,41 @@ service cloud.firestore {
             if (currentUser.photoURL) {
                 // Create and set image if user has profile photo
                 const avatarContainer = document.getElementById('sidebar-avatar');
+                const mobileAvatarContainer = document.getElementById('sidebar-avatar-mobile');
                 
-                // Clear existing content first
-                avatarContainer.innerHTML = '';
+                // Update desktop avatar if it exists
+                if (avatarContainer) {
+                    // Clear existing content first
+                    avatarContainer.innerHTML = '';
+                    
+                    // Create the image element
+                    const img = document.createElement('img');
+                    img.src = currentUser.photoURL;
+                    img.alt = "Profile photo";
+                    img.style.width = '100%';
+                    img.style.height = '100%';
+                    img.style.objectFit = 'cover';
+                    
+                    // Append to container directly
+                    avatarContainer.appendChild(img);
+                }
                 
-                // Create the image element
-                const img = document.createElement('img');
-                img.src = currentUser.photoURL;
-                img.alt = "Profile photo";
-                img.style.width = '100%';
-                img.style.height = '100%';
-                img.style.objectFit = 'cover';
-                
-                // Append to container directly
-                avatarContainer.appendChild(img);
+                // Update mobile avatar if it exists
+                if (mobileAvatarContainer) {
+                    // Clear existing content first
+                    mobileAvatarContainer.innerHTML = '';
+                    
+                    // Create the image element
+                    const mobileImg = document.createElement('img');
+                    mobileImg.src = currentUser.photoURL;
+                    mobileImg.alt = "Profile photo";
+                    mobileImg.style.width = '100%';
+                    mobileImg.style.height = '100%';
+                    mobileImg.style.objectFit = 'cover';
+                    
+                    // Append to container directly
+                    mobileAvatarContainer.appendChild(mobileImg);
+                }
             } else {
                 // Set initials if no profile photo
                 let initials = 'U';
@@ -4524,11 +5295,633 @@ service cloud.firestore {
                 } else if (currentUser.email) {
                     initials = currentUser.email.charAt(0).toUpperCase();
                 }
-                sidebarAvatar.textContent = initials;
+                
+                // Set desktop avatar initials
+                if (sidebarAvatar) {
+                    sidebarAvatar.textContent = initials;
+                }
+                
+                // Set mobile avatar initials
+                if (mobileSidebarAvatar) {
+                    mobileSidebarAvatar.textContent = initials;
+                }
             }
         } else {
             // Default for not logged in
-            sidebarAvatar.textContent = 'G';
+            if (sidebarAvatar) {
+                sidebarAvatar.textContent = 'G';
+            }
+            
+            if (mobileSidebarAvatar) {
+                mobileSidebarAvatar.textContent = 'G';
+            }
+        }
+    }
+
+    // Function to archive a chat
+    async function archiveChat(chatId) {
+        try {
+            const currentUserID = auth.currentUser.uid;
+            
+            // Add chat to archived collection
+            await firebase.firestore()
+                .collection('users')
+                .doc(currentUserID)
+                .collection('archivedChats')
+                .doc(chatId)
+                .set({
+                    archivedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            
+            // Remove the chat element from the UI
+            const chatElement = document.querySelector(`.contact-item[data-chat-id="${chatId}"]`);
+            if (chatElement) {
+                chatElement.remove();
+            }
+            
+            // Check if we need to show empty state
+            const contactsList = document.querySelector('.contacts-list');
+            if (contactsList && contactsList.querySelectorAll('.contact-item').length === 0) {
+                showEmptyChatsState(contactsList);
+            }
+            
+            // If we're in the archived view, reload it
+            if (currentViewState === 'archived') {
+                showArchivedChats();
+            }
+            
+        } catch (error) {
+            console.error('Error archiving chat:', error);
+            showToast('Failed to archive chat', 'error');
+        }
+    }
+
+    async function unarchiveChat(chatId) {
+        try {
+            const currentUserID = auth.currentUser.uid;
+            
+            // Remove chat from archived collection
+            await firebase.firestore()
+                .collection('users')
+                .doc(currentUserID)
+                .collection('archivedChats')
+                .doc(chatId)
+                .delete();
+            
+            // Remove the chat element from the UI
+            const chatElement = document.querySelector(`.contact-item[data-chat-id="${chatId}"]`);
+            if (chatElement) {
+                chatElement.remove();
+            }
+            
+            // Check if we need to show empty state
+            const contactsList = document.querySelector('.contacts-list');
+            if (contactsList && contactsList.querySelectorAll('.contact-item').length === 0) {
+                showEmptyChatsState(contactsList);
+            }
+            
+            // If we're in the normal chats view, reload it
+            if (currentViewState === 'chats') {
+                loadUserChats(currentUserID);
+            }
+            
+        } catch (error) {
+            console.error('Error unarchiving chat:', error);
+            showToast('Failed to unarchive chat', 'error');
+        }
+    }
+    
+    // Function to unblock a user
+    async function unblockUser(userId) {
+        if (!userId || !currentUserID) {
+            console.error("Missing userId or currentUserID for unblocking");
+            return;
+        }
+
+        try {
+            // Get the user's name before unblocking
+            const userDoc = await firebase.firestore()
+                .collection('users')
+                .doc(userId)
+                .get();
+            
+            let userName = 'User';
+            if (userDoc.exists) {
+                const userData = userDoc.data();
+                userName = userData.name || userData.fullName || 'User';
+            }
+            
+            // Remove user from blocked collection
+            await firebase.firestore()
+                .collection('users')
+                .doc(currentUserID)
+                .collection('blockedUsers')
+                .doc(userId)
+                .delete();
+
+            // No toast notification - removed as requested
+            
+            // Refresh contact list after unblocking
+            await loadUserChats(currentUserID);
+            
+            return true;
+        } catch (error) {
+            console.error("Error unblocking user:", error);
+            // No toast notification for errors - removed as requested
+            throw error;
+        }
+    }
+
+    // Function to block a user
+    async function blockUser(userId, userName) {
+        if (!userId || !currentUserID) {
+            console.error("Missing userId or currentUserID for blocking");
+            return false;
+        }
+
+        try {
+            // Add user to blocked collection
+            await firebase.firestore()
+                .collection('users')
+                .doc(currentUserID)
+                .collection('blockedUsers')
+                .doc(userId)
+                .set({
+                    blockedAt: new Date(),
+                    userName: userName || 'Unknown User'
+                });
+            
+            // No toast notification - removed as requested
+            return true;
+        } catch (error) {
+            console.error("Error blocking user:", error);
+            // No toast notification for errors - removed as requested
+            throw error;
+        }
+    }
+
+    // Enhanced toast notification
+    function showEnhancedToast({ type = 'info', title, message, duration = 5000 }) {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+
+        // Clear existing toasts
+        container.innerHTML = '';
+
+        // Create toast element
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        
+        // Get appropriate icon based on type
+        let icon = 'info-circle';
+        if (type === 'success') icon = 'check-circle';
+        if (type === 'error') icon = 'exclamation-circle';
+        if (type === 'warning') icon = 'exclamation-triangle';
+        
+        toast.innerHTML = `
+            <div class="toast-icon">
+                <i class="fas fa-${icon}"></i>
+            </div>
+            <div class="toast-content">
+                <div class="toast-title">${title}</div>
+                <div class="toast-message">${message}</div>
+            </div>
+            <button class="toast-close">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        
+        // Add to container
+        container.appendChild(toast);
+        
+        // Force reflow to enable transition
+        void toast.offsetWidth;
+        
+        // Show the toast
+        setTimeout(() => {
+            toast.classList.add('show');
+        }, 10);
+        
+        // Set up close button
+        const closeBtn = toast.querySelector('.toast-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                removeToast(toast);
+            });
+        }
+        
+        // Auto-remove after duration
+        const timeout = setTimeout(() => {
+            removeToast(toast);
+        }, duration);
+        
+        // Store the timeout to be able to clear it
+        toast.dataset.timeout = timeout;
+        
+        function removeToast(toastElement) {
+            // Clear the timeout
+            if (toastElement.dataset.timeout) {
+                clearTimeout(parseInt(toastElement.dataset.timeout));
+            }
+            
+            // Remove show class
+            toastElement.classList.remove('show');
+            
+            // After transition, remove from DOM
+            setTimeout(() => {
+                if (toastElement.parentNode) {
+                    toastElement.parentNode.removeChild(toastElement);
+                }
+            }, 300);
+        }
+    }
+
+    // Show block user confirmation modal
+    function showBlockUserModal(userId, userName) {
+        const modal = document.getElementById('blockUserModal');
+        const userNameElement = document.getElementById('blockUserName');
+        const confirmBtn = document.getElementById('confirmBlockBtn');
+        const cancelBtn = document.getElementById('cancelBlockBtn');
+        const closeBtn = document.getElementById('closeBlockModalBtn');
+        
+        if (!modal || !userNameElement || !confirmBtn || !cancelBtn || !closeBtn) return;
+        
+        // Set the user name in the modal
+        userNameElement.textContent = userName;
+        
+        // Show the modal
+        modal.classList.add('active');
+        document.body.classList.add('modal-open');
+        
+        // Set up click handlers
+        const handleConfirm = async () => {
+            try {
+                await blockUser(userId, userName);
+                
+                // Close the modal
+                modal.classList.remove('active');
+                document.body.classList.remove('modal-open');
+                
+                // Remove this user's chat from the contacts list if we're in the chats view
+                if (currentViewState === 'chats') {
+                    // Find and remove the chat element for this user
+                    const contactElements = document.querySelectorAll('.contact-item');
+                    contactElements.forEach(element => {
+                        const elementUserId = element.getAttribute('data-user-id');
+                        if (elementUserId === userId) {
+                            element.remove();
+                        }
+                    });
+                    
+                    // Check if we need to show empty state
+                    const contactsList = document.querySelector('.contacts-list');
+                    if (contactsList && contactsList.querySelectorAll('.contact-item').length === 0) {
+                        showEmptyChatsState(contactsList);
+                    }
+                }
+                
+                // Go back to the chats list after blocking
+                showContacts();
+                
+                // Reload the blocked users view if we're in that tab
+                if (currentViewState === 'blocked') {
+                    showBlockedUsers();
+                }
+            } catch (error) {
+                console.error('Error blocking user:', error);
+            }
+        };
+        
+        const handleCancel = () => {
+            modal.classList.remove('active');
+            document.body.classList.remove('modal-open');
+        };
+        
+        // Remove existing event listeners if any
+        confirmBtn.removeEventListener('click', handleConfirm);
+        cancelBtn.removeEventListener('click', handleCancel);
+        closeBtn.removeEventListener('click', handleCancel);
+        
+        // Add event listeners
+        confirmBtn.addEventListener('click', handleConfirm);
+        cancelBtn.addEventListener('click', handleCancel);
+        closeBtn.addEventListener('click', handleCancel);
+        
+        // Close when clicking outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                handleCancel();
+            }
+        });
+    }
+
+    // Update the chat options item click event for Block User
+    function setupChatOptionsMenu() {
+        const optionsBtn = document.getElementById('chat-options-btn');
+        const optionsMenu = document.getElementById('chat-options-menu');
+        
+        if (!optionsBtn || !optionsMenu) return;
+        
+        // Toggle menu on button click
+        optionsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            optionsMenu.classList.toggle('show');
+            
+            // Close other open menus
+            document.querySelectorAll('.contact-menu.show').forEach(m => {
+                m.classList.remove('show');
+            });
+        });
+        
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!optionsMenu.contains(e.target) && !optionsBtn.contains(e.target)) {
+                optionsMenu.classList.remove('show');
+            }
+        });
+        
+        // Add event listeners for menu items
+        const menuItems = optionsMenu.querySelectorAll('.chat-options-item');
+        menuItems.forEach(item => {
+            item.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                optionsMenu.classList.remove('show');
+                
+                // Handle menu item clicks
+                const text = item.textContent.trim();
+                
+                if (text === 'Block User') {
+                    if (currentContact) {
+                        showBlockUserModal(currentContact.id, currentContact.name);
+                    }
+                } else if (text === 'View Profile') {
+                    if (currentContact) {
+                        navigateToUserProfile(currentContact.id);
+                    }
+                } else if (text === 'Delete Conversation') {
+                    if (currentChatId && confirm('Are you sure you want to delete this conversation?')) {
+                        deleteChat(currentChatId);
+                        showContacts();
+                    }
+                } else if (text === 'Mute Notifications') {
+                    if (currentChatId) {
+                        toggleMuteChat(currentChatId);
+                        item.innerHTML = `
+                            <i class="fas fa-bell${item.classList.contains('muted') ? '' : '-slash'}"></i>
+                            ${item.classList.contains('muted') ? 'Unmute Notifications' : 'Mute Notifications'}
+                        `;
+                        item.classList.toggle('muted');
+                    }
+                }
+            });
+        });
+    }
+
+    // Show unblock user confirmation modal
+    function showUnblockUserModal(userId, userName) {
+        const modal = document.getElementById('unblockUserModal');
+        const userNameElement = document.getElementById('unblockUserName');
+        const confirmBtn = document.getElementById('confirmUnblockBtn');
+        const cancelBtn = document.getElementById('cancelUnblockBtn');
+        const closeBtn = document.getElementById('closeUnblockModalBtn');
+        
+        if (!modal || !userNameElement || !confirmBtn || !cancelBtn || !closeBtn) return;
+        
+        // Set the user name in the modal
+        userNameElement.textContent = userName;
+        
+        // Show the modal
+        modal.classList.add('active');
+        document.body.classList.add('modal-open');
+        
+        // Set up click handlers
+        const handleConfirm = async () => {
+            try {
+                await unblockUser(userId);
+                
+                // Close the modal
+                modal.classList.remove('active');
+                document.body.classList.remove('modal-open');
+                
+                // Reload the blocked users view
+                showBlockedUsers();
+            } catch (error) {
+                console.error('Error unblocking user:', error);
+            }
+        };
+        
+        const handleCancel = () => {
+            modal.classList.remove('active');
+            document.body.classList.remove('modal-open');
+        };
+        
+        // Remove existing event listeners if any
+        confirmBtn.removeEventListener('click', handleConfirm);
+        cancelBtn.removeEventListener('click', handleCancel);
+        closeBtn.removeEventListener('click', handleCancel);
+        
+        // Add event listeners
+        confirmBtn.addEventListener('click', handleConfirm);
+        cancelBtn.addEventListener('click', handleCancel);
+        closeBtn.addEventListener('click', handleCancel);
+        
+        // Close when clicking outside
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                handleCancel();
+            }
+        });
+    }
+
+    // Add search functionality for contacts across all tabs
+    function setupContactSearch() {
+        const searchInput = document.querySelector('.search-container .search-box input');
+        if (!searchInput) return;
+        
+        // Function to perform search on the current visible tab
+        function performSearch() {
+            const query = searchInput.value.toLowerCase().trim();
+            
+            // Get the currently active tab
+            const activeTab = document.querySelector('.sidebar-icon.active');
+            const tabType = activeTab ? activeTab.getAttribute('data-tab') : 'chats';
+            
+            // Get the appropriate contacts based on the active tab
+            const contactItems = document.querySelectorAll('.contact-item');
+            
+            if (contactItems.length === 0) return;
+            
+            // Hide loading and empty states during search
+            const loadingElements = document.querySelectorAll('.loading-chats, .loading-blocked, .loading-archived');
+            const emptyStates = document.querySelectorAll('.empty-contacts-state, .empty-blocked-state, .empty-archived-state');
+            
+            loadingElements.forEach(el => {
+                if (el) el.style.display = 'none';
+            });
+            
+            emptyStates.forEach(el => {
+                if (el) el.style.display = 'none';
+            });
+            
+            let anyVisible = false;
+            
+            contactItems.forEach(contact => {
+                const nameElement = contact.querySelector('.contact-name');
+                const previewElement = contact.querySelector('.contact-preview p');
+                
+                if (!nameElement) return;
+                
+                const name = nameElement.textContent.toLowerCase();
+                const preview = previewElement ? previewElement.textContent.toLowerCase() : '';
+                
+                if (query === '' || name.includes(query) || preview.includes(query)) {
+                    contact.style.display = '';
+                    anyVisible = true;
+                } else {
+                    contact.style.display = 'none';
+                }
+            });
+            
+            // Show empty state if no results
+            if (!anyVisible && query !== '') {
+                // Determine the container where the no results message should appear
+                const contactsList = document.querySelector('.contacts-list');
+                if (!contactsList) return;
+                
+                // Create or show no results message
+                let noResults = document.querySelector('.no-search-results');
+                if (!noResults) {
+                    noResults = document.createElement('div');
+                    noResults.className = 'no-search-results empty-state';
+                    noResults.innerHTML = `
+                        <i class="material-symbols-rounded">search_off</i>
+                        <p>No ${tabType} found matching "${query}"</p>
+                        <p class="subtext">Try a different search term</p>
+                    `;
+                    contactsList.appendChild(noResults);
+                } else {
+                    // Update the message based on current tab
+                    noResults.querySelector('p').textContent = `No ${tabType} found matching "${query}"`;
+                    noResults.style.display = '';
+                }
+            } else {
+                // Hide no results message if there are results or empty query
+                const noResults = document.querySelector('.no-search-results');
+                if (noResults) {
+                    noResults.style.display = 'none';
+                }
+                
+                // Show appropriate empty state if query is empty and no contacts
+                if (query === '' && contactItems.length === 0) {
+                    if (tabType === 'chats') {
+                        const emptyChats = document.querySelector('.empty-contacts-state');
+                        if (emptyChats) emptyChats.style.display = '';
+                    } else if (tabType === 'blocked') {
+                        const emptyBlocked = document.querySelector('.empty-blocked-state');
+                        if (emptyBlocked) emptyBlocked.style.display = '';
+                    } else if (tabType === 'archived') {
+                        const emptyArchived = document.querySelector('.empty-archived-state');
+                        if (emptyArchived) emptyArchived.style.display = '';
+                    }
+                }
+            }
+        }
+        
+        // Run search when input changes
+        searchInput.addEventListener('input', performSearch);
+        
+        // Also attach the search function to tab changes
+        function updateSearchOnTabChange() {
+            const sidebarIcons = document.querySelectorAll('.sidebar-icon, .mobile-sidebar-icon');
+            sidebarIcons.forEach(icon => {
+                icon.addEventListener('click', () => {
+                    // Run search after a small delay to let the tab content load
+                    setTimeout(performSearch, 300);
+                });
+            });
+        }
+        
+        // Initialize the tab change listeners
+        updateSearchOnTabChange();
+        
+        // Return the function so it can be called externally
+        return performSearch;
+    }
+
+    // Handle navigation with contact parameter
+    async function handleContactNavigation(contactId) {
+        if (!contactId || !currentUserID) return;
+        
+        try {
+            // Get user details for the contact
+            const userDoc = await firebase.firestore().collection('users').doc(contactId).get();
+            
+            if (!userDoc.exists) {
+                throw new Error(`User with ID ${contactId} does not exist`);
+            }
+            
+            const userData = userDoc.data();
+            
+            // Get current user data to check for blocking
+            const currentUserDoc = await firebase.firestore().collection('users').doc(currentUserID).get();
+            
+            if (!currentUserDoc.exists) {
+                throw new Error('Current user data not found');
+            }
+            
+            const currentUserData = currentUserDoc.data();
+            
+            // Check if either user has blocked the other
+            const currentUserBlockedList = currentUserData.blockedUsers || [];
+            const contactBlockedList = userData.blockedUsers || [];
+            
+            if (currentUserBlockedList.includes(contactId)) {
+                showToast("You have blocked this user. Unblock them first to start a chat.", "error");
+                return;
+            }
+            
+            if (contactBlockedList.includes(currentUserID)) {
+                showToast("Cannot start a chat with this user", "error");
+                return;
+            }
+            
+            const contactUser = {
+                id: contactId,
+                name: userData.displayName || userData.fullName || userData.name || 'User',
+                photoURL: userData.photoURL || userData.profilePicture || null,
+                status: 'offline'
+            };
+            
+            // Check if a chat already exists between these users
+            const chatsRef = firebase.firestore().collection('chats');
+            const q1 = await chatsRef
+                .where('participants', 'array-contains', currentUserID)
+                .get();
+            
+            let existingChatId = null;
+            
+            q1.forEach(doc => {
+                const chatData = doc.data();
+                if (chatData.participants.includes(contactId)) {
+                    existingChatId = doc.id;
+                }
+            });
+            
+            if (existingChatId) {
+                // Chat already exists, load it
+                await loadChat(existingChatId, contactUser);
+            } else {
+                // No existing chat, create a new one
+                await createNewChat(contactUser);
+            }
+            
+            // Show messages section on mobile
+            if (window.innerWidth <= 768) {
+                showMessages();
+            }
+        } catch (error) {
+            console.error("Error handling contact navigation:", error);
+            showToast("Could not initialize chat with this user", "error");
         }
     }
 });

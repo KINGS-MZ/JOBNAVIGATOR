@@ -572,9 +572,341 @@ document.addEventListener('DOMContentLoaded', () => {
         if (strengthElement) strengthElement.textContent = stats.strength || '0%';
     };
     
+    // Update experience section UI with experience data
+    function updateExperienceUI(experiences) {
+        // Find the Experience section container
+        const experienceSections = document.querySelectorAll('.profile-section');
+        let experienceContainer;
+        
+        experienceSections.forEach(section => {
+            const heading = section.querySelector('h2');
+            if (heading && heading.textContent.trim() === 'Experience') {
+                experienceContainer = section.querySelector('.section-content');
+            }
+        });
+        
+        if (!experienceContainer) return;
+        
+        // Clear existing content
+        experienceContainer.innerHTML = '';
+        
+        // Sort experiences by start date (most recent first)
+        experiences.sort((a, b) => {
+            const dateA = new Date(a.startDate || 0);
+            const dateB = new Date(b.startDate || 0);
+            return dateB - dateA;
+        });
+        
+        // Add experience items to the container
+        experiences.forEach(exp => {
+            // Format dates properly
+            let formattedStartDate = '';
+            let formattedEndDate = 'Present';
+            
+            try {
+                if (exp.startDate) {
+                    const startDate = new Date(exp.startDate);
+                    if (!isNaN(startDate.getTime())) {
+                        formattedStartDate = startDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+                    }
+                }
+                
+                if (exp.endDate) {
+                    const endDate = new Date(exp.endDate);
+                    if (!isNaN(endDate.getTime())) {
+                        formattedEndDate = endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+                    }
+                }
+            } catch (error) {
+                console.error("Error formatting dates:", error);
+            }
+            
+            const dateRange = formattedStartDate ? `${formattedStartDate} - ${formattedEndDate}` : `${formattedEndDate}`;
+            
+            const experienceItem = document.createElement('div');
+            experienceItem.className = 'experience-item';
+            experienceItem.dataset.id = exp.id;
+            experienceItem.innerHTML = `
+                <div class="experience-header">
+                    <div class="experience-title-company">
+                        <h3 class="experience-title">${exp.jobTitle || ''}</h3>
+                        <div class="experience-company-container">
+                            <span class="experience-company">${exp.company || ''}</span>
+                        </div>
+                    </div>
+                    <div class="experience-meta">
+                        <span class="experience-date"><i class="fas fa-calendar-alt"></i> ${dateRange}</span>
+                        ${exp.location ? `<span class="experience-location"><i class="fas fa-map-marker-alt"></i> ${exp.location}</span>` : ''}
+                    </div>
+                </div>
+                <div class="experience-content">
+                    <p class="experience-description">${exp.description || ''}</p>
+                    ${exp.skills && exp.skills.length ? `
+                        <div class="experience-skills">
+                            ${exp.skills.map(skill => `<span class="skill-tag">${skill}</span>`).join('')}
+                        </div>
+                    ` : ''}
+                </div>
+                <div class="item-actions">
+                    <button class="btn-edit-item" data-id="${exp.id}" title="Edit this experience">
+                        <span class="material-symbols-rounded">edit</span>
+                    </button>
+                    <button class="btn-delete-item" data-id="${exp.id}" title="Delete this experience">
+                        <span class="material-symbols-rounded">delete</span>
+                    </button>
+                </div>
+            `;
+            
+            experienceContainer.appendChild(experienceItem);
+            
+            // Add delete event listener
+            const deleteBtn = experienceItem.querySelector('.btn-delete-item');
+            if (deleteBtn && isOwnProfile) {
+                deleteBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    if (confirm('Are you sure you want to delete this experience?')) {
+                        try {
+                            const experienceId = deleteBtn.dataset.id;
+                            
+                            // Get current experiences from Firestore
+                            const userDoc = await window.db.collection("users").doc(currentUser.uid).get();
+                            if (userDoc.exists) {
+                                const userData = userDoc.data();
+                                const updatedExperiences = (userData.experiences || []).filter(exp => exp.id !== experienceId);
+                                
+                                // Update Firestore
+                                await window.db.collection("users").doc(currentUser.uid).update({
+                                    experiences: updatedExperiences
+                                });
+                                
+                                // Update UI
+                                updateExperienceUI(updatedExperiences);
+                                showToast('Experience deleted successfully');
+                            }
+                        } catch (error) {
+                            console.error("Error deleting experience:", error);
+                            showToast('Failed to delete experience', 'error');
+                        }
+                    }
+                });
+            } else if (deleteBtn && !isOwnProfile) {
+                // Hide actions if not own profile
+                experienceItem.querySelector('.item-actions').style.display = 'none';
+            }
+            
+            // Add edit event listener
+            const editBtn = experienceItem.querySelector('.btn-edit-item');
+            if (editBtn && isOwnProfile) {
+                editBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    try {
+                        // Get the current experience data
+                        const userDoc = await window.db.collection("users").doc(currentUser.uid).get();
+                        if (userDoc.exists) {
+                            const userData = userDoc.data();
+                            const experienceToEdit = (userData.experiences || []).find(item => item.id === editBtn.dataset.id);
+                            
+                            if (experienceToEdit) {
+                                // Open the experience modal
+                                openModal('experienceModal');
+                                
+                                // Populate form with existing data
+                                document.getElementById('jobTitle').value = experienceToEdit.jobTitle || '';
+                                document.getElementById('company').value = experienceToEdit.company || '';
+                                document.getElementById('location').value = experienceToEdit.location || '';
+                                document.getElementById('startDate').value = experienceToEdit.startDate || '';
+                                document.getElementById('endDate').value = experienceToEdit.endDate || '';
+                                document.getElementById('description').value = experienceToEdit.description || '';
+                                document.getElementById('skills').value = experienceToEdit.skills ? experienceToEdit.skills.join(', ') : '';
+                                
+                                // Add an attribute to the modal to indicate it's for editing
+                                const modal = document.getElementById('experienceModal');
+                                modal.dataset.mode = 'edit';
+                                modal.dataset.experienceId = experienceToEdit.id;
+                                
+                                // Update modal title
+                                document.querySelector('#experienceModal .modal-title').textContent = 'Edit Experience';
+                                
+                                // Update save button text
+                                document.querySelector('#experienceModal .btn-save').textContent = 'Update Experience';
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Error editing experience:", error);
+                        showToast('Failed to load experience data', 'error');
+                    }
+                });
+            }
+        });
+    }
+    
+    // Update education section UI with education data
+    function updateEducationUI(education) {
+        // Find the Education section container
+        const educationSections = document.querySelectorAll('.profile-section');
+        let educationContainer;
+        
+        educationSections.forEach(section => {
+            const heading = section.querySelector('h2');
+            if (heading && heading.textContent.trim() === 'Education') {
+                educationContainer = section.querySelector('.section-content');
+            }
+        });
+        
+        if (!educationContainer) return;
+        
+        // Clear existing content
+        educationContainer.innerHTML = '';
+        
+        // Sort education by start date (most recent first)
+        education.sort((a, b) => {
+            const dateA = new Date(a.startDate || 0);
+            const dateB = new Date(b.startDate || 0);
+            return dateB - dateA;
+        });
+        
+        // Add education items to the container
+        education.forEach(edu => {
+            // Format dates properly
+            let formattedStartDate = '';
+            let formattedEndDate = 'Present';
+            
+            try {
+                if (edu.startDate) {
+                    const startDate = new Date(edu.startDate);
+                    if (!isNaN(startDate.getTime())) {
+                        formattedStartDate = startDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+                    }
+                }
+                
+                if (edu.endDate) {
+                    const endDate = new Date(edu.endDate);
+                    if (!isNaN(endDate.getTime())) {
+                        formattedEndDate = endDate.toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+                    }
+                }
+            } catch (error) {
+                console.error("Error formatting dates:", error);
+            }
+            
+            const dateRange = formattedStartDate ? `${formattedStartDate} - ${formattedEndDate}` : `${formattedEndDate}`;
+            
+            const educationItem = document.createElement('div');
+            educationItem.className = 'education-item';
+            educationItem.dataset.id = edu.id;
+            educationItem.innerHTML = `
+                <div class="education-header">
+                    <div class="education-title-school">
+                        <h3 class="education-degree">${edu.degree || ''}</h3>
+                        <span class="education-school">${edu.school || ''}</span>
+                    </div>
+                    <div class="education-meta">
+                        <span class="education-date"><i class="fas fa-calendar-alt"></i> ${dateRange}</span>
+                    </div>
+                </div>
+                <div class="education-content">
+                    ${edu.fieldOfStudy ? `<p class="education-field"><i class="fas fa-book"></i> Field of Study: ${edu.fieldOfStudy}</p>` : ''}
+                </div>
+                <div class="item-actions">
+                    <button class="btn-edit-item" data-id="${edu.id}" title="Edit this education">
+                        <span class="material-symbols-rounded">edit</span>
+                    </button>
+                    <button class="btn-delete-item" data-id="${edu.id}" title="Delete this education">
+                        <span class="material-symbols-rounded">delete</span>
+                    </button>
+                </div>
+            `;
+            
+            educationContainer.appendChild(educationItem);
+            
+            // Add delete event listener
+            const deleteBtn = educationItem.querySelector('.btn-delete-item');
+            if (deleteBtn && isOwnProfile) {
+                deleteBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    if (confirm('Are you sure you want to delete this education?')) {
+                        try {
+                            const educationId = deleteBtn.dataset.id;
+                            
+                            // Get current education entries from Firestore
+                            const userDoc = await window.db.collection("users").doc(currentUser.uid).get();
+                            if (userDoc.exists) {
+                                const userData = userDoc.data();
+                                const updatedEducation = (userData.education || []).filter(item => item.id !== educationId);
+                                
+                                // Update Firestore
+                                await window.db.collection("users").doc(currentUser.uid).update({
+                                    education: updatedEducation
+                                });
+                                
+                                // Update UI
+                                updateEducationUI(updatedEducation);
+                                showToast('Education entry deleted successfully');
+                            }
+                        } catch (error) {
+                            console.error("Error deleting education:", error);
+                            showToast('Failed to delete education entry', 'error');
+                        }
+                    }
+                });
+            } else if (deleteBtn && !isOwnProfile) {
+                // Hide actions if not own profile
+                educationItem.querySelector('.item-actions').style.display = 'none';
+            }
+            
+            // Add edit event listener
+            const editBtn = educationItem.querySelector('.btn-edit-item');
+            if (editBtn && isOwnProfile) {
+                editBtn.addEventListener('click', async (e) => {
+                    e.stopPropagation();
+                    try {
+                        // Get the current education data
+                        const userDoc = await window.db.collection("users").doc(currentUser.uid).get();
+                        if (userDoc.exists) {
+                            const userData = userDoc.data();
+                            const educationToEdit = (userData.education || []).find(item => item.id === editBtn.dataset.id);
+                            
+                            if (educationToEdit) {
+                                // Open the education modal
+                                openModal('educationModal');
+                                
+                                // Populate form with existing data
+                                document.getElementById('degree').value = educationToEdit.degree || '';
+                                document.getElementById('school').value = educationToEdit.school || '';
+                                document.getElementById('eduStartDate').value = educationToEdit.startDate || '';
+                                document.getElementById('eduEndDate').value = educationToEdit.endDate || '';
+                                document.getElementById('fieldOfStudy').value = educationToEdit.fieldOfStudy || '';
+                                
+                                // Add an attribute to the modal to indicate it's for editing
+                                const modal = document.getElementById('educationModal');
+                                modal.dataset.mode = 'edit';
+                                modal.dataset.educationId = educationToEdit.id;
+                                
+                                // Update modal title
+                                document.querySelector('#educationModal .modal-title').textContent = 'Edit Education';
+                                
+                                // Update save button text
+                                document.querySelector('#educationModal .btn-save').textContent = 'Update Education';
+                            }
+                        }
+                    } catch (error) {
+                        console.error("Error editing education:", error);
+                        showToast('Failed to load education data', 'error');
+                    }
+                });
+            }
+        });
+    }
+    
     // Modal handling functions
     function openModal(modalId) {
-        document.getElementById(modalId).classList.add('active');
+        console.log('Opening modal:', modalId);
+        const modal = document.getElementById(modalId);
+        if (!modal) {
+            console.error('Modal not found:', modalId);
+            return;
+        }
+        modal.classList.add('active');
         document.body.style.overflow = 'hidden';
     }
 
@@ -583,31 +915,27 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.style.overflow = '';
     }
 
-    // Add click handlers to all edit buttons
+    // Add event listeners for edit buttons
     document.querySelectorAll('.edit-section').forEach(button => {
-        button.addEventListener('click', async (e) => {
-            const section = e.currentTarget.closest('.profile-section');
-            const sectionHeading = section.querySelector('h2').textContent.trim();
-            
-            if (sectionHeading === 'About') {
-                openModal('aboutModal');
-                
-                // Get the current about text
-                try {
-                    const userDoc = await window.db.collection("users").doc(currentUser.uid).get();
-                    if (userDoc.exists) {
-                        const userData = userDoc.data();
-                        document.getElementById('about').value = userData.about || '';
-                    }
-                } catch (error) {
-                    console.error("Error fetching about data:", error);
+        button.addEventListener('click', (e) => {
+            console.log('Edit button clicked');
+            const section = e.target.closest('.profile-section');
+            if (section) {
+                const sectionTitle = section.querySelector('h2').textContent.trim();
+                console.log('Section title:', sectionTitle);
+                if (sectionTitle === 'Education') {
+                    console.log('Opening education modal');
+                    openModal('educationModal');
+                } else if (sectionTitle === 'Skills') {
+                    console.log('Opening skills modal');
+                    openModal('skillsModal');
+                } else if (sectionTitle === 'About') {
+                    console.log('Opening about modal');
+                    openModal('aboutModal');
+                } else if (sectionTitle === 'Experience') {
+                    console.log('Opening experience modal');
+                    openModal('experienceModal');
                 }
-            } else if (sectionHeading === 'Skills') {
-                openModal('skillsModal');
-            } else if (sectionHeading === 'Education') {
-                openModal('educationModal');
-            } else if (sectionHeading === 'Experience') {
-                openModal('experienceModal');
             }
         });
     });
@@ -627,45 +955,50 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Close on cancel button click
-        modal.querySelector('.btn-cancel').addEventListener('click', function() {
-            closeModal(this.closest('.modal-overlay').id);
-        });
-    });
+        const cancelBtn = modal.querySelector('.btn-cancel');
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', function() {
+                closeModal(this.closest('.modal-overlay').id);
+            });
+        }
 
-    // Save about data
-    document.querySelectorAll('.modal-overlay').forEach(modal => {
+        // Save button click for all modals
         const saveBtn = modal.querySelector('.btn-save');
         if (saveBtn) {
-            saveBtn.addEventListener('click', async () => {
-                const modalId = modal.id;
+            saveBtn.addEventListener('click', async function() {
+                const modalId = this.closest('.modal-overlay').id;
+                const isEditMode = modal.dataset.mode === 'edit';
                 
                 if (modalId === 'aboutModal') {
-                    const aboutText = document.getElementById('about').value.trim();
+                    // Handle save about
+                    const about = document.getElementById('about').value.trim();
                     
                     try {
-                        // Save to Firestore
                         await window.db.collection("users").doc(currentUser.uid).update({
-                        about: aboutText
-                    });
-                    
-                        // Update UI
-                        const aboutSection = document.querySelector('.profile-section:first-of-type .section-content');
-                    if (aboutSection) {
-                        if (aboutText) {
-                                aboutSection.innerHTML = `<p>${aboutText}</p>`;
-                            aboutSection.classList.remove('placeholder-text');
-                        } else {
-                                aboutSection.innerHTML = `<p class="placeholder-text">Tell recruiters about your professional background and skills.</p>`;
+                            about
+                        });
+                        
+                        // Update UI immediately with more specific selector
+                        const aboutSection = document.querySelector('.about-column .profile-section .section-content p');
+                        if (aboutSection) {
+                            if (about) {
+                                aboutSection.textContent = about;
+                                aboutSection.classList.remove('placeholder-text');
+                            } else {
+                                const placeholderText = "Tell recruiters about your professional background and skills.";
+                                aboutSection.textContent = placeholderText;
+                                aboutSection.classList.add('placeholder-text');
+                            }
                         }
-                    }
-                    
+                        
                         closeModal(modalId);
-                } catch (error) {
-                        console.error("Error saving about data:", error);
-                        alert("Failed to save changes. Please try again.");
+                        showToast('About section updated successfully');
+                    } catch (error) {
+                        console.error("Error saving about:", error);
+                        showToast('Failed to save about section', 'error');
                     }
                 } else if (modalId === 'experienceModal') {
-                    // Handle save experience
+                    // Handle save/update experience
                     const jobTitle = document.getElementById('jobTitle').value.trim();
                     const company = document.getElementById('company').value.trim();
                     const location = document.getElementById('location').value.trim();
@@ -689,19 +1022,39 @@ document.addEventListener('DOMContentLoaded', () => {
                             experiences = userData.experiences || [];
                         }
                         
-                        // Add new experience
-            const newExperience = {
-                            id: Date.now().toString(),
-                            jobTitle,
-                            company,
-                            location,
-                            startDate,
-                            endDate,
-                            description,
-                            skills: skills.split(',').map(s => s.trim()).filter(s => s)
-                        };
-                        
-                        experiences.push(newExperience);
+                        if (isEditMode) {
+                            // Edit existing experience
+                            const experienceId = modal.dataset.experienceId;
+                            const index = experiences.findIndex(exp => exp.id === experienceId);
+                            
+                            if (index !== -1) {
+                                // Update the experience
+                                experiences[index] = {
+                                    ...experiences[index],
+                                    jobTitle,
+                                    company,
+                                    location,
+                                    startDate,
+                                    endDate,
+                                    description,
+                                    skills: skills.split(',').map(s => s.trim()).filter(s => s)
+                                };
+                            }
+                        } else {
+                            // Add new experience
+                            const newExperience = {
+                                id: Date.now().toString(),
+                                jobTitle,
+                                company,
+                                location,
+                                startDate,
+                                endDate,
+                                description,
+                                skills: skills.split(',').map(s => s.trim()).filter(s => s)
+                            };
+                            
+                            experiences.push(newExperience);
+                        }
                         
                         // Save to Firestore
                         await window.db.collection("users").doc(currentUser.uid).update({
@@ -709,10 +1062,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         });
                         
                         // Update UI
-                    updateExperienceUI(experiences);
+                        updateExperienceUI(experiences);
                         closeModal(modalId);
                         
-                        // Clear form
+                        // Reset form and modal state
                         document.getElementById('jobTitle').value = '';
                         document.getElementById('company').value = '';
                         document.getElementById('location').value = '';
@@ -720,12 +1073,23 @@ document.addEventListener('DOMContentLoaded', () => {
                         document.getElementById('endDate').value = '';
                         document.getElementById('description').value = '';
                         document.getElementById('skills').value = '';
-            } catch (error) {
+                        
+                        // Reset modal title and save button text
+                        document.querySelector('#experienceModal .modal-title').textContent = 'Add Experience';
+                        document.querySelector('#experienceModal .btn-save').textContent = 'Save Experience';
+                        
+                        // Reset mode
+                        modal.dataset.mode = '';
+                        modal.dataset.experienceId = '';
+                        
+                        // Show success message
+                        showToast(isEditMode ? 'Experience updated successfully' : 'Experience added successfully');
+                    } catch (error) {
                         console.error("Error saving experience:", error);
-                        alert("Failed to save experience. Please try again.");
+                        showToast('Failed to save experience', 'error');
                     }
                 } else if (modalId === 'educationModal') {
-                    // Handle save education
+                    // Handle save/update education
                     const degree = document.getElementById('degree').value.trim();
                     const school = document.getElementById('school').value.trim();
                     const startDate = document.getElementById('eduStartDate').value;
@@ -734,37 +1098,55 @@ document.addEventListener('DOMContentLoaded', () => {
                     
                     if (!degree || !school) {
                         alert("Degree and school are required.");
-                return;
-            }
-            
-            try {
+                        return;
+                    }
+                    
+                    try {
                         // Get existing education entries
                         const userDoc = await window.db.collection("users").doc(currentUser.uid).get();
                         let education = [];
-                
+                        
                         if (userDoc.exists) {
-                    const userData = userDoc.data();
+                            const userData = userDoc.data();
                             education = userData.education || [];
                         }
                         
-                        // Add new education
-                        const newEducation = {
-                            id: Date.now().toString(),
-                            degree,
-                            school,
-                            startDate,
-                            endDate,
-                            fieldOfStudy
-                        };
-                        
-                        education.push(newEducation);
+                        if (isEditMode) {
+                            // Edit existing education
+                            const educationId = modal.dataset.educationId;
+                            const index = education.findIndex(edu => edu.id === educationId);
+                            
+                            if (index !== -1) {
+                                // Update the education
+                                education[index] = {
+                                    ...education[index],
+                                    degree,
+                                    school,
+                                    startDate,
+                                    endDate,
+                                    fieldOfStudy
+                                };
+                            }
+                        } else {
+                            // Add new education
+                            const newEducation = {
+                                id: Date.now().toString(),
+                                degree,
+                                school,
+                                startDate,
+                                endDate,
+                                fieldOfStudy
+                            };
+                            
+                            education.push(newEducation);
+                        }
                         
                         // Save to Firestore
                         await window.db.collection("users").doc(currentUser.uid).update({
                             education
-                                });
-                                
-                                // Update UI
+                        });
+                        
+                        // Update UI
                         updateEducationUI(education);
                         closeModal(modalId);
                         
@@ -774,9 +1156,20 @@ document.addEventListener('DOMContentLoaded', () => {
                         document.getElementById('eduStartDate').value = '';
                         document.getElementById('eduEndDate').value = '';
                         document.getElementById('fieldOfStudy').value = '';
-                        } catch (error) {
+                        
+                        // Reset modal title and save button text
+                        document.querySelector('#educationModal .modal-title').textContent = 'Add Education';
+                        document.querySelector('#educationModal .btn-save').textContent = 'Save Education';
+                        
+                        // Reset mode
+                        modal.dataset.mode = '';
+                        modal.dataset.educationId = '';
+                        
+                        // Show success message
+                        showToast(isEditMode ? 'Education updated successfully' : 'Education added successfully');
+                    } catch (error) {
                         console.error("Error saving education:", error);
-                        alert("Failed to save education. Please try again.");
+                        showToast('Failed to save education', 'error');
                     }
                 } else if (modalId === 'skillsModal') {
                     // Get all skills from previews
@@ -797,12 +1190,12 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Save to Firestore
                         await window.db.collection("users").doc(currentUser.uid).update({
                             skills: skillCategories
-                                });
-                                
-                                // Update UI
+                        });
+                        
+                        // Update UI
                         updateSkillsDisplay();
                         closeModal(modalId);
-                        } catch (error) {
+                    } catch (error) {
                         console.error("Error saving skills:", error);
                         alert("Failed to save skills. Please try again.");
                     }

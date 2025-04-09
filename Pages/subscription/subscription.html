@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Theme loader script - must be first to prevent flickering -->
+    <script src="/Assets/theme-loader.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subscription Plans - Job Navigator</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="stylesheet" href="../../Assets/navbar/nav.css">
+    <link rel="stylesheet" href="subscription.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,100..700,0..1,0..200">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Space+Grotesk:wght@700&display=swap" rel="stylesheet">
+    
+    <!-- Page-specific styles -->
+    <style>
+        /* Ensure dropdown menu works properly */
+        .dropdown-menu.show {
+            opacity: 1 !important;
+            visibility: visible !important;
+            transform: translateY(0) !important;
+            pointer-events: auto !important;
+            display: block !important;
+            z-index: 9999 !important;
+        }
+        
+        /* Fix dropdown position on mobile */
+        @media (max-width: 768px) {
+            .dropdown-menu {
+                position: fixed !important;
+                top: 4rem !important;
+                right: 1rem !important;
+                width: 250px !important;
+                max-width: calc(100vw - 2rem) !important;
+            }
+        }
+        
+        /* Fix scrolling issues with dropdown open */
+        body.dropdown-open {
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <div class="logo">
+                <span class="logo-icon">JN</span>
+                <span class="logo-text">Job Navigator</span>
+            </div>
+            
+            <div class="nav-right">
+                <a href="../home/home.html" class="nav-icon-btn" aria-label="Home">
+                    <span class="material-symbols-rounded">home</span>
+                </a>
+                <a href="../jobs/jobs.html" class="nav-icon-btn" aria-label="Jobs">
+                    <span class="material-symbols-rounded">work</span>
+                </a>
+                <a href="../users/users.html" class="nav-icon-btn" aria-label="Users">
+                    <span class="material-symbols-rounded">group</span>
+                </a>
+                <a href="../chats/chats.html" class="nav-icon-btn" aria-label="Chats">
+                    <span class="material-symbols-rounded">chat</span>
+                </a>
+                
+                <div class="nav-separator"></div>
+                
+                <button id="theme-toggle" aria-label="Toggle dark mode">
+                    <span class="material-symbols-rounded moon-icon">dark_mode</span>
+                    <span class="material-symbols-rounded sun-icon">light_mode</span>
+                </button>
+                
+                <button id="notifications-btn" class="notification-btn" aria-label="Notifications">
+                    <span class="material-symbols-rounded">notifications</span>
+                    <span class="notification-badge" id="notification-count">0</span>
+                </button>
+                
+                <div class="user-menu">
+                    <button id="user-menu-btn" class="user-btn" aria-label="User menu" type="button">
+                        <span class="material-symbols-rounded">menu</span>
+                    </button>
+                    <div class="dropdown-menu" id="user-dropdown">
+                        <div class="dropdown-header">
+                            <div class="user-avatar">
+                                <img id="avatar-image-dropdown" alt="Profile picture" style="display: none;">
+                                <div class="avatar-initials" id="avatar-initials-dropdown"></div>
+                            </div>
+                            <div class="user-info">
+                                <span id="user-name">Guest User</span>
+                                <span id="user-email">guest@example.com</span>
+                            </div>
+                        </div>
+                        
+                        <div class="menu-sections">
+                            <a href="../home/home.html">
+                                <i class="fas fa-home"></i>
+                                Home
+                            </a>
+                            <a href="../jobs/jobs.html">
+                                <i class="fas fa-briefcase"></i>
+                                Jobs
+                            </a>
+                            <a href="../posts/posts.html">
+                                <i class="fas fa-newspaper"></i>
+                                Posts
+                            </a>
+                            <div class="menu-divider"></div>
+                            <a href="../saved/saved.html">
+                                <i class="fas fa-heart"></i>
+                                Saved Jobs
+                                <span class="badge" id="saved-jobs-badge"></span>
+                            </a>
+                            <a href="../chats/chats.html">
+                                <i class="fas fa-comments"></i>
+                                Chats
+                            </a>
+                            <div class="menu-divider"></div>
+                            <a href="../users/users.html">
+                                <i class="fas fa-users"></i>
+                                Users
+                            </a>
+                            <a href="../user-account/account.html">
+                                <i class="fas fa-user"></i>
+                                My Account
+                            </a>
+                            <a href="../settings/settings.html">
+                                <i class="fas fa-cog"></i>
+                                Settings
+                            </a>
+                            <div class="menu-divider"></div>
+                            <a href="#" id="logout-link" class="logout-link">
+                                <i class="fas fa-sign-out-alt"></i>
+                                Sign Out
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Credit Card Sidebar -->
+    <div id="payment-sidebar" class="payment-sidebar">
+        <div class="sidebar-content">
+            <div class="sidebar-header">
+                <h3>Payment Details</h3>
+                <button id="close-sidebar" class="close-btn" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="plan-summary">
+                <div id="selected-plan-info">
+                    <h4>Premium Plan</h4>
+                    <p><span id="trial-length">7</span> days free, then <span id="plan-price">29 MAD</span>/<span id="billing-period">month</span></p>
+                </div>
+            </div>
+            
+            <form id="payment-form">
+                <div class="form-group">
+                    <label for="card-holder">Cardholder Name</label>
+                    <input type="text" id="card-holder" placeholder="Full Name on Card" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="card-number">Card Number</label>
+                    <div class="card-input-wrapper">
+                        <input type="text" id="card-number" placeholder="1234 5678 9012 3456" maxlength="19" required>
+                        <div class="card-icons">
+                            <i class="fab fa-cc-visa"></i>
+                            <i class="fab fa-cc-mastercard"></i>
+                            <i class="fab fa-cc-amex"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group half">
+                        <label for="expiry-date">Expiry Date</label>
+                        <input type="text" id="expiry-date" placeholder="MM/YY" maxlength="5" required>
+                    </div>
+                    <div class="form-group half">
+                        <label for="cvv">CVV</label>
+                        <input type="text" id="cvv" placeholder="123" maxlength="4" required>
+                    </div>
+                </div>
+                
+                <div class="form-group checkbox">
+                    <input type="checkbox" id="terms-agree" required>
+                    <label for="terms-agree">I agree to the <a href="#" class="terms-link">Terms & Conditions</a></label>
+                </div>
+                
+                <div class="form-footer">
+                    <p class="secure-notice"><i class="fas fa-lock"></i> Your payment is secure and encrypted</p>
+                    <button type="submit" class="btn-primary start-trial-btn">Start My Free Trial</button>
+                    <p class="cancel-notice">You won't be charged during your free trial. You can cancel anytime.</p>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Overlay -->
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+    
+    <main>
+        <div class="subscription-container">
+            <div class="subscription-header">
+                <h1>Upgrade Your Job Search Experience</h1>
+                <p>Choose the plan that's right for your career journey</p>
+                
+                <div class="billing-toggle">
+                    <span class="billing-option monthly active">Monthly</span>
+                    <div class="toggle-switch">
+                        <input type="checkbox" id="billing-toggle">
+                        <label for="billing-toggle"></label>
+                    </div>
+                    <span class="billing-option annually">Annually <span class="save-badge">Save 20%</span></span>
+                </div>
+            </div>
+            
+            <div class="subscription-plans">
+                <!-- Free Plan -->
+                <div class="plan-card">
+                    <div class="plan-header">
+                        <div class="plan-name">Free</div>
+                        <div class="plan-price">
+                            <span class="price">0 MAD</span>
+                            <span class="period">/month</span>
+                        </div>
+                        <div class="plan-description">Perfect for basic job searching</div>
+                    </div>
+                    <div class="plan-features">
+                        <ul>
+                            <li><i class="fas fa-check"></i> Standard job search</li>
+                            <li><i class="fas fa-check"></i> Save up to 10 jobs</li>
+                            <li><i class="fas fa-check"></i> Basic profile customization</li>
+                            <li><i class="fas fa-check"></i> Email support</li>
+                            <li class="not-included"><i class="fas fa-times"></i> Premium badge</li>
+                            <li class="not-included"><i class="fas fa-times"></i> Job application boost</li>
+                            <li class="not-included"><i class="fas fa-times"></i> Profile highlighting</li>
+                        </ul>
+                    </div>
+                    <div class="plan-cta">
+                        <button class="btn-current">Current Plan</button>
+                    </div>
+                </div>
+                
+                <!-- Premium Plan -->
+                <div class="plan-card highlight">
+                    <div class="popular-badge">Most Popular</div>
+                    <div class="plan-header">
+                        <div class="plan-name">Premium</div>
+                        <div class="plan-price">
+                            <span class="price">29 MAD</span>
+                            <span class="period">/month</span>
+                        </div>
+                        <div class="plan-description">Ideal for active job seekers</div>
+                    </div>
+                    <div class="plan-features">
+                        <ul>
+                            <li><i class="fas fa-check"></i> Premium user badge</li>
+                            <li><i class="fas fa-check"></i> Featured profile status</li>
+                            <li><i class="fas fa-check"></i> Save unlimited jobs</li>
+                            <li><i class="fas fa-check"></i> Profile highlighting in search</li>
+                            <li><i class="fas fa-check"></i> Priority email support</li>
+                            <li><i class="fas fa-check"></i> See who viewed your profile</li>
+                            <li><i class="fas fa-check"></i> 3× job application boost</li>
+                            <li><i class="fas fa-check"></i> Access to premium jobs</li>
+                        </ul>
+                    </div>
+                    <div class="plan-cta">
+                        <button class="btn-primary">Try 7 Days Free</button>
+                        <div class="plan-note">Cancel anytime during trial</div>
+                    </div>
+                </div>
+                
+                <!-- Professional Plan -->
+                <div class="plan-card">
+                    <div class="plan-header">
+                        <div class="plan-name">Professional</div>
+                        <div class="plan-price">
+                            <span class="price">69 MAD</span>
+                            <span class="period">/month</span>
+                        </div>
+                        <div class="plan-description">For career professionals</div>
+                    </div>
+                    <div class="plan-features">
+                        <ul>
+                            <li><i class="fas fa-check"></i> Elite user badge</li>
+                            <li><i class="fas fa-check"></i> Top profile placement</li>
+                            <li><i class="fas fa-check"></i> Exclusive job access</li>
+                            <li><i class="fas fa-check"></i> 24/7 dedicated support</li>
+                            <li><i class="fas fa-check"></i> 5× job application boost</li>
+                            <li><i class="fas fa-check"></i> Special profile frame</li>
+                            <li><i class="fas fa-check"></i> Verification checkmark</li>
+                            <li><i class="fas fa-check"></i> Featured in recruiter searches</li>
+                        </ul>
+                    </div>
+                    <div class="plan-cta">
+                        <button class="btn-primary">Try 14 Days Free</button>
+                        <div class="plan-note">Cancel anytime during trial</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="testimonials-section">
+                <h2>What Our Premium Members Say</h2>
+                <div class="testimonials-container">
+                    <div class="testimonial-card">
+                        <div class="testimonial-quote">
+                            <i class="fas fa-quote-left"></i>
+                            The Premium plan was a game-changer for my job search. I landed my dream job in just 6 weeks!
+                        </div>
+                        <div class="testimonial-author">
+                            <div class="author-avatar">
+                                <div class="avatar-initials">AO</div>
+                            </div>
+                            <div class="author-info">
+                                <div class="author-name">AYMEN OUADNINE</div>
+                                <div class="author-role">Software Engineer</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="testimonial-card">
+                        <div class="testimonial-quote">
+                            <i class="fas fa-quote-left"></i>
+                            The resume review and coaching sessions were invaluable. Worth every penny of the Professional plan.
+                        </div>
+                        <div class="testimonial-author">
+                            <div class="author-avatar">
+                                <div class="avatar-initials">ME</div>
+                            </div>
+                            <div class="author-info">
+                                <div class="author-name">MEHDI EL-EMARTI</div>
+                                <div class="author-role">Marketing Manager</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="testimonial-card">
+                        <div class="testimonial-quote">
+                            <i class="fas fa-quote-left"></i>
+                            The AI job matching feature saved me so much time. I only applied to positions that were truly a good fit.
+                        </div>
+                        <div class="testimonial-author">
+                            <div class="author-avatar">
+                                <div class="avatar-initials">NE</div>
+                            </div>
+                            <div class="author-info">
+                                <div class="author-name">NADIA ELMANSOURI</div>
+                                <div class="author-role">Developer</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="faq-section">
+                <h2>Frequently Asked Questions</h2>
+                <div class="faq-container">
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            How do I cancel my subscription?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            You can cancel your subscription at any time from your account settings. If you cancel during your free trial, you won't be charged. If you cancel after your trial, you'll continue to have access until the end of your billing period.
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            Can I switch between subscription plans?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            Yes, you can upgrade or downgrade your subscription at any time. If you upgrade, the changes take effect immediately and you'll be charged a prorated amount. If you downgrade, the change takes effect at the end of your current billing period.
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            What happens to my saved jobs if I downgrade?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            If you downgrade from Premium or Professional to Free, you'll still have access to all your saved jobs, but you won't be able to save new jobs beyond the 10-job limit. We recommend reviewing your saved jobs before downgrading.
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            How does the resume review work?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            With Premium, you receive one resume review per month from our career experts. With Professional, you get unlimited reviews. Simply upload your resume in the dashboard, and you'll receive detailed feedback within 48 hours.
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            Is there a discount for annual subscriptions?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            Yes! When you choose annual billing, you save 20% compared to monthly billing. For example, the Premium plan is 29 MAD/month or 290 MAD/year, saving you 58 MAD annually. The Professional plan is 69 MAD/month or 690 MAD/year, saving you 138 MAD annually. This discount is automatically applied when you select the annual billing option.
+                        </div>
+                    </div>
+                    
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            What payment methods do you accept?
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                        <div class="faq-answer">
+                            We accept major credit/debit cards, bank transfers, and mobile payment options popular in Morocco. All prices are in Moroccan Dirham (MAD) and include applicable taxes.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="cta-section">
+                <div class="cta-content">
+                    <h2>Ready to Supercharge Your Job Search?</h2>
+                    <p>Join thousands of successful job seekers who found their dream job with Job Navigator Premium.</p>
+                    <button class="btn-cta">Upgrade Now</button>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <footer>
+        <p>&copy; 2023 Job Navigator. All rights reserved.</p>
+    </footer>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+    
+    <script>
+        // Check for existing Firebase instances and avoid duplicate initialization
+        if (typeof firebase === 'undefined' || !firebase.apps.length) {
+            // Firebase configuration
+            const firebaseConfig = {
+                apiKey: "AIzaSyCb-WQn8hxetYE2wWMQ37y7vRAKl0hFbkI",
+                authDomain: "jobnav-799f0.firebaseapp.com",
+                databaseURL: "https://jobnav-799f0-default-rtdb.firebaseio.com",
+                projectId: "jobnav-799f0",
+                storageBucket: "jobnav-799f0.appspot.com",
+                messagingSenderId: "908819629942",
+                appId: "1:908819629942:web:e569e324a0959efaef1c57",
+                measurementId: "G-58CZK5KRN4"
+            };
+            
+            // Initialize Firebase
+            firebase.initializeApp(firebaseConfig);
+        }
+        
+        // Make Firebase objects available globally
+        window.auth = firebase.auth();
+        window.db = firebase.firestore();
+    </script>
+    
+    <script src="subscription.js"></script>
+</body>
+</html> 

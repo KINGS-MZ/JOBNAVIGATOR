@@ -37,6 +37,11 @@
                 
                 <div class="nav-separator"></div>
                 
+                <a href="../subscription/subscription.html" class="upgrade-btn">
+                    <i class="fas fa-star"></i>
+                    Upgrade
+                </a>
+                
                 <button id="theme-toggle" aria-label="Toggle dark mode">
                     <span class="material-symbols-rounded moon-icon">dark_mode</span>
                     <span class="material-symbols-rounded sun-icon">light_mode</span>
@@ -91,7 +96,7 @@
                                 <i class="fas fa-users"></i>
                                 Users
                             </a>
-                            <a href="../profile/profile.html">
+                            <a href="../account/account.html">
                                 <i class="fas fa-user"></i>
                                 My Profile
                             </a>
@@ -252,6 +257,99 @@
             </div>
         </section>
 
+        <!-- Subscription Management -->
+        <section class="settings-section" id="subscription-section">
+            <h2 class="section-title">Subscription</h2>
+            <div class="settings-grid">
+                <!-- Free plan view (shown when user has no active subscription) -->
+                <div class="settings-card" id="free-subscription-card">
+                    <div class="settings-header">
+                        <i class="fas fa-crown"></i>
+                        <h3>Current Plan: Free</h3>
+                    </div>
+                    <div class="settings-content">
+                        <div class="subscription-info">
+                            <p>You're currently on the <strong>Free Plan</strong></p>
+                            <p class="subscription-limitations">Limited to 10 saved jobs and basic features.</p>
+                            <div class="upgrade-info">
+                                <p>Upgrade to Premium or Professional to unlock:</p>
+                                <ul class="feature-list">
+                                    <li><i class="fas fa-check"></i> Unlimited saved jobs</li>
+                                    <li><i class="fas fa-check"></i> Profile highlighting in search</li>
+                                    <li><i class="fas fa-check"></i> Priority support</li>
+                                    <li><i class="fas fa-check"></i> Job application boost</li>
+                                </ul>
+                            </div>
+                            <a href="../subscription/subscription.html" class="upgrade-btn">
+                                <i class="fas fa-arrow-circle-up"></i>
+                                Upgrade Now
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Active subscription view (shown when user has an active subscription) -->
+                <div class="settings-card" id="active-subscription-card" style="display: none;">
+                    <div class="settings-header">
+                        <i class="fas fa-crown"></i>
+                        <h3>Current Plan: <span id="current-plan-name">Premium</span></h3>
+                    </div>
+                    <div class="settings-content">
+                        <div class="subscription-info">
+                            <div class="plan-status">
+                                <div class="status-badge" id="subscription-status-badge">Active</div>
+                                <p id="subscription-period-text">Monthly billing</p>
+                            </div>
+                            
+                            <div class="subscription-details">
+                                <div class="detail-item">
+                                    <span class="detail-label">Next payment:</span>
+                                    <span class="detail-value" id="next-payment-date">June 15, 2024</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Amount:</span>
+                                    <span class="detail-value" id="payment-amount">29 MAD</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="detail-label">Payment method:</span>
+                                    <span class="detail-value" id="payment-method">Visa ending in 1234</span>
+                                </div>
+                            </div>
+                            
+                            <div class="subscription-actions">
+                                <button id="change-plan-btn" class="btn-outline">
+                                    <i class="fas fa-exchange-alt"></i>
+                                    Change Plan
+                                </button>
+                                <button id="update-payment-btn" class="btn-outline">
+                                    <i class="fas fa-credit-card"></i>
+                                    Update Payment
+                                </button>
+                                <button id="cancel-subscription-btn" class="btn-outline btn-danger-outline">
+                                    <i class="fas fa-times-circle"></i>
+                                    Cancel Subscription
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment History -->
+                <div class="settings-card" id="payment-history-card" style="display: none;">
+                    <div class="settings-header">
+                        <i class="fas fa-history"></i>
+                        <h3>Payment History</h3>
+                    </div>
+                    <div class="settings-content">
+                        <div class="payment-history-container">
+                            <p id="no-payment-history" class="empty-state-message">No payment history available yet.</p>
+                            <div id="payment-history-list"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- Privacy Settings -->
         <section class="settings-section">
             <h2 class="section-title">Privacy & Data</h2>
@@ -369,5 +467,58 @@
     </script>
     <!-- Main JavaScript -->
     <script src="settings.js"></script>
+    
+    <!-- Payment Update Modal -->
+    <div id="payment-update-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Update Payment Method</h3>
+                <button id="close-modal-btn" class="close-btn" aria-label="Close" type="button">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <form id="payment-update-form">
+                    <div class="form-group">
+                        <label for="card-holder-update">Cardholder Name</label>
+                        <input type="text" id="card-holder-update" placeholder="Full Name on Card" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="card-number-update">Card Number</label>
+                        <div class="card-input-wrapper">
+                            <input type="text" id="card-number-update" placeholder="1234 5678 9012 3456" maxlength="19" required>
+                            <div class="card-icons">
+                                <i class="fab fa-cc-visa"></i>
+                                <i class="fab fa-cc-mastercard"></i>
+                                <i class="fab fa-cc-amex"></i>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group half">
+                            <label for="expiry-date-update">Expiry Date</label>
+                            <input type="text" id="expiry-date-update" placeholder="MM/YY" maxlength="5" required>
+                        </div>
+                        <div class="form-group half">
+                            <label for="cvv-update">CVV</label>
+                            <input type="text" id="cvv-update" placeholder="123" maxlength="4" required>
+                        </div>
+                    </div>
+                    
+                    <div class="form-footer">
+                        <p class="secure-notice"><i class="fas fa-lock"></i> Your payment information is secure and encrypted</p>
+                        <button type="submit" class="btn-primary" id="update-card-btn">Update Payment Method</button>
+                    </div>
+                </form>
+                <div id="payment-update-message" class="message-container"></div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Overlay -->
+    <div id="modal-overlay" class="modal-overlay"></div>
 </body>
 </html>

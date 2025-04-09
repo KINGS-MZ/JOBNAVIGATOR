@@ -147,32 +147,41 @@ nav {
     background: transparent;
     border: none;
     cursor: pointer;
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 8px;
+    width: 2.2rem !important;
+    height: 2.2rem !important;
+    border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--primary-grey);
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
+    position: relative;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 #theme-toggle:hover {
-    background: rgba(52, 152, 219, 0.1);
-    transform: translateY(-2px);
+    background-color: rgba(0, 0, 0, 0.05);
 }
 
 .dark-mode #theme-toggle:hover {
-    background: rgba(46, 204, 113, 0.1);
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
 #theme-toggle i {
-    font-size: 1.25rem;
-    color: var(--primary-blue);
+    position: absolute;
+    transition: all 0.3s ease;
+    color: var(--primary-grey);
+    font-size: 1.4rem !important;
+    width: 1.4rem !important;
+    height: 1.4rem !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .dark-mode #theme-toggle i {
-    color: var(--primary-green);
+    color: var(--text-light);
 }
 
 /* Notification Button Styles */
@@ -689,35 +698,165 @@ body.dark-mode .users-list::-webkit-scrollbar-thumb {
     height: 100%;
 }
 
-.dark-mode .user-item {
-    background-color: #2a2b31;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.05);
+/* Premium User Card Styling */
+.user-item.premium-user {
+    background: linear-gradient(135deg, #ffffff 0%, #fffdf7 100%);
+    border: 1px solid rgba(212, 172, 13, 0.15);
+    box-shadow: 0 2px 8px rgba(212, 172, 13, 0.05);
+    position: relative;
+    overflow: hidden;
+    animation: none;
 }
 
-.user-avatar::after {
+.user-item.premium-user::before {
     content: '';
     position: absolute;
-    inset: 0;
-    border-radius: 12px;
-    border: 1px solid rgba(0, 0, 0, 0.05);
-    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.03);
+    top: 0;
+    right: 0;
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.08) 0%, rgba(255, 193, 7, 0) 70%);
+    border-radius: 0 0 0 80px;
+    pointer-events: none;
 }
 
-.dark-mode .user-avatar::after {
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.08);
+.user-item.premium-user::after {
+    display: none;
 }
 
-.user-item:hover {
+.user-item.premium-user .premium-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: linear-gradient(to right, #f5a623, #ffca28);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 0 8px 0 8px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 1px 3px rgba(255, 193, 7, 0.15);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.user-item.premium-user .user-avatar {
+    border: 1px solid #ffd54f;
+    box-shadow: 0 1px 4px rgba(255, 193, 7, 0.1);
+    position: relative;
+}
+
+.user-item.premium-user .user-avatar::before {
+    display: none;
+}
+
+/* Professional User Card Styling */
+.user-item.professional-user {
+    background: linear-gradient(135deg, #ffffff 0%, #fafdf8 100%);
+    border: 1px solid rgba(124, 179, 66, 0.15);
+    box-shadow: 0 2px 8px rgba(124, 179, 66, 0.05);
+    position: relative;
+    overflow: hidden;
+    animation: none;
+}
+
+.user-item.professional-user::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, rgba(124, 179, 66, 0.08) 0%, rgba(124, 179, 66, 0) 70%);
+    border-radius: 0 0 0 80px;
+    pointer-events: none;
+}
+
+.user-item.professional-user::after {
+    display: none;
+}
+
+.user-item.professional-user .professional-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: linear-gradient(to right, #7cb342, #8bc34a);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 0 8px 0 8px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 1px 3px rgba(124, 179, 66, 0.15);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.user-item.professional-user .user-avatar {
+    border: 1px solid #aed581;
+    box-shadow: 0 1px 4px rgba(124, 179, 66, 0.1);
+    position: relative;
+}
+
+.user-item.professional-user .user-avatar::before {
+    display: none;
+}
+
+/* Dark mode for premium and professional users */
+.dark-mode .user-item.premium-user {
+    background: linear-gradient(135deg, #2c3e50 0%, #2c2e20 100%);
+    border: 1px solid rgba(255, 193, 7, 0.15);
+    box-shadow: 0 2px 8px rgba(255, 193, 7, 0.05);
+}
+
+.dark-mode .user-item.premium-user::before {
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.1) 0%, rgba(255, 193, 7, 0) 70%);
+}
+
+.dark-mode .user-item.professional-user {
+    background: linear-gradient(135deg, #2c3e50 0%, #293225 100%);
+    border: 1px solid rgba(124, 179, 66, 0.15);
+    box-shadow: 0 2px 8px rgba(124, 179, 66, 0.05);
+}
+
+.dark-mode .user-item.professional-user::before {
+    background: linear-gradient(135deg, rgba(124, 179, 66, 0.1) 0%, rgba(124, 179, 66, 0) 70%);
+}
+
+/* Enhanced hover effects for premium and professional users */
+.user-item.premium-user:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.06);
-    border-color: rgba(52, 152, 219, 0.15);
+    box-shadow: 0 4px 10px rgba(255, 193, 7, 0.1);
+    border-color: rgba(255, 193, 7, 0.25);
 }
 
-.dark-mode .user-item:hover {
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.12);
-    border-color: rgba(46, 204, 113, 0.15);
+.dark-mode .user-item.premium-user:hover {
+    box-shadow: 0 4px 10px rgba(255, 193, 7, 0.1);
+    border-color: rgba(255, 193, 7, 0.25);
+}
+
+.user-item.professional-user:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(124, 179, 66, 0.1);
+    border-color: rgba(124, 179, 66, 0.25);
+}
+
+.dark-mode .user-item.professional-user:hover {
+    box-shadow: 0 4px 10px rgba(124, 179, 66, 0.1);
+    border-color: rgba(124, 179, 66, 0.25);
+}
+
+.user-item:hover .user-avatar {
+    transform: none;
+    box-shadow: none;
+}
+
+.dark-mode .user-item:hover .user-avatar {
+    box-shadow: none;
 }
 
 .user-avatar {
@@ -747,12 +886,12 @@ body.dark-mode .users-list::-webkit-scrollbar-thumb {
 }
 
 .user-item:hover .user-avatar {
-    transform: scale(1.03);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    transform: none;
+    box-shadow: none;
 }
 
 .dark-mode .user-item:hover .user-avatar {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.18);
+    box-shadow: none;
 }
 
 .user-details {
@@ -790,17 +929,19 @@ body.dark-mode .users-list::-webkit-scrollbar-thumb {
 
 .user-bio {
     font-size: 0.85rem;
-    color: var(--primary-grey);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    opacity: 0.85;
-    letter-spacing: 0.01em;
-    max-width: 100%;
+    line-height: 1.4;
+    margin-bottom: 12px;
     display: -webkit-box;
     -webkit-line-clamp: 2;
+    line-clamp: 2;
     -webkit-box-orient: vertical;
-    line-height: 1.3;
-    min-height: 2.6rem;
+    overflow: hidden;
+    opacity: 0.85;
+    text-align: left;
+    max-width: 100%;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    box-sizing: border-box;
 }
 
 .dark-mode .user-bio {
@@ -1228,6 +1369,7 @@ body.dark-mode .toast-message {
         display: flex;
         flex-direction: column;
         gap: 0.75rem;
+        padding-bottom: 80px; /* Added padding to ensure last user isn't hidden by bottom nav */
     }
     
     .user-item {
@@ -1266,6 +1408,10 @@ body.dark-mode .toast-message {
         padding: 1.5rem 0.75rem 5rem;
     }
     
+    .users-list {
+        padding-bottom: 85px; /* Additional padding for smaller screens */
+    }
+    
     .users-header h2 {
         font-size: 1.5rem;
     }
@@ -1298,6 +1444,7 @@ body.dark-mode .toast-message {
     
     .user-bio {
         -webkit-line-clamp: 1;
+        line-clamp: 1;
         min-height: auto;
         font-size: 0.8rem;
     }
@@ -1419,5 +1566,265 @@ body.dark-mode .follow-btn.pending:hover {
     }
     100% {
         transform: translateX(100%);
+    }
+}
+
+.user-skills {
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 6px;
+    margin-bottom: 16px;
+    text-align: left;
+    justify-content: flex-start;
+    width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    height: 26px; /* Fixed height for single line */
+}
+
+.skill-tag {
+    font-size: 0.7rem;
+    padding: 3px 8px;
+    background-color: rgba(52, 152, 219, 0.1);
+    color: var(--primary-blue);
+    border-radius: 4px;
+    font-weight: 500;
+    text-align: center;
+    display: inline-block;
+    max-width: 100px; /* Limit width */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.skill-tag.more-skills {
+    background-color: rgba(52, 152, 219, 0.2);
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.dark-mode .skill-tag.more-skills {
+    background-color: rgba(46, 204, 113, 0.2);
+}
+
+/* Media queries for skills on smaller screens */
+@media (max-width: 480px) {
+    .user-skills {
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .skill-tag {
+        max-width: 80px; /* Smaller on mobile screens */
+    }
+}
+
+@media (max-width: 767px) and (min-width: 481px) {
+    .skill-tag {
+        max-width: 90px;
+    }
+}
+
+/* For list view bio */
+.users-list:not(.list-view) .user-bio {
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+}
+
+/* Subscription badges */
+.subscription-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 0.5rem;
+    padding: 0.15rem;
+    border-radius: 50%;
+    width: 1.3rem;
+    height: 1.3rem;
+    text-align: center;
+}
+
+.subscription-badge .material-symbols-rounded {
+    font-size: 0.85rem;
+    line-height: 1;
+    font-weight: 700;
+}
+
+/* Premium badge styling */
+.subscription-badge.premium {
+    background-color: rgba(255, 193, 7, 0.05);
+    box-shadow: 0 1px 2px rgba(255, 193, 7, 0.05);
+    border: none;
+    border-radius: 4px;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0.2rem;
+}
+
+.dark-mode .subscription-badge.premium {
+    background-color: rgba(255, 193, 7, 0.08);
+    box-shadow: 0 1px 2px rgba(255, 193, 7, 0.1);
+    border: none;
+}
+
+/* Special styling for premium badge icon */
+.subscription-badge.premium .material-symbols-rounded {
+    font-size: 1.1rem;
+    font-variation-settings: 'FILL' 1, 'wght' 400;
+    color: #ffc107; /* Golden color */
+    text-shadow: none;
+    font-family: 'Material Symbols Rounded', sans-serif;
+    animation: none;
+}
+
+.subscription-badge.professional {
+    background-color: rgba(124, 179, 66, 0.05);
+    color: #8bc34a;
+    box-shadow: 0 1px 2px rgba(124, 179, 66, 0.05);
+    border-radius: 4px;
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0.2rem;
+    border: none;
+}
+
+.dark-mode .subscription-badge.professional {
+    background-color: rgba(124, 179, 66, 0.08);
+    color: #aed581;
+    box-shadow: 0 1px 2px rgba(124, 179, 66, 0.1);
+    border: none;
+}
+
+.subscription-badge.professional .material-symbols-rounded {
+    font-size: 1.1rem;
+    font-variation-settings: 'FILL' 1, 'wght' 700;
+    animation: none;
+}
+
+/* User name row styling */
+.user-name-row {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+}
+
+.dark-mode .user-item {
+    background-color: #2a2b31;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.user-avatar::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.03);
+}
+
+.dark-mode .user-avatar::after {
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.user-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.06);
+    border-color: rgba(52, 152, 219, 0.15);
+}
+
+.dark-mode .user-item:hover {
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.12);
+    border-color: rgba(46, 204, 113, 0.15);
+}
+
+/* Creator/Admin User Card Styling */
+.user-item.admin-user {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f1ff 100%);
+    border: 1px solid rgba(103, 58, 183, 0.15);
+    box-shadow: 0 2px 8px rgba(103, 58, 183, 0.05);
+    position: relative;
+    overflow: hidden;
+    animation: none;
+}
+
+.user-item.admin-user::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 80px;
+    height: 80px;
+    background: linear-gradient(135deg, rgba(103, 58, 183, 0.08) 0%, rgba(103, 58, 183, 0) 70%);
+    border-radius: 0 0 0 80px;
+    pointer-events: none;
+}
+
+.user-item.admin-user .creator-badge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: linear-gradient(to right, #673ab7, #9c27b0);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 0 8px 0 8px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 1px 3px rgba(103, 58, 183, 0.15);
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
+.user-item.admin-user .user-avatar {
+    border: 1px solid #673ab7;
+    box-shadow: 0 1px 4px rgba(103, 58, 183, 0.1);
+    position: relative;
+}
+
+/* Dark mode for admin users */
+.dark-mode .user-item.admin-user {
+    background: linear-gradient(135deg, #2c3e50 0%, #2d2635 100%);
+    border: 1px solid rgba(103, 58, 183, 0.15);
+    box-shadow: 0 2px 8px rgba(103, 58, 183, 0.05);
+}
+
+.dark-mode .user-item.admin-user::before {
+    background: linear-gradient(135deg, rgba(103, 58, 183, 0.1) 0%, rgba(103, 58, 183, 0) 70%);
+}
+
+/* Enhanced hover effects for admin users */
+.user-item.admin-user:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(103, 58, 183, 0.1);
+    border-color: rgba(103, 58, 183, 0.25);
+}
+
+.dark-mode .user-item.admin-user:hover {
+    box-shadow: 0 4px 10px rgba(103, 58, 183, 0.1);
+    border-color: rgba(103, 58, 183, 0.25);
+}
+
+/* Mobile bottom spacer */
+.mobile-spacer {
+    height: 0;
+    display: none;
+}
+
+@media (max-width: 768px) {
+    .mobile-spacer {
+        display: block;
+        height: 80px; /* Same height as bottom nav plus some extra space */
+        width: 100%;
+    }
+}
+
+@media (max-width: 576px) {
+    .mobile-spacer {
+        height: 90px; /* Extra space for smaller screens */
     }
 } 

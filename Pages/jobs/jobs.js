@@ -18,6 +18,12 @@ import {
 onAuthStateChanged(auth, async (user) => {
     const menuSections = document.querySelector('.menu-sections');
     
+    // Skip updating menu if it was handled by nav.js
+    if (window.navJsHandledMenu) {
+        console.log('Menu already handled by nav.js');
+        return;
+    }
+    
     if (user) {
         // Fetch user profile data from Firestore
         try {
@@ -179,35 +185,38 @@ onAuthStateChanged(auth, async (user) => {
             // Load the count of saved jobs
             const savedJobsCount = userSavedJobs.size;
             
+            // Get current page path to determine which menu item should be active
+            const currentPath = window.location.pathname;
+            
             menuSections.innerHTML = `
-                <a href="../home/home.html">
+                <a href="../home/home.html" class="${currentPath.includes('/home/') ? 'active' : ''}">
                     <i class="fas fa-home"></i>
                     Home
                 </a>
-                <a href="../jobs/jobs.html">
+                <a href="../jobs/jobs.html" class="${currentPath.includes('/jobs/') ? 'active' : ''}">
                     <i class="fas fa-briefcase"></i>
                     Jobs
                 </a>
-                <a href="../posts/posts.html">
+                <a href="../posts/posts.html" class="${currentPath.includes('/posts/') ? 'active' : ''}">
                     <i class="fas fa-newspaper"></i>
                     Posts
                 </a>
                 <div class="menu-divider"></div>
-                <a href="../saved/saved.html">
+                <a href="../saved/saved.html" class="${currentPath.includes('/saved/') ? 'active' : ''}">
                     <i class="fas fa-heart"></i>
                     Saved Jobs
                     <span class="badge">${savedJobsCount}</span>
                 </a>
-                <a href="../chats/chats.html">
+                <a href="../chats/chats.html" class="${currentPath.includes('/chats/') ? 'active' : ''}">
                     <i class="fas fa-comments"></i>
                     Chats
                 </a>
                 <div class="menu-divider"></div>
-                <a href="../profile/profile.html">
+                <a href="../account/account.html" class="${currentPath.includes('/account/') ? 'active' : ''}">
                     <i class="fas fa-user"></i>
                     My Profile
                 </a>
-                <a href="../settings/settings.html">
+                <a href="../settings/settings.html" class="${currentPath.includes('/settings/') ? 'active' : ''}">
                     <i class="fas fa-cog"></i>
                     Settings
                 </a>
@@ -217,6 +226,9 @@ onAuthStateChanged(auth, async (user) => {
                     Sign Out
                 </a>
             `;
+
+            // Apply highlighting after menu is built
+            highlightCurrentPageInMenu();
 
             // Reattach logout event listener
             const logoutLink = document.getElementById('logout-link');
@@ -268,6 +280,9 @@ onAuthStateChanged(auth, async (user) => {
                     Sign In
                 </a>
             `;
+            
+            // Apply highlighting after guest menu is built
+            highlightCurrentPageInMenu();
         }
     }
 });
@@ -288,6 +303,28 @@ let filteredJobs = [];
 let currentPage = 1;
 const jobsPerPage = 10;
 let userSavedJobs = new Set(); // Add this new variable to track saved jobs
+
+// Global variables for filters
+let currentFilters = {
+    jobType: [],
+    experience: [],
+    minSalary: null,
+    maxSalary: null,
+    location: [],
+    date: null
+};
+
+// Global state for active filters
+let activeFilters = {
+    location: null,
+    jobType: [],
+    experience: [],
+    salary: {
+        min: null,
+        max: null
+    },
+    date: null
+};
 
 // Function to create job card with optimized performance
 function createJobCard(job) {
@@ -399,176 +436,552 @@ function createJobCard(job) {
 // Function to display jobs for current page
 function displayJobs(jobs) {
     const jobsContainer = document.querySelector('.jobs-container');
-    const startIndex = (currentPage - 1) * jobsPerPage;
-    const endIndex = startIndex + jobsPerPage;
-    const jobsToShow = jobs.slice(startIndex, endIndex);
+    if (!jobsContainer) {
+        console.error('Jobs container not found');
+        return;
+    }
     
-    jobsToShow.forEach(job => {
-        const card = createJobCard(job);
-        jobsContainer.appendChild(card);
+    // Clear existing jobs
+    jobsContainer.innerHTML = '';
+    
+    if (jobs.length === 0) {
+        showNoJobsMessage(jobsContainer, 'No jobs found matching your criteria');
+        return;
+    }
+    
+    jobs.forEach(job => {
+        const jobCard = createJobCard(job);
+        jobsContainer.appendChild(jobCard);
+    });
+}
+
+// Function to get all filter values
+function getFilterValues() {
+    return {
+        jobType: Array.from(document.querySelectorAll('input[name="job-type"]:checked')).map(cb => cb.value),
+        experience: Array.from(document.querySelectorAll('input[name="experience"]:checked')).map(cb => cb.value),
+        minSalary: document.getElementById('min-salary').value || null,
+        maxSalary: document.getElementById('max-salary').value || null,
+        location: Array.from(document.querySelectorAll('input[name="location"]:checked')).map(cb => cb.value),
+        date: document.querySelector('input[name="date"]:checked')?.value || null,
+        customLocation: activeFilters.location
+    };
+}
+
+// Function to check if a job matches the filters
+function jobMatchesFilters(job, filters) {
+    // Job type filter
+    if (filters.jobType.length > 0 && !filters.jobType.includes(job.type?.toLowerCase())) {
+        return false;
+    }
+
+    // Experience level filter
+    if (filters.experience.length > 0 && !filters.experience.includes(job.experience?.toLowerCase())) {
+        return false;
+    }
+
+    // Salary range filter
+    const jobSalaryMin = parseInt(job.salaryMin) || 0;
+    const jobSalaryMax = parseInt(job.salaryMax) || 0;
+    const filterMinSalary = parseInt(filters.minSalary) || 0;
+    const filterMaxSalary = parseInt(filters.maxSalary) || Infinity;
+
+    // Check if the job's salary range overlaps with the filter range
+    if (jobSalaryMax < filterMinSalary || jobSalaryMin > filterMaxSalary) {
+        return false;
+    }
+
+    // Location filter - checkbox locations
+    if (filters.location.length > 0 && !filters.location.includes(job.location?.toLowerCase())) {
+        return false;
+    }
+    
+    // Custom location filter
+    if (filters.customLocation && job.location) {
+        if (!job.location.toLowerCase().includes(filters.customLocation.toLowerCase())) {
+            return false;
+        }
+    }
+
+    // Date filter
+    if (filters.date) {
+        const jobDate = new Date(job.createdAt);
+        const now = new Date();
+        const diffTime = Math.abs(now - jobDate);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        switch (filters.date) {
+            case '24h':
+                if (diffDays > 1) return false;
+                break;
+            case '3d':
+                if (diffDays > 3) return false;
+                break;
+            case '7d':
+                if (diffDays > 7) return false;
+                break;
+            case '30d':
+                if (diffDays > 30) return false;
+                break;
+        }
+    }
+
+    return true;
+}
+
+// Function to filter jobs based on current filters
+function filterJobs(jobs) {
+    const filters = getFilterValues();
+    return jobs.filter(job => jobMatchesFilters(job, filters));
+}
+
+// Function to update pagination controls and display current page
+function updatePagination() {
+    // Check if pagination container exists
+    const paginationContainer = document.querySelector('.pagination');
+    if (!paginationContainer) {
+        console.error("Pagination container not found");
+        return;
+    }
+    
+    console.log(`Updating pagination for ${filteredJobs.length} total jobs`);
+    
+    const totalPages = Math.ceil(filteredJobs.length / jobsPerPage);
+    console.log(`Total pages: ${totalPages}, Current page: ${currentPage}, Jobs per page: ${jobsPerPage}`);
+    
+    // Adjust current page if needed
+    if (currentPage > totalPages) {
+        currentPage = Math.max(1, totalPages);
+        console.log(`Adjusted current page to ${currentPage}`);
+    }
+    
+    // Clear pagination container
+    paginationContainer.innerHTML = '';
+    
+    // Don't show pagination if there's only one page
+    if (totalPages <= 1) {
+        console.log("Only one page, not showing pagination controls");
+        // Still need to display the page
+        displayCurrentPage();
+        return;
+    }
+    
+    // Create pagination controls
+    // Previous button
+    const prevButton = document.createElement('button');
+    prevButton.classList.add('pagination-btn', 'prev-btn');
+    prevButton.innerHTML = '<i class="fas fa-chevron-left"></i>';
+    prevButton.disabled = currentPage === 1;
+    prevButton.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            displayCurrentPage();
+            updatePagination();
+        }
     });
     
-    // Show/hide "See More" button
-    const seeMoreButton = document.getElementById('see-more-btn');
-    if (seeMoreButton) {
-        seeMoreButton.style.display = endIndex < jobs.length ? 'block' : 'none';
+    // Next button
+    const nextButton = document.createElement('button');
+    nextButton.classList.add('pagination-btn', 'next-btn');
+    nextButton.innerHTML = '<i class="fas fa-chevron-right"></i>';
+    nextButton.disabled = currentPage === totalPages;
+    nextButton.addEventListener('click', () => {
+        if (currentPage < totalPages) {
+            currentPage++;
+            displayCurrentPage();
+            updatePagination();
+        }
+    });
+    
+    // Page number indicator
+    const pageIndicator = document.createElement('span');
+    pageIndicator.classList.add('page-indicator');
+    pageIndicator.textContent = `Page ${currentPage} of ${totalPages}`;
+    
+    // Add elements to container
+    paginationContainer.appendChild(prevButton);
+    paginationContainer.appendChild(pageIndicator);
+    paginationContainer.appendChild(nextButton);
+    
+    // Display current page of jobs
+    displayCurrentPage();
+}
+
+// Function to display current page of jobs
+function displayCurrentPage() {
+    const startIndex = (currentPage - 1) * jobsPerPage;
+    const endIndex = Math.min(startIndex + jobsPerPage, filteredJobs.length);
+    const currentPageJobs = filteredJobs.slice(startIndex, endIndex);
+    
+    const jobsContainer = document.querySelector('.jobs-container');
+    if (!jobsContainer) return;
+    
+    // Reset the container
+    jobsContainer.innerHTML = '';
+    jobsContainer.classList.remove('showing-message');
+    jobsContainer.style.display = 'grid'; // Ensure it's back to grid display
+    
+    console.log(`Displaying page ${currentPage}: showing jobs ${startIndex}-${endIndex} of ${filteredJobs.length}`);
+    
+    if (currentPageJobs.length === 0) {
+        console.log("No jobs to display on current page");
+        showNoJobsMessage(jobsContainer, 'No jobs available for this page');
+        return;
+    }
+    
+    // Display current page of jobs
+    currentPageJobs.forEach(job => {
+        const jobCard = createJobCard(job);
+        jobsContainer.appendChild(jobCard);
+    });
+    
+    console.log(`Successfully displayed ${currentPageJobs.length} jobs`);
+}
+
+// Function to handle filter changes
+function handleFilterChange() {
+    const jobsContainer = document.querySelector('.jobs-container');
+    const loadingContainer = document.querySelector('.loading-container');
+    
+    // Show loading state
+    jobsContainer.style.display = 'none';
+    loadingContainer.style.display = 'block';
+    
+    // Update active filters based on current form state
+    updateActiveFiltersState();
+    
+    // Apply filters to the allJobs array
+    filteredJobs = filterJobs(allJobs);
+    
+    // Reset to first page when filters change
+    currentPage = 1;
+    
+    // Hide loading state
+    loadingContainer.style.display = 'none';
+    jobsContainer.style.display = 'grid';
+    
+    if (filteredJobs.length === 0) {
+        showNoJobsMessage(jobsContainer, 'No jobs match your current filters');
+    } else {
+        // Use the pagination system to display jobs
+        updatePagination();
     }
 }
 
-// Function to filter jobs
-function filterJobs(searchQuery = '') {
-    const params = getUrlParameters();
-    const jobType = document.getElementById('job-type').value;
-    const salaryRange = document.getElementById('salary-range').value;
+// Function to update active filters state from form inputs
+function updateActiveFiltersState() {
+    // Get all checked job types
+    const jobTypes = Array.from(document.querySelectorAll('input[name="job-type"]:checked')).map(cb => cb.value);
+    activeFilters.jobType = jobTypes;
     
-    filteredJobs = allJobs.filter(jobData => {
-        // Apply search filter
-        const matchesSearch = (searchQuery === '' && params.q === '') || 
-            jobData.title?.toLowerCase().includes((searchQuery || params.q).toLowerCase()) || 
-            jobData.company?.toLowerCase().includes((searchQuery || params.q).toLowerCase()) || 
-            jobData.location?.toLowerCase().includes((searchQuery || params.q).toLowerCase()) ||
-            jobData.description?.toLowerCase().includes((searchQuery || params.q).toLowerCase());
-        
-        // Apply location filter
-        const matchesLocation = !params.location || 
-            jobData.location?.toLowerCase().includes(params.location.toLowerCase());
-        
-        // Apply job type filter
-        const matchesType = (jobType === '' && !params.type) || 
-            jobData.type?.toLowerCase() === (jobType || params.type).toLowerCase();
-        
-        // Apply salary range filter
-        let matchesSalary = true;
-        const salaryParam = salaryRange || params.salary;
-        if (salaryParam !== '') {
-            const [min, max] = salaryParam.split('-').map(num => 
-                num === '+' ? Infinity : parseInt(num) * 1000
-            );
-            matchesSalary = (jobData.salaryMin >= min || !min) && 
-                (jobData.salaryMax <= max || max === Infinity);
-        }
-        
-        return matchesSearch && matchesLocation && matchesType && matchesSalary;
-    });
+    // Get all checked experience levels
+    const experiences = Array.from(document.querySelectorAll('input[name="experience"]:checked')).map(cb => cb.value);
+    activeFilters.experience = experiences;
     
-    return filteredJobs;
+    // Get all checked locations (but preserve custom location if set)
+    const locations = Array.from(document.querySelectorAll('input[name="location"]:checked')).map(cb => cb.value);
+    // Only reset location if we have checked locations or if all are unchecked
+    if (locations.length > 0) {
+        activeFilters.location = null; // Clear custom location when checkbox locations are selected
+    }
+    
+    // Get date filter
+    const dateFilter = document.querySelector('input[name="date"]:checked')?.value || null;
+    activeFilters.date = dateFilter;
+    
+    // Get salary range
+    const minSalary = document.getElementById('min-salary').value || null;
+    const maxSalary = document.getElementById('max-salary').value || null;
+    activeFilters.salary.min = minSalary;
+    activeFilters.salary.max = maxSalary;
+    
+    // Update the display
+    updateActiveFiltersDisplay();
 }
 
-// Function to load more jobs
-function loadMoreJobs() {
-    currentPage++;
-    displayJobs(filteredJobs);
+// Function to clear all filters
+function clearAllFilters() {
+    // Uncheck all checkboxes
+    document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    
+    // Clear salary inputs
+    document.getElementById('min-salary').value = '';
+    document.getElementById('max-salary').value = '';
+    
+    // Clear location input
+    const locationInput = document.getElementById('location-filter');
+    if (locationInput) {
+        locationInput.value = '';
+    }
+    
+    // Reset active filters
+    activeFilters = {
+        location: null,
+        jobType: [],
+        experience: [],
+        salary: {
+            min: null,
+            max: null
+        },
+        date: null
+    };
+    
+    // Update active filters display
+    updateActiveFiltersDisplay();
+    
+    // Refresh job display
+    handleFilterChange();
+}
+
+// Function to set up the location filter input
+function setupLocationFilter() {
+    const locationInput = document.getElementById('location-filter');
+    const applyLocationBtn = document.getElementById('applyLocation');
+    
+    if (!locationInput || !applyLocationBtn) return;
+    
+    // Handler for apply button click
+    applyLocationBtn.addEventListener('click', () => {
+        applyLocationFilter();
+    });
+    
+    // Handler for enter key in input
+    locationInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            applyLocationFilter();
+        }
+    });
+    
+    // Function to apply the location filter
+    function applyLocationFilter() {
+        const locationValue = locationInput.value.trim();
+        
+        // Clear location checkboxes if a location is specified
+        if (locationValue) {
+            // Uncheck any location checkboxes
+            document.querySelectorAll('input[name="location"]:checked').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            
+            // Set the custom location filter
+            activeFilters.location = locationValue;
+            
+            // Update active filters display and apply filters
+            updateActiveFiltersDisplay();
+            handleFilterChange();
+        }
+    }
+}
+
+// Function to initialize filters
+function initializeFilters() {
+    // Add change event listeners to all filter inputs
+    document.querySelectorAll('input[name="job-type"], input[name="experience"], input[name="location"], input[name="date"]').forEach(input => {
+        input.addEventListener('change', () => {
+            // If a location checkbox is checked, clear the custom location filter
+            if (input.name === 'location' && input.checked) {
+                activeFilters.location = null;
+                document.getElementById('location-filter').value = '';
+            }
+            handleFilterChange();
+        });
+    });
+    
+    // Set up location filter input
+    setupLocationFilter();
+    
+    // Add input event listeners to salary inputs with validation
+    const minSalaryInput = document.getElementById('min-salary');
+    const maxSalaryInput = document.getElementById('max-salary');
+
+    if (minSalaryInput) {
+        minSalaryInput.addEventListener('input', (e) => {
+            // Remove any non-numeric characters
+            e.target.value = e.target.value.replace(/[^0-9]/g, '');
+            handleFilterChange();
+        });
+    }
+
+    if (maxSalaryInput) {
+        maxSalaryInput.addEventListener('input', (e) => {
+            // Remove any non-numeric characters
+            e.target.value = e.target.value.replace(/[^0-9]/g, '');
+            handleFilterChange();
+        });
+    }
+    
+    // Add click event listener to clear filters buttons
+    document.querySelector('.clear-filters').addEventListener('click', clearAllFilters);
+    
+    // Add click event listener to mobile clear filters button
+    const mobileClearFiltersBtn = document.getElementById('mobileClearFilters');
+    if (mobileClearFiltersBtn) {
+        mobileClearFiltersBtn.addEventListener('click', () => {
+            clearAllFilters();
+            // Visual feedback for mobile clear button
+            mobileClearFiltersBtn.classList.add('clicked');
+            setTimeout(() => {
+                mobileClearFiltersBtn.classList.remove('clicked');
+            }, 300);
+        });
+    }
 }
 
 // Main function to load jobs
 async function loadJobs(searchQuery = '') {
+    const jobsContainer = document.querySelector('.jobs-container');
+    const loadingContainer = document.querySelector('.loading-container');
+    const seeMoreBtn = document.getElementById('see-more-btn');
+    const locationParam = getUrlParameters().location || '';
+    
+    if (!jobsContainer || !loadingContainer) {
+        console.error('Required containers not found');
+        return;
+    }
+    
+    console.log(`loadJobs called with search query: "${searchQuery}"`);
+    
     try {
-        const jobsContainer = document.querySelector('.jobs-container');
-        const loadingContainer = document.querySelector('.loading-container');
-        
         // Show loading state
-        if (loadingContainer) {
-            loadingContainer.classList.remove('hide');
-        }
+        loadingContainer.style.display = 'block';
         jobsContainer.style.display = 'none';
-
+        
         // Reset pagination
         currentPage = 1;
-        jobsContainer.innerHTML = '';
-
-        // Force load user's saved jobs if logged in BEFORE displaying any jobs
-        // This ensures the saved state is correctly reflected in the UI
-        if (auth.currentUser) {
-            console.log("User is logged in, loading saved jobs...");
-            await loadUserSavedJobs();
-            console.log(`After loading, userSavedJobs has ${userSavedJobs.size} items`);
-            // Log the contents of userSavedJobs for debugging
-            userSavedJobs.forEach(jobId => {
-                console.log(`Saved job ID: ${jobId}`);
-            });
-        } else {
-            console.log("User is not logged in, skipping saved jobs loading");
-            // Clear the set to ensure no stale data
-            userSavedJobs.clear();
-        }
-
+        
         // Fetch jobs if not already fetched
         if (allJobs.length === 0) {
+            console.log("No jobs in memory, fetching from Firestore...");
             const jobsQuery = query(collection(db, "jobs"), where("status", "==", "published"));
             const querySnapshot = await getDocs(jobsQuery);
             
             if (querySnapshot.empty) {
+                console.log("No jobs returned from Firestore query");
                 showNoJobsMessage(jobsContainer, "No jobs available at the moment.");
+                loadingContainer.style.display = 'none';
+                jobsContainer.style.display = 'block';
+                if (seeMoreBtn) seeMoreBtn.style.display = 'none';
                 return;
             }
             
             // Store all jobs in memory
             allJobs = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             console.log(`Loaded ${allJobs.length} jobs from Firestore`);
+        } else {
+            console.log(`Using ${allJobs.length} jobs already in memory`);
         }
-
-        // Filter jobs
-        filteredJobs = filterJobs(searchQuery);
-
+        
+        // First apply search query filter if provided
+        let searchedJobs = allJobs;
+        
+        if (searchQuery) {
+            console.log(`Filtering by search query: "${searchQuery}"`);
+            const query = searchQuery.toLowerCase();
+            searchedJobs = allJobs.filter(job => {
+                const titleMatch = job.title?.toLowerCase().includes(query);
+                const companyMatch = job.company?.toLowerCase().includes(query);
+                const descriptionMatch = job.description?.toLowerCase().includes(query);
+                const skillsMatch = job.skills?.some(skill => skill.toLowerCase().includes(query));
+                
+                return titleMatch || companyMatch || descriptionMatch || skillsMatch;
+            });
+            console.log(`Found ${searchedJobs.length} jobs matching search query`);
+        }
+        
+        // Apply location filter from URL parameter if no location checkbox is checked
+        // and we have a custom location filter
+        if (activeFilters.location && !document.querySelector('input[name="location"]:checked')) {
+            console.log(`Filtering by custom location: "${activeFilters.location}"`);
+            searchedJobs = searchedJobs.filter(job => {
+                if (!job.location) return false;
+                return job.location.toLowerCase().includes(activeFilters.location.toLowerCase());
+            });
+            console.log(`Found ${searchedJobs.length} jobs matching custom location`);
+        }
+        
+        // Apply the rest of the filters
+        filteredJobs = filterJobs(searchedJobs);
+        console.log(`After applying all filters: ${filteredJobs.length} jobs remain`);
+        
         if (filteredJobs.length === 0) {
+            console.log("No jobs match filters, showing message");
             showNoJobsMessage(jobsContainer, "No jobs match your search criteria.");
+            loadingContainer.style.display = 'none';
+            jobsContainer.style.display = 'block';
+            if (seeMoreBtn) seeMoreBtn.style.display = 'none';
             return;
         }
-
-        // Display first page of jobs
-        jobsContainer.style.display = 'grid';
-        displayJobs(filteredJobs);
-
-        // Hide loading container
-        if (loadingContainer) {
-            loadingContainer.classList.add('hide');
-        }
-
-    } catch (error) {
-        console.error("Error loading jobs:", error);
-        showErrorMessage(jobsContainer);
         
-        // Hide loading container
-        if (loadingContainer) {
-            loadingContainer.classList.add('hide');
+        // Sort jobs by date (newest first)
+        filteredJobs.sort((a, b) => {
+            const dateA = a.createdAt ? new Date(a.createdAt) : new Date(0);
+            const dateB = b.createdAt ? new Date(b.createdAt) : new Date(0);
+            return dateB - dateA;
+        });
+        
+        console.log("About to update pagination and display jobs");
+        
+        // Update pagination and display first page
+        updatePagination();
+        
+        // Hide loading state
+        loadingContainer.style.display = 'none';
+        jobsContainer.style.display = 'grid';
+        
+        // Hide the see more button if we're using pagination
+        if (seeMoreBtn) {
+            seeMoreBtn.style.display = 'none';
         }
+    } catch (error) {
+        console.error('Error loading jobs:', error);
+        showErrorMessage(jobsContainer);
+        loadingContainer.style.display = 'none';
+        jobsContainer.style.display = 'block';
+        if (seeMoreBtn) seeMoreBtn.style.display = 'none';
     }
 }
 
 // Helper function to show no jobs message
 function showNoJobsMessage(container, message) {
+    console.log(`Showing no jobs message: "${message}"`);
+    
+    // Add the showing-message class instead of inline styles
+    container.classList.add('showing-message');
+    
     container.innerHTML = `
-        <div class="no-jobs">
-            <dotlottie-player 
-                src="https://lottie.host/6f65cb19-68f4-4012-80f9-66ea8e94f084/lQ66W9skG5.lottie" 
-                background="transparent" 
-                speed="1" 
-                style="width: 140px; height: 140px" 
-                loop 
-                autoplay>
-            </dotlottie-player>
-            <p>${message}</p>
-        </div>
+        <dotlottie-player 
+            src="https://lottie.host/6f65cb19-68f4-4012-80f9-66ea8e94f084/lQ66W9skG5.lottie" 
+            background="transparent" 
+            speed="1" 
+            style="width: 140px; height: 140px" 
+            loop 
+            autoplay>
+        </dotlottie-player>
+        <p>${message}</p>
     `;
-    container.style.display = 'flex';
 }
 
 // Helper function to show error message
 function showErrorMessage(container) {
+    console.log("Showing error message");
+    
+    // Add the showing-message class instead of inline styles
+    container.classList.add('showing-message');
+    
     container.innerHTML = `
-        <div class="error">
-            <dotlottie-player 
-                src="https://lottie.host/6f65cb19-68f4-4012-80f9-66ea8e94f084/lQ66W9skG5.lottie" 
-                background="transparent" 
-                speed="1" 
-                style="width: 140px; height: 140px" 
-                loop 
-                autoplay>
-            </dotlottie-player>
-            <p>Error loading jobs. Please try again later.</p>
-        </div>
+        <dotlottie-player 
+            src="https://lottie.host/6f65cb19-68f4-4012-80f9-66ea8e94f084/lQ66W9skG5.lottie" 
+            background="transparent" 
+            speed="1" 
+            style="width: 140px; height: 140px" 
+            loop 
+            autoplay>
+        </dotlottie-player>
+        <p>Error loading jobs. Please try again later.</p>
     `;
-    container.style.display = 'flex';
 }
 
 // Function to get URL parameters
@@ -586,17 +999,88 @@ function getUrlParameters() {
 function updateSearchInputs() {
     const params = getUrlParameters();
     const jobSearch = document.getElementById('job-search');
-    const jobType = document.getElementById('job-type');
-    const salaryRange = document.getElementById('salary-range');
-
+    const locationFilter = document.querySelectorAll('input[name="location"]');
+    const locationInput = document.getElementById('location-filter');
+    const jobTypeFilters = document.querySelectorAll('input[name="job-type"]');
+    const minSalaryInput = document.getElementById('min-salary');
+    const maxSalaryInput = document.getElementById('max-salary');
+    
+    // Update search query
     if (jobSearch && params.q) {
         jobSearch.value = params.q;
     }
-    if (jobType && params.type) {
-        jobType.value = params.type;
+    
+    // Reset active filters
+    activeFilters = {
+        location: null,
+        jobType: [],
+        experience: [],
+        salary: {
+            min: null,
+            max: null
+        },
+        date: null
+    };
+    
+    // Update location filters
+    let locationFound = false;
+    if (params.location) {
+        if (locationFilter.length > 0) {
+            locationFilter.forEach(filter => {
+                if (filter.value.toLowerCase() === params.location.toLowerCase()) {
+                    filter.checked = true;
+                    locationFound = true;
+                    activeFilters.jobType.push(filter.value);
+                }
+            });
+        }
+        
+        // If location doesn't match any checkboxes, set it as a custom location
+        // and populate the location input field
+        if (!locationFound && locationInput) {
+            locationInput.value = params.location;
+            activeFilters.location = params.location;
+        }
     }
-    if (salaryRange && params.salary) {
-        salaryRange.value = params.salary;
+    
+    // Update job type filters
+    if (jobTypeFilters.length > 0 && params.type) {
+        jobTypeFilters.forEach(filter => {
+            if (filter.value.toLowerCase() === params.type.toLowerCase()) {
+                filter.checked = true;
+                activeFilters.jobType.push(filter.value);
+            }
+        });
+    }
+    
+    // Update salary range - handle different formats
+    // Format could be "min-max", "min+", or "0-max"
+    if (params.salary) {
+        if (params.salary.includes('-')) {
+            const [min, max] = params.salary.split('-');
+            if (minSalaryInput && min) {
+                minSalaryInput.value = min;
+                activeFilters.salary.min = min;
+            }
+            if (maxSalaryInput && max) {
+                maxSalaryInput.value = max;
+                activeFilters.salary.max = max;
+            }
+        } else if (params.salary.endsWith('+')) {
+            const min = params.salary.slice(0, -1);
+            if (minSalaryInput) {
+                minSalaryInput.value = min;
+                activeFilters.salary.min = min;
+            }
+        }
+    }
+    
+    // Display active filters
+    updateActiveFiltersDisplay();
+    
+    // Trigger filter handling if there are any filter parameters
+    if (params.location || params.type || params.salary) {
+        setTimeout(() => handleFilterChange(), 100);
     }
 }
 
@@ -897,12 +1381,13 @@ function shareJob(job) {
 function initializeFloatingMenu() {
     const menuBtn = document.querySelector('.menu-btn');
     const menuItems = document.querySelector('.menu-items');
-    let isMenuOpen = false;
-
+    
+    // Silently return if floating menu elements don't exist
     if (!menuBtn || !menuItems) {
-        console.error('Floating menu elements not found');
         return;
     }
+    
+    let isMenuOpen = false;
 
     // Add click event to toggle menu
     menuBtn.addEventListener('click', (event) => {
@@ -1008,7 +1493,86 @@ async function loadUserSavedJobs() {
     }
 }
 
+// Salary Input Handler
+class SalaryInputHandler {
+    constructor() {
+        this.minInput = document.getElementById('min-salary');
+        this.maxInput = document.getElementById('max-salary');
+        
+        this.init();
+    }
+    
+    init() {
+        this.setupEventListeners();
+    }
+    
+    setupEventListeners() {
+        // Add input event listeners to both inputs
+        this.minInput.addEventListener('input', this.handleInput.bind(this));
+        this.maxInput.addEventListener('input', this.handleInput.bind(this));
+        
+        // Add blur event listeners to format values
+        this.minInput.addEventListener('blur', this.formatValue.bind(this, this.minInput));
+        this.maxInput.addEventListener('blur', this.formatValue.bind(this, this.maxInput));
+    }
+    
+    handleInput() {
+        // Ensure min value is not greater than max value
+        const minValue = parseInt(this.minInput.value) || 0;
+        const maxValue = parseInt(this.maxInput.value) || 0;
+        
+        if (minValue > maxValue && maxValue !== 0) {
+            this.minInput.value = maxValue;
+        }
+    }
+    
+    formatValue(input) {
+        if (!input.value) return;
+        
+        let value = parseInt(input.value);
+        if (isNaN(value)) {
+            input.value = '';
+            return;
+        }
+        
+        // Format the value with thousand separators
+        input.value = value.toLocaleString('en-US');
+    }
+    
+    getValues() {
+        return {
+            min: parseInt(this.minInput.value.replace(/,/g, '')) || 0,
+            max: parseInt(this.maxInput.value.replace(/,/g, '')) || 0
+        };
+    }
+}
+
+// Initialize the salary input handler when the page loads
 document.addEventListener('DOMContentLoaded', () => {
+    new SalaryInputHandler();
+    
+    // Add event listeners for filter checkboxes
+    const filterOptions = document.querySelectorAll('.filter-option input[type="checkbox"]');
+    filterOptions.forEach(option => {
+        option.addEventListener('change', () => {
+            // Here you would typically update the job listings based on the selected filters
+            console.log('Filter changed:', option.name, option.value, option.checked);
+        });
+    });
+    
+    // Clear filters button
+    const clearFiltersBtn = document.querySelector('.clear-filters');
+    clearFiltersBtn.addEventListener('click', () => {
+        filterOptions.forEach(option => {
+            option.checked = false;
+        });
+        // Reset salary inputs
+        const minSalary = document.getElementById('min-salary');
+        const maxSalary = document.getElementById('max-salary');
+        minSalary.value = '';
+        maxSalary.value = '';
+    });
+
     console.log("DOM loaded, initializing page...");
     
     // Initialize floating menu first
@@ -1061,11 +1625,29 @@ document.addEventListener('DOMContentLoaded', () => {
         if (savedTheme === 'dark') {
             document.documentElement.classList.add('dark-mode');
             document.body.classList.add('dark-mode');
-            if (themeIcon) themeIcon.className = 'fas fa-sun';
+            const moonIcon = themeToggle.querySelector('.moon-icon');
+            const sunIcon = themeToggle.querySelector('.sun-icon');
+            if (moonIcon) {
+                moonIcon.style.opacity = '0';
+                moonIcon.style.transform = 'rotate(180deg) scale(0)';
+            }
+            if (sunIcon) {
+                sunIcon.style.opacity = '1';
+                sunIcon.style.transform = 'rotate(0) scale(1)';
+            }
         } else {
             document.documentElement.classList.remove('dark-mode');
             document.body.classList.remove('dark-mode');
-            if (themeIcon) themeIcon.className = 'fas fa-moon';
+            const moonIcon = themeToggle.querySelector('.moon-icon');
+            const sunIcon = themeToggle.querySelector('.sun-icon');
+            if (moonIcon) {
+                moonIcon.style.opacity = '1';
+                moonIcon.style.transform = 'rotate(0) scale(1)';
+            }
+            if (sunIcon) {
+                sunIcon.style.opacity = '0';
+                sunIcon.style.transform = 'rotate(-180deg) scale(0)';
+            }
         }
     }
 
@@ -1074,12 +1656,19 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.classList.toggle('dark-mode');
         
         // Save theme preference to localStorage
-        if (document.documentElement.classList.contains('dark-mode')) {
-            localStorage.setItem('theme', 'dark');
-            if (themeIcon) themeIcon.className = 'fas fa-sun';
-        } else {
-            localStorage.setItem('theme', 'light');
-            if (themeIcon) themeIcon.className = 'fas fa-moon';
+        const isDarkMode = document.documentElement.classList.contains('dark-mode');
+        localStorage.setItem('theme', isDarkMode ? 'dark' : 'light');
+        
+        // Toggle visibility of moon/sun icons
+        const moonIcon = themeToggle.querySelector('.moon-icon');
+        const sunIcon = themeToggle.querySelector('.sun-icon');
+        if (moonIcon) {
+            moonIcon.style.opacity = isDarkMode ? '0' : '1';
+            moonIcon.style.transform = isDarkMode ? 'rotate(180deg) scale(0)' : 'rotate(0) scale(1)';
+        }
+        if (sunIcon) {
+            sunIcon.style.opacity = isDarkMode ? '1' : '0';
+            sunIcon.style.transform = isDarkMode ? 'rotate(0) scale(1)' : 'rotate(-180deg) scale(0)';
         }
     }
 
@@ -1089,4 +1678,264 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Rest of existing initialization code...
+    initializeFilters();
+});
+
+// Add a function to handle highlighting the current page in the dropdown menu
+function highlightCurrentPageInMenu() {
+    // Get the current page path
+    const currentPath = window.location.pathname;
+    
+    // Look for the page directory name in the path
+    let currentPage = '';
+    const pathParts = currentPath.split('/');
+    
+    for (const part of pathParts) {
+        if (['home', 'jobs', 'posts', 'chats', 'saved', 'account', 'settings', 'users', 'notifications'].includes(part)) {
+            currentPage = part;
+            break;
+        }
+    }
+    
+    if (!currentPage) return; // If we couldn't determine the current page
+    
+    // Get all menu links in the dropdown
+    const menuLinks = document.querySelectorAll('.menu-sections a');
+    
+    // Remove any existing active classes
+    menuLinks.forEach(link => {
+        link.classList.remove('active');
+    });
+    
+    // Find and highlight the current page
+    menuLinks.forEach(link => {
+        const href = link.getAttribute('href');
+        if (href && href.includes(`/${currentPage}/`)) {
+            link.classList.add('active');
+        }
+    });
+}
+
+// Function to update the active filters display
+function updateActiveFiltersDisplay() {
+    const activeFiltersContainer = document.getElementById('activeFilters');
+    if (!activeFiltersContainer) return;
+    
+    // Clear current filters
+    activeFiltersContainer.innerHTML = '';
+    
+    let hasActiveFilters = false;
+    
+    // Add location filter if active
+    if (activeFilters.location) {
+        hasActiveFilters = true;
+        const filterTag = createFilterTag('Location', activeFilters.location, 'location');
+        activeFiltersContainer.appendChild(filterTag);
+    }
+    
+    // Add job type filters if active
+    activeFilters.jobType.forEach(type => {
+        hasActiveFilters = true;
+        const filterTag = createFilterTag('Job Type', type, 'jobType', type);
+        activeFiltersContainer.appendChild(filterTag);
+    });
+    
+    // Add experience filters if active
+    activeFilters.experience.forEach(exp => {
+        hasActiveFilters = true;
+        const filterTag = createFilterTag('Experience', exp, 'experience', exp);
+        activeFiltersContainer.appendChild(filterTag);
+    });
+    
+    // Add salary filter if active
+    if (activeFilters.salary.min || activeFilters.salary.max) {
+        hasActiveFilters = true;
+        let salaryText = '';
+        if (activeFilters.salary.min && activeFilters.salary.max) {
+            salaryText = `${activeFilters.salary.min} - ${activeFilters.salary.max} MAD`;
+        } else if (activeFilters.salary.min) {
+            salaryText = `Min: ${activeFilters.salary.min} MAD`;
+        } else if (activeFilters.salary.max) {
+            salaryText = `Max: ${activeFilters.salary.max} MAD`;
+        }
+        const filterTag = createFilterTag('Salary', salaryText, 'salary');
+        activeFiltersContainer.appendChild(filterTag);
+    }
+    
+    // Add date filter if active
+    if (activeFilters.date) {
+        hasActiveFilters = true;
+        let dateText = '';
+        switch (activeFilters.date) {
+            case '24h': dateText = 'Last 24 hours'; break;
+            case '3d': dateText = 'Last 3 days'; break;
+            case '7d': dateText = 'Last 7 days'; break;
+            case '30d': dateText = 'Last 30 days'; break;
+            default: dateText = activeFilters.date;
+        }
+        const filterTag = createFilterTag('Date', dateText, 'date');
+        activeFiltersContainer.appendChild(filterTag);
+    }
+    
+    // Only show the container if we have active filters
+    activeFiltersContainer.style.display = hasActiveFilters ? 'flex' : 'none';
+}
+
+// Function to create a filter tag element
+function createFilterTag(label, value, filterType, filterValue = null) {
+    const tag = document.createElement('div');
+    tag.className = `active-filter-tag ${filterType}-filter`;
+    
+    const labelSpan = document.createElement('span');
+    labelSpan.className = 'filter-label';
+    labelSpan.textContent = `${label}: `;
+    
+    const valueSpan = document.createElement('span');
+    valueSpan.className = 'filter-value';
+    valueSpan.textContent = value;
+    
+    const removeButton = document.createElement('button');
+    removeButton.className = 'remove-filter';
+    removeButton.innerHTML = '<i class="fas fa-times"></i>';
+    removeButton.setAttribute('aria-label', `Remove ${label} filter`);
+    removeButton.addEventListener('click', () => removeFilter(filterType, filterValue));
+    
+    tag.appendChild(labelSpan);
+    tag.appendChild(valueSpan);
+    tag.appendChild(removeButton);
+    
+    return tag;
+}
+
+// Function to remove a filter
+function removeFilter(filterType, filterValue = null) {
+    switch (filterType) {
+        case 'location':
+            // Clear location filter
+            activeFilters.location = null;
+            // Uncheck any location checkboxes
+            document.querySelectorAll('input[name="location"]:checked').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            break;
+            
+        case 'jobType':
+            // Remove specific job type
+            activeFilters.jobType = activeFilters.jobType.filter(type => type !== filterValue);
+            // Uncheck the checkbox
+            document.querySelector(`input[name="job-type"][value="${filterValue}"]:checked`)?.click();
+            break;
+            
+        case 'experience':
+            // Remove specific experience level
+            activeFilters.experience = activeFilters.experience.filter(exp => exp !== filterValue);
+            // Uncheck the checkbox
+            document.querySelector(`input[name="experience"][value="${filterValue}"]:checked`)?.click();
+            break;
+            
+        case 'salary':
+            // Clear both min and max salary
+            activeFilters.salary.min = null;
+            activeFilters.salary.max = null;
+            // Clear the inputs
+            document.getElementById('min-salary').value = '';
+            document.getElementById('max-salary').value = '';
+            break;
+            
+        case 'date':
+            // Clear date filter
+            activeFilters.date = null;
+            // Uncheck any date checkboxes
+            document.querySelectorAll('input[name="date"]:checked').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            break;
+    }
+    
+    // Update the display and filter the jobs
+    updateActiveFiltersDisplay();
+    handleFilterChange();
+}
+
+// Script to manage navigation display based on screen size
+document.addEventListener('DOMContentLoaded', function() {
+    // Setup bottom navigation protected links
+    setupProtectedNavLinks();
+    
+    // Initialize other components
+    // ...
+});
+
+// Function to setup protected navigation links
+function setupProtectedNavLinks() {
+    // Get bottom navigation links for Users and Chats
+    const usersLink = document.querySelector('.bottom-nav a[href="../users/users.html"]');
+    const chatsLink = document.querySelector('.bottom-nav a[href="../chats/chats.html"]');
+    
+    // Add click event handlers to check authentication
+    if (usersLink) {
+        usersLink.addEventListener('click', function(e) {
+            if (!isUserSignedIn()) {
+                e.preventDefault();
+                showToast(); // Show sign-in required toast
+                return false;
+            }
+        });
+    }
+    
+    if (chatsLink) {
+        chatsLink.addEventListener('click', function(e) {
+            if (!isUserSignedIn()) {
+                e.preventDefault();
+                showToast(); // Show sign-in required toast
+                return false;
+            }
+        });
+    }
+    
+    // Add the same protection to the Add Post button (if it exists and isn't already protected)
+    const addPostLink = document.querySelector('.bottom-nav a.bottom-nav-add');
+    if (addPostLink) {
+        addPostLink.addEventListener('click', function(e) {
+            if (!isUserSignedIn()) {
+                e.preventDefault();
+                showToast(); // Show sign-in required toast
+                return false;
+            }
+        });
+    }
+}
+
+// Event listeners for toast dialog closing
+document.addEventListener('DOMContentLoaded', function() {
+    const toastClose = document.getElementById('toastClose');
+    const toastOverlay = document.getElementById('toastOverlay');
+    
+    // Close toast when X button is clicked
+    if (toastClose) {
+        toastClose.addEventListener('click', hideToast);
+    }
+    
+    // Close toast when clicking outside (on the overlay)
+    if (toastOverlay) {
+        toastOverlay.addEventListener('click', hideToast);
+    }
+    
+    // Add event listeners for the sign in/sign up buttons in the toast
+    const toastSignIn = document.getElementById('toastSignIn');
+    const toastSignUp = document.getElementById('toastSignUp');
+    
+    if (toastSignIn) {
+        toastSignIn.addEventListener('click', function() {
+            const currentPage = encodeURIComponent(window.location.href);
+            window.location.href = `../login/login.html?redirect=${currentPage}`;
+        });
+    }
+    
+    if (toastSignUp) {
+        toastSignUp.addEventListener('click', function() {
+            const currentPage = encodeURIComponent(window.location.href);
+            window.location.href = `../login/login.html?redirect=${currentPage}&section=signup`;
+        });
+    }
 });

@@ -128,34 +128,41 @@ nav {
     background: transparent;
     border: none;
     cursor: pointer;
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 8px;
+    width: 2.2rem !important;
+    height: 2.2rem !important;
+    border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--primary-grey);
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
+    position: relative;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 #theme-toggle:hover {
-    background: rgba(52, 152, 219, 0.1);
-    transform: translateY(-2px);
+    background-color: rgba(0, 0, 0, 0.05);
 }
 
 .dark-mode #theme-toggle:hover {
-    background: rgba(46, 204, 113, 0.1);
+    background-color: rgba(255, 255, 255, 0.1);
 }
 
 #theme-toggle i {
-    font-size: 1.25rem;
-    color: var(--primary-blue);
     position: absolute;
     transition: all 0.3s ease;
+    color: var(--primary-grey);
+    font-size: 1.4rem !important;
+    width: 1.4rem !important;
+    height: 1.4rem !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .dark-mode #theme-toggle i {
-    color: var(--primary-green);
+    color: var(--text-light);
 }
 
 #theme-toggle .fa-sun {
@@ -1135,84 +1142,155 @@ main {
 
 /* Experience Item Styles */
 .experience-item, .education-item {
-    display: flex;
-    gap: 1.5rem;
-    padding-bottom: 2rem;
-    border-bottom: 1px solid var(--light-border);
-    margin-bottom: 2rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid var(--light-border);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    background-color: var(--bg-light);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
 .dark-mode .experience-item,
 .dark-mode .education-item {
     border-color: var(--dark-border);
+    background-color: var(--bg-dark);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
 }
 
-.company-logo, .school-logo {
-    width: 48px;
-    height: 48px;
-    min-width: 48px;
-    background: var(--light-hover);
-    border-radius: 8px;
+.experience-item:hover,
+.education-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+}
+
+.dark-mode .experience-item:hover,
+.dark-mode .education-item:hover {
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+}
+
+.experience-header {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--primary-blue);
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.experience-title-company {
+    flex: 1;
+    min-width: 60%;
+}
+
+.experience-title {
+    font-weight: 600;
     font-size: 1.25rem;
-}
-
-.dark-mode .company-logo,
-.dark-mode .school-logo {
-    background: var(--dark-hover);
-    color: var(--primary-green);
-}
-
-.experience-details h3,
-.education-details h3 {
-    font-size: 1.1rem;
-    margin-bottom: 0.5rem;
     color: var(--text-dark);
-}
-
-.dark-mode .experience-details h3,
-.dark-mode .education-details h3 {
-    color: var(--text-light);
-}
-
-.company, .school {
-    color: var(--primary-grey);
     margin-bottom: 0.25rem;
 }
 
-.dark-mode .company,
-.dark-mode .school {
+.dark-mode .experience-title {
     color: var(--text-light);
+}
+
+.experience-company-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.experience-company {
+    font-size: 1rem;
+    color: var(--primary-blue);
+    font-weight: 500;
+}
+
+.dark-mode .experience-company {
+    color: var(--primary-green);
+}
+
+.experience-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+    color: var(--text-dark);
     opacity: 0.8;
-}
-
-.duration, .location {
-    color: var(--primary-grey);
     font-size: 0.9rem;
-    margin-bottom: 1rem;
 }
 
-.dark-mode .duration,
-.dark-mode .location {
+.dark-mode .experience-meta {
     color: var(--text-light);
     opacity: 0.7;
 }
 
-.responsibilities {
-    margin: 1rem 0;
-    padding-left: 1.5rem;
+.experience-date,
+.experience-location {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
 }
 
-.responsibilities li {
-    margin-bottom: 0.5rem;
+.experience-content {
+    margin-top: 1rem;
+}
+
+.experience-description {
+    font-size: 0.95rem;
+    line-height: 1.6;
     color: var(--text-dark);
+    margin-bottom: 1rem;
+    text-align: justify;
 }
 
-.dark-mode .responsibilities li {
+.dark-mode .experience-description {
     color: var(--text-light);
+    opacity: 0.9;
+}
+
+.experience-skills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.skill-tag {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.75rem;
+    background-color: rgba(52, 152, 219, 0.1);
+    border-radius: 30px;
+    font-size: 0.85rem;
+    color: var(--primary-blue);
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.dark-mode .skill-tag {
+    background-color: rgba(46, 204, 113, 0.15);
+    color: var(--primary-green);
+}
+
+.skill-tag:hover {
+    background-color: rgba(52, 152, 219, 0.2);
+    transform: translateY(-2px);
+}
+
+.dark-mode .skill-tag:hover {
+    background-color: rgba(46, 204, 113, 0.25);
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .experience-header {
+        flex-direction: column;
+    }
+    
+    .experience-meta {
+        align-items: flex-start;
+        margin-top: 0.5rem;
+    }
 }
 
 /* Skills Grid */
@@ -1826,33 +1904,44 @@ footer p {
 }
 
 .btn-delete-item {
-    background: transparent;
+    background: none;
     border: none;
     color: #e74c3c;
+    opacity: 0.6;
     cursor: pointer;
-    padding: 0.5rem;
-    border-radius: 50%;
+    font-size: 1rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
     display: flex;
     align-items: center;
     justify-content: center;
-    opacity: 0.7;
-    transition: all 0.2s ease;
 }
 
-.btn-delete-item:hover {
-    opacity: 1;
-    background: rgba(231, 76, 60, 0.1);
-    transform: scale(1.1);
+.btn-delete-item .material-symbols-rounded {
+    font-size: 20px;
+    font-variation-settings: 'FILL' 0, 'wght' 400;
 }
 
 .dark-mode .btn-delete-item {
+    color: #ff6464;
+    opacity: 0.6;
+}
+
+.btn-delete-item:hover {
+    background-color: rgba(231, 76, 60, 0.1);
     color: #e74c3c;
-    opacity: 0.8;
+    opacity: 1;
+}
+
+.btn-delete-item:hover .material-symbols-rounded {
+    font-variation-settings: 'FILL' 1, 'wght' 400;
 }
 
 .dark-mode .btn-delete-item:hover {
+    background-color: rgba(255, 100, 100, 0.2);
+    color: #ff6464;
     opacity: 1;
-    background: rgba(231, 76, 60, 0.2);
 }
 
 /* Adjust spacing for headers */
@@ -2576,4 +2665,451 @@ input[type="month"]::before {
 .dark-mode .dropdown-empty {
     color: var(--text-light);
     opacity: 0.6;
+}
+
+.education-title-school {
+    flex: 1;
+    min-width: 60%;
+}
+
+.education-degree {
+    font-weight: 600;
+    font-size: 1.25rem;
+    color: var(--text-dark);
+    margin-bottom: 0.25rem;
+}
+
+.dark-mode .education-degree {
+    color: var(--text-light);
+}
+
+.education-school {
+    font-size: 1rem;
+    color: var(--primary-blue);
+    font-weight: 500;
+}
+
+.dark-mode .education-school {
+    color: var(--primary-green);
+}
+
+.education-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+    color: var(--text-dark);
+    opacity: 0.8;
+    font-size: 0.9rem;
+}
+
+.dark-mode .education-meta {
+    color: var(--text-light);
+    opacity: 0.7;
+}
+
+.education-date {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.education-field {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-dark);
+    margin-top: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.dark-mode .education-field {
+    color: var(--text-light);
+    opacity: 0.9;
+}
+
+/* Delete button styling */
+.btn-delete-item {
+    background: none;
+    border: none;
+    color: #e74c3c;
+    opacity: 0.6;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-delete-item .material-symbols-rounded {
+    font-size: 20px;
+    font-variation-settings: 'FILL' 0, 'wght' 400;
+}
+
+.dark-mode .btn-delete-item {
+    color: #ff6464;
+    opacity: 0.6;
+}
+
+.btn-delete-item:hover {
+    background-color: rgba(231, 76, 60, 0.1);
+    color: #e74c3c;
+    opacity: 1;
+}
+
+.btn-delete-item:hover .material-symbols-rounded {
+    font-variation-settings: 'FILL' 1, 'wght' 400;
+}
+
+.dark-mode .btn-delete-item:hover {
+    background-color: rgba(255, 100, 100, 0.2);
+    color: #ff6464;
+    opacity: 1;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+    .experience-header, .education-header {
+        flex-direction: column;
+    }
+    
+    .experience-meta, .education-meta {
+        align-items: flex-start;
+        margin-top: 0.5rem;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    /* This positioning is now handled in the later media query */
+    .experience-item, .education-item {
+        position: relative;
+        padding-top: 2.5rem;
+    }
+}
+
+/* Item actions container */
+.item-actions {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    display: flex;
+    gap: 0.5rem;
+    z-index: 2;
+}
+
+/* Position parent items */
+.experience-item,
+.education-item {
+    position: relative;
+    padding-bottom: 3.5rem; /* Extra padding for action buttons */
+}
+
+/* Edit button styling */
+.btn-edit-item {
+    background: none;
+    border: none;
+    color: var(--primary-blue);
+    opacity: 0.6;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-edit-item .material-symbols-rounded {
+    font-size: 20px;
+    font-variation-settings: 'FILL' 0, 'wght' 400;
+}
+
+.dark-mode .btn-edit-item {
+    color: var(--primary-green);
+    opacity: 0.6;
+}
+
+.btn-edit-item:hover {
+    background-color: rgba(52, 152, 219, 0.1);
+    color: var(--primary-blue);
+    opacity: 1;
+}
+
+.btn-edit-item:hover .material-symbols-rounded {
+    font-variation-settings: 'FILL' 1, 'wght' 400;
+}
+
+.dark-mode .btn-edit-item:hover {
+    background-color: rgba(46, 204, 113, 0.2);
+    color: var(--primary-green);
+    opacity: 1;
+}
+
+/* Delete button styling - already exists but updating for consistency */
+.btn-delete-item {
+    background: none;
+    border: none;
+    color: #e74c3c;
+    opacity: 0.6;
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dark-mode .btn-delete-item {
+    color: #ff6464;
+    opacity: 0.6;
+}
+
+.btn-delete-item:hover {
+    background-color: rgba(231, 76, 60, 0.1);
+    color: #e74c3c;
+    opacity: 1;
+}
+
+.dark-mode .btn-delete-item:hover {
+    background-color: rgba(255, 100, 100, 0.2);
+    color: #ff6464;
+}
+
+/* Mobile responsive adjustments */
+@media (max-width: 768px) {
+    .experience-header, .education-header {
+        flex-direction: column;
+    }
+    
+    .experience-meta, .education-meta {
+        align-items: flex-start;
+        margin-top: 0.5rem;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    
+    /* Position both buttons correctly */
+    .item-actions {
+        top: 1rem;
+        right: 1rem;
+        bottom: auto;
+        flex-direction: row;
+    }
+    
+    /* Adjust button size and spacing for mobile */
+    .btn-edit-item,
+    .btn-delete-item {
+        padding: 6px;
+        font-size: 0.9rem;
+        margin-left: 0.5rem;
+        opacity: 0.8;
+    }
+    
+    .btn-edit-item .material-symbols-rounded,
+    .btn-delete-item .material-symbols-rounded {
+        font-size: 18px;
+    }
+    
+    /* Remove previous redundant absolute positioning for delete button */
+    .btn-delete-item {
+        position: static;
+        margin-top: 0;
+    }
+    
+    .experience-item, .education-item {
+        position: relative;
+        padding-top: 2.5rem;
+        padding-bottom: 1.5rem; /* Reduce bottom padding since buttons are now at the top */
+    }
+}
+
+/* Profile Layout */
+.profile-layout {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.profile-header-column {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.profile-header {
+    margin-bottom: 0;
+    height: auto;
+}
+
+.profile-cover {
+    height: 150px;
+}
+
+.profile-info {
+    padding: 0 1.5rem 1.5rem;
+    margin-top: -50px;
+}
+
+.profile-avatar {
+    width: 100px;
+    height: 100px;
+    margin-bottom: 1rem;
+}
+
+.profile-details h1 {
+    font-size: 1.5rem;
+}
+
+.headline {
+    font-size: 1rem;
+}
+
+/* Stats Section Styles */
+.stats-section {
+    margin-bottom: 0.25rem;
+}
+
+.stats-grid {
+    display: flex;
+    gap: 1.5rem;
+    justify-content: space-between;
+    overflow-x: auto;
+    padding: 0.5rem 0;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    min-width: max-content;
+    padding: 0.5rem;
+    flex: 1;
+}
+
+.stat-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+}
+
+.stat-icon i {
+    font-size: 1.25rem;
+    color: var(--primary-blue);
+}
+
+.dark-mode .stat-icon i {
+    color: var(--primary-green);
+}
+
+.stat-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.stat-value {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--text-dark);
+}
+
+.dark-mode .stat-value {
+    color: var(--text-light);
+}
+
+.stat-label {
+    font-size: 0.8rem;
+    color: var(--primary-grey);
+}
+
+.dark-mode .stat-label {
+    color: var(--text-light);
+    opacity: 0.7;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .profile-layout {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    .profile-header {
+        margin-bottom: 0;
+    }
+}
+
+@media (max-width: 768px) {
+    .profile-cover {
+        height: 120px;
+    }
+
+    .profile-info {
+        padding: 0 1rem 1rem;
+        margin-top: -40px;
+    }
+
+    .profile-avatar {
+        width: 80px;
+        height: 80px;
+    }
+
+    .profile-details h1 {
+        font-size: 1.3rem;
+    }
+
+    .headline {
+        font-size: 0.9rem;
+    }
+
+    .stats-grid {
+        gap: 1rem;
+    }
+
+    .stat-item {
+        padding: 0.25rem;
+    }
+
+    .stat-value {
+        font-size: 1rem;
+    }
+
+    .stat-label {
+        font-size: 0.7rem;
+    }
+}
+
+/* Education Section specific styles */
+.profile-section:has(h2:contains('Education')) {
+    margin-bottom: 0.125rem;
+}
+
+.profile-section:has(h2:contains('Education')) .section-header {
+    margin-bottom: 0.25rem;
+}
+
+.profile-section:has(h2:contains('Education')) .section-content {
+    padding-top: 0.0625rem;
+}
+
+/* Education Section specific styles */
+.profile-section h2:contains('Education') {
+    margin-bottom: 0.0625rem;
+}
+
+/* Education Section specific styles */
+.education-section {
+    margin-bottom: 0.0625rem !important;
 }
